@@ -31,6 +31,10 @@
 * `revision` increases on every save. Projects embed the revision they were drawn with.
 * Pins must lie on the 10-unit (2.5 mm) grid. `id` is permanent (drawings connect to it); `name` is the
   displayed designation and can change freely. `dir` is the lead direction (`l`, `r`, `u`, `d`).
+* Pin `show` (default `true`) controls whether the designation is drawn when the project setting
+  *Show terminal designations on all symbols* is on; with `false` the pin is never numbered automatically.
+  Designations are not part of the symbol artwork: they are drawn once by the renderer, so they follow the
+  project setting exactly like built-in symbols, and a designation typed for a placed component always shows.
 * Pin `type` (port type) is one of `elec.passive`, `elec.input`, `elec.output`, `elec.bidir`, `elec.power`,
   `elec.ground`, `hyd.pressure`, `hyd.tank`, `hyd.work`, `hyd.pilot`, `hyd.drain`, `pneu.supply`,
   `pneu.work`, `pneu.exhaust`, `pneu.pilot`, `any`, or empty (derived from the category). The part before
