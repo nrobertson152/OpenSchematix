@@ -19,7 +19,7 @@ revisions/objects/<sha256>        zlib-compressed JSON snapshots, content-addres
 `manifest.json`:
 
 ```json
-{"format": "OpenSchematix Project", "version": 1, "sheet_schema": 2, "app": "OpenSchematix 1.0.0",
+{"format": "OpenSchematix Project", "version": 1, "sheet_schema": 2, "app": "OpenSchematix 1.0.1",
  "project_uid": "…", "sheets": [{"uid": "…", "name": "…", "path": "sheets/<uid>.json"}],
  "symbols": [{"id": "user:…", "path": "symbols/0001.osym"}], "revisions": "revisions/index.json"}
 ```
