@@ -26,6 +26,7 @@ renumbering a pin never disconnects existing drawings.
 from __future__ import annotations
 
 import copy
+import math
 import uuid
 
 from ..geometry import GRID
@@ -103,6 +104,16 @@ def normalise(data) -> dict:
             if len(pts) < 2:
                 raise SymbolFormatError(f"primitive {i}: needs at least two points")
             q["pts"] = pts
+            if k == "line":
+                q["arrow_start"] = p.get("arrow_start") is True
+                q["arrow_end"] = p.get("arrow_end") is True
+                try:
+                    size = float(p.get("arrow_size", 10.0))
+                    if isinstance(p.get("arrow_size"), bool) or not math.isfinite(size) or not 0 < size <= 10000:
+                        size = 10.0
+                except (ValueError, TypeError, OverflowError):
+                    size = 10.0
+                q["arrow_size"] = size
             if k == "poly":
                 q["fill"] = bool(p.get("fill", False))
         elif k in ("circle", "arc"):
@@ -150,6 +161,23 @@ def build_geometry(doc: dict) -> Geometry:
             if key in p:
                 p[key] = tuple(p[key])
     prims = flatten_prims(prims)
+    from ..shapes import arrowhead_points
+    arrows = []
+    for p in prims:
+        if p.get("k") != "line" or len(p.get("pts", [])) < 2:
+            continue
+        pts = p["pts"]
+        for start, enabled in ((True, p.get("arrow_start")), (False, p.get("arrow_end"))):
+            if not enabled:
+                continue
+            tip = pts[0] if start else pts[-1]
+            for neighbor in (pts[1:] if start else reversed(pts[:-1])):
+                if math.dist(tip, neighbor) > 1e-9:
+                    triangle = arrowhead_points(tip, neighbor, p.get("arrow_size", 10.0))
+                    if triangle:
+                        arrows.append({"k": "poly", "pts": triangle, "fill": True, "w": p.get("w", "normal")})
+                    break
+    prims.extend(arrows)
     # Pin designations are not part of the artwork: like built-in symbols they
     # are drawn once by the renderer (render.terminal_label_prims) according to
     # the project's "show terminal designations" setting. Baking them into the
