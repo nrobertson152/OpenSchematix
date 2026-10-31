@@ -240,8 +240,11 @@ def clean_rings(raw) -> list:
                 raise ValueError("fill vertices must be [x, y] or [x, y, bulge]")
             if any(isinstance(c, bool) for c in v):
                 raise ValueError("fill vertex values must be numbers")
-            x, y = float(v[0]), float(v[1])
-            b = float(v[2]) if len(v) == 3 else 0.0
+            try:
+                x, y = float(v[0]), float(v[1])
+                b = float(v[2]) if len(v) == 3 else 0.0
+            except (TypeError, ValueError, OverflowError) as exc:
+                raise ValueError("fill vertex values must be numbers") from exc
             if not (math.isfinite(x) and math.isfinite(y) and math.isfinite(b)) or abs(b) > MAX_BULGE:
                 raise ValueError("fill vertex values out of range")
             ring.append((x, y, b))
