@@ -1,5 +1,5 @@
 """Reading and writing ``.schematix`` project files, and opening older
-documents (legacy ``.osch`` drawings and HPS Schematix ``.hpss``).
+documents (including legacy single-sheet drawings).
 
 The ``.schematix`` container is a ZIP archive (see docs/FILE_FORMAT.md):
 
@@ -199,7 +199,7 @@ def read_zip(fileobj) -> OpenResult:
 
 
 def open_any(path: str) -> OpenResult:
-    """Open a .schematix project, or convert an .osch / .hpss drawing into a
+    """Open a .schematix project, or convert a legacy drawing into a
     new (unsaved) one-sheet project. The original file is never modified."""
     with open(path, "rb") as f:
         head = f.read(4)
@@ -218,9 +218,9 @@ def open_any(path: str) -> OpenResult:
     project = project_from_document(legacy.document, title=legacy.document.sheet.title or name)
     project.revisions = RevisionStore()
     project.activate_symbols()
-    fmt = "hpss" if legacy.migrated else "osch"
+    fmt = "legacy" if legacy.migrated else "osch"
     warnings = list(legacy.warnings)
-    warnings.insert(0, f"Converted from {'an HPS Schematix' if fmt == 'hpss' else 'a legacy OpenSchematix .osch'} drawing. "
+    warnings.insert(0, f"Converted from an older drawing format. "
                        f"The original file is unchanged; save the project as a new {PROJECT_EXTENSION} file.")
     return OpenResult(project, migrated=True, source_format=fmt, warnings=warnings)
 
