@@ -536,10 +536,14 @@ def items_in_rect(doc: Document, r, selectable=None, crossing: bool = False) -> 
 
 def hit_test(doc: Document, p: Point, tol: float, selectable=None) -> Optional[int]:
     """Topmost item under p. Wires and shapes are tested first (they are thin
-    and drawn over symbol bodies), then components in reverse placement order."""
+    and drawn over symbol bodies), then components in reverse placement order,
+    then boundary fills (drawn underneath everything, so anything else at the
+    point wins; among overlapping fills the smallest is picked)."""
     from .geometry import bbox_hit, seg_distance
+    from .regions import region_area
     from .shapes import shape_distance
     best = None
+    fills = []
     for w in doc.wires.values():
         if selectable is not None and not selectable(w):
             continue
@@ -548,6 +552,9 @@ def hit_test(doc: Document, p: Point, tol: float, selectable=None) -> Optional[i
             best = (d, w.id)
     for s in doc.shapes.values():
         if selectable is not None and not selectable(s):
+            continue
+        if s.kind == "hatch":
+            fills.append(s)
             continue
         d = shape_distance(s, p)
         if d <= tol and (best is None or d < best[0]):
@@ -559,6 +566,13 @@ def hit_test(doc: Document, p: Point, tol: float, selectable=None) -> Optional[i
             continue
         if bbox_hit(c.bbox(), p, tol * 0.5):
             return c.id
+    hits = []
+    for s in fills:
+        d = shape_distance(s, p)
+        if d <= tol:
+            hits.append((d, abs(region_area(s.rings)), s.id))
+    if hits:
+        return min(hits)[2]
     return None
 
 

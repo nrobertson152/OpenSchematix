@@ -67,6 +67,8 @@ def paper_items(doc: Document, use_sheet: bool = True, project=None):
             if "p" in q:
                 q["p"] = (q["p"][0] * f, q["p"][1] * f)
                 q["size"] = q.get("size", 10) * f
+            if "rings" in q:     # uniform scale: bulges are unchanged
+                q["rings"] = [[(x * f, y * f, b) for x, y, b in ring] for ring in q["rings"]]
             out.append(q)
         items = out
     if use_sheet:
@@ -97,6 +99,57 @@ def _atomic_write(path: str, data: bytes):
         raise
 
 
+# ================================================================ regions (boundary fills)
+def _fmt4(v):
+    s = f"{v:.4f}".rstrip("0").rstrip(".")
+    return "0" if s in ("-0", "") else s
+
+
+def svg_region_path(rings) -> str:
+    """SVG path data for a region: one closed sub-path per ring, arcs as
+    elliptical-arc commands (exact), filled with fill-rule="evenodd"."""
+    from .regions import bulge_arc, ring_edges, split_arcs
+    d = []
+    for ring in rings:
+        ring = split_arcs(ring)
+        d.append(f"M{_fmt4(ring[0][0])} {_fmt4(ring[0][1])}")
+        for p0, p1, b in ring_edges(ring):
+            if b:
+                _c, r, _a0, sw = bulge_arc(p0, p1, b)
+                # world y points down like SVG's, so a positive sweep is SVG's positive-angle direction
+                d.append(f"A{_fmt4(r)} {_fmt4(r)} 0 0 {1 if sw > 0 else 0} {_fmt4(p1[0])} {_fmt4(p1[1])}")
+            else:
+                d.append(f"L{_fmt4(p1[0])} {_fmt4(p1[1])}")
+        d.append("Z")
+    return " ".join(d)
+
+
+def pdf_region_ops(rings) -> list:
+    """PDF path operators for a region: arcs as cubic Béziers (pieces of at
+    most 90°, radial error < 0.03 %), filled with the even-odd rule (f*)."""
+    from .regions import bulge_arc, ring_edges, split_arcs
+    ops = []
+    for ring in rings:
+        ring = split_arcs(ring)
+        ops.append(f"{_fmt4(ring[0][0])} {_fmt4(ring[0][1])} m")
+        for p0, p1, b in ring_edges(ring):
+            if b:
+                (cx, cy), _r, _a0, sw = bulge_arc(p0, p1, b)
+                k = 4.0 / 3.0 * b            # 4/3 tan(sweep / 4)
+                v0 = (p0[0] - cx, p0[1] - cy)
+                v1 = (p1[0] - cx, p1[1] - cy)
+                c1 = (p0[0] - k * v0[1], p0[1] + k * v0[0])
+                c2 = (p1[0] + k * v1[1], p1[1] - k * v1[0])
+                ops.append(f"{_fmt4(c1[0])} {_fmt4(c1[1])} {_fmt4(c2[0])} {_fmt4(c2[1])} "
+                           f"{_fmt4(p1[0])} {_fmt4(p1[1])} c")
+            else:
+                ops.append(f"{_fmt4(p1[0])} {_fmt4(p1[1])} l")
+        ops.append("h")
+    if ops:
+        ops.append("f*")
+    return ops
+
+
 # ================================================================ SVG
 def to_svg(doc: Document, use_sheet: bool = True, project=None) -> str:
     items, (x0, y0, x1, y1) = paper_items(doc, use_sheet, project)
@@ -124,6 +177,8 @@ def to_svg(doc: Document, use_sheet: bool = True, project=None) -> str:
             (cx, cy), r = it["c"], it["r"]
             fill = ' fill="#000000"' if it.get("fill") else ""
             out.append(f'<circle cx="{_fmt(cx)}" cy="{_fmt(cy)}" r="{_fmt(r)}"{sw}{dash}{fill}/>')
+        elif k == "region":
+            out.append(f'<path d="{svg_region_path(it["rings"])}" fill="#000000" fill-rule="evenodd" stroke="none"/>')
         elif k == "text":
             x, y = text_origin(it)
             weight = ' font-weight="bold"' if it.get("bold") else ""
@@ -170,6 +225,9 @@ def _page_content(items, extent) -> tuple[bytes, float, float]:
     for it in items:
         kind = it["k"]
         if kind == "text":
+            continue
+        if kind == "region":
+            ops += pdf_region_ops(it["rings"])
             continue
         ops.append(f"{_fmt(it.get('wpx', 1.4))} w")
         ops.append("[6 3] 0 d" if it.get("dash") else "[] 0 d")

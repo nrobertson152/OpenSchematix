@@ -24,6 +24,26 @@ TERM_SNAP_PX = 9     # snap-to-terminal radius in screen pixels
 OSNAP_PX = 11        # object snap radius
 
 
+def region_screen_points(rings, to_screen, zoom) -> list:
+    """Flat screen coordinates of a boundary fill as ONE Tk polygon.
+
+    Tk polygons have no holes, so every ring is joined to a common anchor
+    by a zero-width "keyhole" cut that is walked in both directions. Holes
+    are oriented opposite to their outer ring, so the result is the same
+    under the even-odd rule (X11, Windows default) and the non-zero rule."""
+    from ..regions import flatten_ring
+    tol = 0.35 / max(zoom, 1e-9)          # chord error about a third of a pixel
+    flat = [flatten_ring(r, tol) for r in rings]
+    flat = [r for r in flat if len(r) >= 2]
+    if not flat:
+        return []
+    anchor = flat[0][0]
+    seq = []
+    for r in flat:
+        seq += r + [r[0], anchor]
+    return [v for p in seq for v in to_screen(p)]
+
+
 def draw_items(cv: tk.Canvas, items, to_screen, zoom, colors, font_family, selected=(), override=None,
                tag="scene", color_fn=None, hovered=None, width_scale=1.0):
     """Draw scene primitives on a Tk canvas. `colors` is a Theme (or dict)."""
@@ -60,6 +80,10 @@ def draw_items(cv: tk.Canvas, items, to_screen, zoom, colors, font_family, selec
             pts = [v for p in it["pts"] for v in to_screen(p)]
             cv.create_polygon(*pts, outline=color, fill=color if it.get("fill") else "", width=w, dash=dash,
                               joinstyle="round", tags=tag)
+        elif k == "region":
+            pts = region_screen_points(it["rings"], to_screen, zoom)
+            if len(pts) >= 6:
+                cv.create_polygon(*pts, outline="", fill=color, width=0, tags=tag)
         elif k == "circle":
             x, y = to_screen(it["c"])
             r = it["r"] * zoom
@@ -499,11 +523,11 @@ class SchematicCanvas(DrawingView):
                         consider("int", q, 0.3)
         return (best[1], best[2]) if best else None
 
-    def resolve_point(self, raw, base=None, snap_grid=None):
+    def resolve_point(self, raw, base=None, snap_grid=None, osnap=None):
         """Apply object snap, ortho and grid snap to a raw world point."""
         st = self.app.settings
         self.snap_kind = None
-        if st["osnap"]:
+        if st["osnap"] and osnap is not False:
             hit = self.object_snap(raw)
             if hit:
                 self.snap_kind = hit[0]
@@ -607,7 +631,7 @@ class SchematicCanvas(DrawingView):
         if r is not None:
             if isinstance(r, (ia.GetPoint, ia.GetDistance, ia.GetAngle)):
                 self.cursor = self.resolve_point(self.raw_cursor, getattr(r, "base", None),
-                                                 getattr(r, "snap_grid", None))
+                                                 getattr(r, "snap_grid", None), getattr(r, "osnap", None))
             else:
                 self.cursor = self.raw_cursor
                 self.snap_kind = None
@@ -716,7 +740,8 @@ class SchematicCanvas(DrawingView):
         r = self.request
         runner = self.app.runner
         if isinstance(r, (ia.GetPoint, ia.GetDistance, ia.GetAngle)):
-            q = self.resolve_point(p, getattr(r, "base", None), getattr(r, "snap_grid", None))
+            q = self.resolve_point(p, getattr(r, "base", None), getattr(r, "snap_grid", None),
+                                   getattr(r, "osnap", None))
             runner.answer(q)
         elif isinstance(r, ia.GetSelection):
             hit = editing.hit_test(self.doc, p, PICK_PX / self.zoom, self.selectable)

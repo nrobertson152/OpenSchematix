@@ -15,15 +15,19 @@ schematic editor and in the symbol editor:
     host.sel_delete(ids)
     host.new_shape_layer()      layer for new drafting shapes
     host.set_selection(ids)
+
+Optional hooks: host.fill_boundary_shapes() (shapes that may bound a FILL;
+default: all drafting shapes), host.settings (FILL gap tolerance).
 """
 from __future__ import annotations
 
 import math
 
-from ..geometry import UNIT_MM
-from ..model import Shape
+from ..geometry import UNIT_MM, clean
+from ..model import Shape, clean_bulge
 from ..shapes import angle_of, extend, shape_prims, trim
-from .interact import Answer, CommandError, GetAngle, GetDistance, GetObject, GetPoint, GetSelection, GetText
+from .interact import (Answer, CommandError, GetAngle, GetDistance, GetNumber, GetObject, GetPoint, GetSelection,
+                       GetText)
 
 
 def _shape(host, kind, **kw):
@@ -39,6 +43,69 @@ def _shape(host, kind, **kw):
 
 def _ghost(kind, **kw):
     return shape_prims(Shape(-1, kind, **kw), role="ghost")
+
+
+def _fill_gap_mm(host) -> float:
+    st = getattr(host, "settings", None)
+    try:
+        v = float(st["fill_gap_mm"]) if st is not None else 0.0
+    except (KeyError, TypeError, ValueError):
+        v = 0.0
+    return v if 0 <= v <= MAX_FILL_GAP_MM else 0.0
+
+
+MAX_FILL_GAP_MM = 10.0
+
+
+def make_fill(host, rings) -> Shape:
+    """Add a boundary-fill shape (independent of the objects that bounded it)."""
+    s = Shape(host.doc.new_id(), "hatch",
+              rings=[[(clean(x), clean(y), clean_bulge(b)) for x, y, b in ring] for ring in rings])
+    s.layer = host.new_shape_layer()
+    host.doc.add_shape(s)
+    return s
+
+
+def cmd_fill(host):
+    """FILL / HATCH: click inside closed areas to fill them solid. Each pick
+    makes one independent fill object (with holes for islands inside it)."""
+    from ..boundary_fill import find_region
+    made = []
+    while True:
+        gap = _fill_gap_mm(host)
+        hint = f" (gap tolerance {gap:g} mm)" if gap else ""
+        p = yield GetPoint(f"Click inside a closed area to fill{hint} (Enter to finish)", allow_enter=True,
+                           keywords=("Gap",), snap_grid=False, osnap=False)
+        if p is None:
+            break
+        if isinstance(p, Answer):
+            if p.keyword == "Gap":
+                v = yield GetNumber(f"Gap tolerance in mm: largest opening to close automatically "
+                                    f"(0 to {MAX_FILL_GAP_MM:g}, current {gap:g})", default=gap)
+                if v is None or isinstance(v, Answer):
+                    continue
+                if not 0 <= v <= MAX_FILL_GAP_MM:
+                    host.log(f"Gap tolerance must be between 0 and {MAX_FILL_GAP_MM:g} mm.", "warning")
+                    continue
+                st = getattr(host, "settings", None)
+                if st is not None:
+                    st["fill_gap_mm"] = float(v)
+            continue
+        hook = getattr(host, "fill_boundary_shapes", None)
+        shapes = hook() if hook is not None else list(host.doc.shapes.values())
+        res = find_region(shapes, p, gap=gap / UNIT_MM)
+        if not res.ok:
+            host.log(res.message, "warning")
+            continue
+        s = make_fill(host, res.rings)
+        made.append(s.id)
+        msg = "Area filled" + (f" with {res.holes} hole(s)" if res.holes else "") + \
+              (f"; {res.bridged} gap(s) closed" if res.bridged else "") + "."
+        host.log(msg, "info")
+        host.refresh_view()
+    if made:
+        host.set_selection(set(made))
+    return f"{len(made)} fill(s) created."
 
 
 def cmd_line(host):
@@ -314,7 +381,7 @@ def cmd_extend(host):
     return f"{n} extension(s)."
 
 
-DRAW_COMMANDS = {"LINE": cmd_line, "PLINE": cmd_pline, "RECTANGLE": cmd_rect, "CIRCLE": cmd_circle, "ARC": cmd_arc,
+DRAW_COMMANDS = {"FILL": cmd_fill, "LINE": cmd_line, "PLINE": cmd_pline, "RECTANGLE": cmd_rect, "CIRCLE": cmd_circle, "ARC": cmd_arc,
                  "TEXT": cmd_text, "MOVE": cmd_move, "COPY": cmd_copy, "ROTATE": cmd_rotate, "SCALE": cmd_scale,
                  "MIRROR": cmd_mirror, "ERASE": cmd_erase, "TRIM": cmd_trim, "EXTEND": cmd_extend}
 
@@ -322,6 +389,7 @@ DRAW_COMMANDS = {"LINE": cmd_line, "PLINE": cmd_pline, "RECTANGLE": cmd_rect, "C
 # and the symbol editor so both toolbars read the same. The typed alias and
 # any shortcut are appended by commands.tooltip().
 TOOL_TIPS = {
+    "FILL": "Fill: click inside closed areas to fill them solid (islands stay open)",
     "LINE": "Line: draw straight segments",
     "PLINE": "Polyline: draw connected segments (C closes)",
     "RECTANGLE": "Rectangle: pick two corners",

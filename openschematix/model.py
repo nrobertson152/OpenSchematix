@@ -227,7 +227,13 @@ class Wire:
 
 
 # ================================================================ shape
-SHAPE_KINDS = ("line", "polyline", "polygon", "rect", "circle", "arc", "text")
+def clean_bulge(b: float) -> float:
+    """Bulges are stored with 9 decimals (sub-nanometre sagitta error)."""
+    r = round(b, 9)
+    return 0.0 if r == 0 else r
+
+
+SHAPE_KINDS = ("line", "polyline", "polygon", "rect", "circle", "arc", "text", "hatch")
 SHAPE_WIDTHS = ("thin", "normal", "thick")
 
 
@@ -240,6 +246,8 @@ class Shape:
       circle: c, r
       arc:    c, r, start, extent    (degrees, counter-clockwise on screen, 0 = +x)
       text:   p, s, size, anchor, angle
+      hatch:  rings  (solid boundary fill: closed rings of (x, y, bulge)
+              vertices filled with the even-odd rule, see regions.py)
     """
     id: int
     kind: str
@@ -261,6 +269,7 @@ class Shape:
     arrow_start: bool = False
     arrow_end: bool = False
     arrow_size: float = 10.0
+    rings: list = field(default_factory=list)
 
     def bbox(self):
         from .shapes import shape_bbox
@@ -279,6 +288,9 @@ class Shape:
             d.update(p=[clean(self.pts[0][0]), clean(self.pts[0][1])], s=self.s, size=self.size, anchor=self.anchor)
             if self.angle:
                 d["angle"] = self.angle
+        elif self.kind == "hatch":
+            d["rings"] = [[[clean(x), clean(y)] + ([clean_bulge(b)] if clean_bulge(b) else []) for x, y, b in ring]
+                          for ring in self.rings]
         if self.kind in ("line", "polyline"):
             if self.arrow_start:
                 d["arrow_start"] = True
@@ -310,6 +322,9 @@ class Shape:
             s.pts = [(float(p[0]), float(p[1])) for p in d["pts"]]
             if len(s.pts) < 2:
                 raise ValueError(f"shape {s.id} has fewer than two points")
+        elif kind == "hatch":
+            from .regions import clean_rings
+            s.rings = clean_rings(d.get("rings"))
         elif kind in ("circle", "arc"):
             s.c = (float(d["c"][0]), float(d["c"][1]))
             s.r = float(d["r"])
@@ -538,11 +553,16 @@ class Document:
         return f"{prefix}{n}"
 
     # ---------------------------------------------------------------- serialisation
+    def required_schema(self) -> int:
+        """Lowest sheet schema able to represent this sheet: files without
+        boundary fills stay readable by OpenSchematix 1.0.x (schema 2)."""
+        return SHEET_SCHEMA if any(s.kind == "hatch" for s in self.shapes.values()) else 2
+
     def to_dict(self, standalone: bool = True):
         from . import FILE_FORMAT, VERSION
         d = {}
         if standalone:
-            d.update(format=FILE_FORMAT, schema=SHEET_SCHEMA, app_version=VERSION)
+            d.update(format=FILE_FORMAT, schema=self.required_schema(), app_version=VERSION)
         d.update({
             "uid": self.uid,
             "name": self.name,
@@ -589,5 +609,15 @@ class Document:
 
 
 # Schema of one sheet's JSON (the .osch "schema" number). 1 = OpenSchematix
-# legacy single-drawing files; 2 = 1.0 sheets (shapes, props, layers, uid).
-SHEET_SCHEMA = 2
+# legacy single-drawing files; 2 = 1.0 sheets (shapes, props, layers, uid);
+# 3 = adds "hatch" shapes (boundary fills). Sheets without fills are still
+# written as schema 2 so older releases can open them (Document.required_schema).
+SHEET_SCHEMA = 3
+
+
+def sheet_dict_schema(d) -> int:
+    """Schema needed by a serialised sheet (as stored in revision snapshots)."""
+    shapes = d.get("shapes") if isinstance(d, dict) else None
+    if isinstance(shapes, list) and any(isinstance(s, dict) and s.get("kind") == "hatch" for s in shapes):
+        return 3
+    return 2

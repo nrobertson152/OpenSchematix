@@ -16,6 +16,7 @@ DEFAULTS = {
     "show_markers": True,
     "snap_grid": True,
     "osnap": True,                  # object snap for drafting tools
+    "fill_gap_mm": 0.0,             # FILL/HATCH gap tolerance (0 = boundaries must be closed)
     "ortho": False,
     "grid_step": 10,                # snap/grid step in drawing units (0.25 mm)
     "recent_files": [],

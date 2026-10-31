@@ -1,7 +1,9 @@
 # OpenSchematix - Development Progress
 
-_Last updated: 2026-10-31 (session 5: Phase 1 merged into main; Phase 2 item 6 (import/explode symbols) complete on
-branch `phase2-symbol-import-explode`, not merged). Read this first when resuming development._
+_Last updated: 2026-10-31 (session 7: boundary-fill stabilisation — schema/revision compatibility, Tk 8.6
+verification, performance — on `feature/boundary-fill`, draft PR #4, not merged. Session 6: boundary fill (FILL/HATCH)
+implemented. Session 5: Phase 2 item 6 (import/explode symbols)). Read this
+first when resuming development._
 
 ## Release / branding
 
@@ -88,6 +90,95 @@ Next action: Phase 2, item 5 (line-end arrows) — only after authorisation.
   polyline; only the two parametric valves take `params`; copying does not replace placed components
   automatically (use *Replace symbol*; wires on matching terminal ids stay connected).
 - **Next action:** wait for authorisation (Phase 3 localisation, or merging item 5 from the other branch).
+
+### Boundary fill — FILL / HATCH (done, session 6, branch `feature/boundary-fill`, PR #4)
+
+The owner's brief calls this "Phase 3: Boundary Fill"; the earlier specification above listed localisation as
+Phase 3 — the numbering is for the owner to reconcile. The draft on the branch (closed-contour chaining that
+rejected intersections and holes, fills stored as plain polygons, a failing test) was replaced.
+
+- **Engine (`boundary_fill.py`, GUI independent):** planar arrangement. Shapes → elementary edges (segments,
+  arcs ≤ 90°, world angles = −screen angles); pairwise intersections via sort-and-sweep on bounding boxes
+  (segment/segment, segment/circle and circle/circle with tangency tolerance, plus "end point on edge" for
+  T-junctions, overlaps and near misses); points within `SNAP_TOL` = 0.01 units (0.0025 mm) merged by grid
+  hashing; edges split at vertices, identical pieces deduplicated (shared edges, duplicates, co-circular
+  overlaps); dangling pieces pruned; half-edges sorted by tangent angle with curvature tie-break; faces traced
+  "next clockwise" (bounded faces positive area). Pick = smallest bounded face containing the point; edges walked
+  on both sides of the face (bridges) dropped so joined islands become separate rings; other connected
+  components inside the face become holes unless nested in another such component. Rings simplified (collinear
+  segments / co-circular arcs ≤ 180° merged). Rejects: no geometry, point outside all faces (open boundary),
+  point within `SNAP_TOL` of an edge, degenerate area. Optional gap tolerance (≤ 40 units / 10 mm) adds straight
+  bridges from open ends to the nearest open end or edge, then re-runs the arrangement.
+- **Regions (`regions.py`):** rings of `(x, y, bulge)` (DXF bulge convention in world coordinates, |b| ≤ 1);
+  exact signed area (shoelace + circular segments), exact even-odd containment (arcs split into y-monotone
+  pieces), bbox, boundary distance, flattening by chord tolerance, arc splitting, transforms (mirror negates
+  bulges), validation (`clean_rings`), slab trapezoid decomposition for DXF SOLIDs.
+- **Model / format:** `Shape(kind="hatch", rings=…)`; `to_dict` writes `rings` (bulge omitted when 0), no
+  width/dash/fill. `SHEET_SCHEMA = FILE_SCHEMA = 3`; `Document.required_schema()` returns 3 only when the sheet
+  has fills, `projectio.write_zip` writes the max over sheets → files without fills stay schema 2 (1.0.x
+  compatible). Revision snapshots are not considered (a 1.0.x reader could open a fill-free project whose old
+  revisions contain fills and fail only when restoring that revision).
+- **Shapes:** bbox, prims (`{"k": "region", "rings", "fill": True}`), move/rotate/scale/mirror, hit distance
+  (0 inside, distance to boundary outside / in holes), snap/grip points at vertices, not a TRIM/EXTEND edge,
+  `trim()` returns None. `render.scene` draws fills before other shapes; `editing.hit_test` tests fills last
+  (after components) and prefers the smallest fill.
+- **Output:** canvas = one Tk polygon per fill with keyhole cuts (holes oriented opposite → same result under
+  even-odd and non-zero), chord error ⅓ px; SVG = `<path fill-rule="evenodd">` with `A` arcs; PDF = path with
+  Bézier arcs + `f*`; DXF R12 = per fill a block `OSX_FILL_n` of SOLID trapezoids + INSERT on the fill's layer
+  (arc chord error 0.005 mm). `paper_items` scales `rings`; `prim_bbox` handles `region`.
+- **GUI:** `cadcmds.cmd_fill` loop (Enter finishes, keyword Gap → `GetNumber` mm stored in setting
+  `fill_gap_mm`), `GetPoint(osnap=False, snap_grid=False)` (new `osnap` field honoured by
+  `SchematicCanvas.resolve_point`); host hook `App.fill_boundary_shapes()` = drafting shapes on visible layers
+  except text/fills (wires and symbols are deliberately not boundaries); toolbar button (new `fill` icon), Draw
+  menu entry, aliases HATCH/H; inspector shows area/holes/extent and hides line style for fills; FILL excluded
+  from the symbol editor (`EDITOR_COMMANDS`), `shape_to_symbol_prim` degrades a fill to a filled outer polygon
+  defensively.
+- **Files:** `boundary_fill.py` (rewritten), `regions.py` (new), `model.py`, `__init__.py`, `projectio.py`,
+  `shapes.py`, `render.py`, `editing.py`, `export.py`, `dxf.py`, `symbols/base.py`, `settings.py`, `commands.py`,
+  `gui/cadcmds.py`, `gui/canvas_view.py`, `gui/interact.py`, `gui/app.py`, `gui/inspector.py`, `gui/icons.py`,
+  `gui/symbol_editor.py`, `tests/test_boundary_fill.py` (rewritten, 67 tests), `tests/gui_smoke.py` (+31
+  checks), docs (`BOUNDARY_FILL.md` new, `FILE_FORMAT.md`, `DXF.md`, `COMMANDS.md` regenerated), README,
+  CHANGELOG.
+- **Tests (session 6, Python 3.13 / Tk 9.0, ezdxf 1.4.6b0 from source, pypdf, pypdfium2):** `pytest` **421
+  passed, 0 skipped**; `tests/gui_smoke.py` under Xvfb **165/165 ok** (main: 354 / 134). Exports checked on real
+  files: SVG rendered in Chromium, PDF rasterised with pdfium (fill black, hole white), DXF audited and rendered
+  with ezdxf (SOLID area = region area within 3·10⁻⁴); randomised consistency test (any interior pick of a found
+  region finds the same region; exact area = finely flattened area).
+- **Limitations:** solid fills only; not associative; fixed "outer" island rule; DXF fills are SOLID blocks (R12
+  has no HATCH; some anti-aliased viewers show hairline seams); imported DXF HATCH still skipped and our
+  exported fill blocks re-import as many filled polygons; boundary search is global per pick (≈0.2 s for 3 300
+  sparse objects, seconds for thousands of densely crossing ones).
+- **Next action:** owner review of PR #4; do not merge without authorisation.
+
+#### Session 7 — stabilisation and compatibility (same branch)
+
+- **Defect 1 (fixed): fills only in revision history were saved as schema 2.** Reproduced with the released
+  v1.0.0 code (extracted from the tag): it opened such a project and failed with "unknown shape kind 'hatch'"
+  only when restoring that revision. Now `projectio.required_schema(project)` = max(current sheets,
+  `RevisionStore.required_schema()`), the latter scanning every snapshot sheet object (`model.sheet_dict_schema`,
+  cached per content hash; objects are immutable). Schema drops back to 2 once no snapshot holds a fill.
+  Templates with fills are written as `.ostpl` version 2 (1.0.x refuses them as newer instead of "damaged").
+  Tests: `tests/test_fill_compat.py` (13) — including running the real v1.0.0 reader (`git archive v1.0.0`,
+  skipped without git/tag) against files written now: fill files refused, fill-free files open.
+- **Tk 8.6:** python-build-standalone Tk 8.6.12/8.6.14 builds abort on `tk.Menu` under Xvfb (xcb assertion,
+  also on `main`: a toolchain defect, not ours), so Tcl/Tk 8.6.13 was built from source (no Xft) with a
+  `_tkinter` built for the system Python 3.13 (wrapper `/home/claude/tk86/py86` in the dev container, not in
+  the repo). Results: pytest 447 passed / 1 skipped (ezdxf subprocess probe), GUI smoke 169/169. The only
+  failures before were two **test** defects (menubar cascades indexed by position; Tk 8.6 menubars have a
+  tear-off entry at index 0) — fixed in the test. New pixel checks in `gui_smoke.py` (ImageMagick `import`, 24-bit
+  display; skipped otherwise): fill, empty hole, separately filled island, selection colour, zoom, pan, MOVE —
+  identical results under Tk 8.6.13 and 9.0.3. Windows: Tk's GC default fill rule is EvenOddRule → GDI
+  ALTERNATE (`win/tkWinDraw.c`); source-checked only, not run.
+- **Defect 2 (fixed): gap tolerance was O(open ends × edges)** — 33.2 s for a 3 300-object sheet. Now
+  sort-and-sweep candidate pairs (`_point_edge_pairs`, `_point_point_pairs`): 0.21 s; output proven identical to
+  the old all-pairs algorithm (reference copy in the tests, 12 randomised drawings × 3 gaps, incl. exact ties).
+- **Measured speed-ups (no behaviour change):** island nesting with bounding-box prefilters (sparse sheet 0.28 →
+  0.08 s); cycle area / bbox computed from edge data, bulge rings built lazily (dense 400 lines+arcs 0.73 → 0.61 s,
+  600 circles 0.69 → 0.59 s). Areas and hole counts identical before/after on every benchmark case.
+- **Robustness:** `tools/fuzz_boundary_fill.py` (7 degenerate scenario families × 30 seeds, 1 398 accepted
+  regions): 0 failures before and after — no numerical defect found, so the arrangement maths was not changed.
+- **Python 3.10.14** (minimum supported; pbs build, Tk 8.6.12): pytest 445 passed / 3 skipped (pypdfium2, ezdxf);
+  GUI not runnable there (same pbs Menu abort).
 
 ## Status summary
 

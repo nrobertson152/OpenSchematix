@@ -248,7 +248,8 @@ def scene(doc: Document, screen: bool = True, conn: Connectivity | None = None, 
     items = []
     if frame:
         items += frame_prims(doc, project)
-    for s in doc.shapes.values():
+    # boundary fills are drawn first so their boundary lines stay visible on top
+    for s in sorted(doc.shapes.values(), key=lambda s: s.kind != "hatch"):
         if visible(s.layer):
             items += shape_prims(s, item=s.id)
     style = settings.get("crossing_style", "bridge")

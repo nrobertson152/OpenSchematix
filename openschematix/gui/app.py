@@ -422,7 +422,8 @@ class App:
         d.add_command(label="Wire", accelerator="W", command=lambda: self.canvas.set_tool("wire"))
         d.add_separator()
         for name, label, al_ in (("LINE", "Line", "L"), ("PLINE", "Polyline", "PL"), ("RECTANGLE", "Rectangle", "REC"),
-                                 ("CIRCLE", "Circle", "C"), ("ARC", "Arc", "A"), ("TEXT", "Text", "T")):
+                                 ("CIRCLE", "Circle", "C"), ("ARC", "Arc", "A"), ("TEXT", "Text", "T"),
+                                 ("FILL", "Fill (hatch)", "FILL")):
             d.add_command(label=label, accelerator=al_, command=lambda n=name: self.run_command(n))
         d.add_separator()
         for name, label, al_ in (("MOVE", "Move", "M"), ("COPY", "Copy", "CO"), ("ROTATE", "Rotate", "RO"),
@@ -515,7 +516,7 @@ class App:
         btn("wire", lambda: self.canvas.set_tool("wire"), "Draw wires: click terminals and bend points",
             checkable=True, key="wire", command="WIRE")
         for icon, name in (("line", "LINE"), ("polyline", "PLINE"), ("rect", "RECTANGLE"), ("circle", "CIRCLE"),
-                           ("arc", "ARC"), ("text", "TEXT")):
+                           ("arc", "ARC"), ("text", "TEXT"), ("fill", "FILL")):
             btn(icon, lambda n=name: self.run_command(n), cadcmds.TOOL_TIPS[name], checkable=True, key=name,
                 command=name)
         sep()
@@ -1229,6 +1230,15 @@ class App:
 
     def cut_edges(self):
         return list(self.doc.shapes.values()) + [editing.wire_as_shape(w) for w in self.doc.wires.values()]
+
+    def fill_boundary_shapes(self):
+        """Drafting shapes that can bound a FILL: those on visible layers.
+        Wires and symbols are not boundaries (a fill under a circuit is not
+        cut up by its wiring); existing fills and text are ignored."""
+        def visible(name):
+            lay = self.project.layer(name)
+            return lay is None or lay.visible
+        return [s for s in self.doc.shapes.values() if s.kind not in ("hatch", "text") and visible(s.layer)]
 
     def refresh_view(self):
         self.canvas.redraw()

@@ -43,6 +43,18 @@ def layer_name_for_dxf(name: str) -> str:
 
 
 # ================================================================ export
+FILL_TOL = 0.02      # chord error for arcs of boundary fills, drawing units (0.005 mm)
+
+
+def region_solids(rings, tol: float = FILL_TOL) -> list:
+    """Decompose a boundary fill into trapezoids (4-point quads in drawing
+    units) for R12 SOLID entities. R12 has no HATCH entity; SOLIDs are filled
+    by every DXF reader. Straight edges are exact, arcs are flattened with a
+    chord error of at most `tol`."""
+    from .regions import flatten_ring, trapezoids
+    return trapezoids([flatten_ring(r, tol) for r in rings])
+
+
 class _Writer:
     def __init__(self):
         self.lines = []
@@ -99,10 +111,40 @@ def to_dxf(doc, project=None, include_frame: bool = True, layer_by_role: bool = 
         return name
 
     ents = _Writer()
+    blocks = _Writer()
+    n_fills = 0
     for it in items:
         layer = lay(it)
         ltype = "DASHED" if it.get("dash") else "CONTINUOUS"
         kind = it["k"]
+        if kind == "region":
+            quads = region_solids(it["rings"])
+            if not quads:
+                continue
+            n_fills += 1
+            name = f"OSX_FILL_{n_fills}"
+            blocks.g(0, "BLOCK")
+            blocks.g(8, layer)
+            blocks.g(2, name)
+            blocks.g(70, 0)
+            for c in (10, 20, 30):
+                blocks.g(c, 0.0)
+            blocks.g(3, name)
+            for q in quads:
+                blocks.g(0, "SOLID")
+                blocks.g(8, layer)
+                for n, idx in enumerate((0, 1, 3, 2)):       # SOLID corner order: 1 2 4 3
+                    blocks.g(10 + n, X(q[idx][0]))
+                    blocks.g(20 + n, Y(q[idx][1]))
+                    blocks.g(30 + n, 0.0)
+            blocks.g(0, "ENDBLK")
+            blocks.g(8, layer)
+            ents.g(0, "INSERT")
+            ents.g(8, layer)
+            ents.g(2, name)
+            for c in (10, 20, 30):
+                ents.g(c, 0.0)
+            continue
         if kind in ("line", "poly"):
             pts = it["pts"]
             closed = kind == "poly"
@@ -265,6 +307,7 @@ def to_dxf(doc, project=None, include_frame: bool = True, layer_by_role: bool = 
     out.g(0, "ENDSEC")
     out.g(0, "SECTION")
     out.g(2, "BLOCKS")
+    out.lines += blocks.lines
     out.g(0, "ENDSEC")
     out.g(0, "SECTION")
     out.g(2, "ENTITIES")
