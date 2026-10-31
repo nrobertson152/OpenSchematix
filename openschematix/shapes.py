@@ -82,7 +82,15 @@ def text_extent(s: Shape):
 
 def shape_bbox(s: Shape):
     if s.kind in ("line", "polyline", "polygon", "rect"):
-        return bbox_of(s.pts)
+        points = list(s.pts)
+        if s.kind in ("line", "polyline") and len(points) >= 2:
+            for start, enabled in ((True, s.arrow_start), (False, s.arrow_end)):
+                if enabled:
+                    neighbor = _endpoint_neighbor(s.pts, start)
+                    if neighbor is not None:
+                        tip = s.pts[0] if start else s.pts[-1]
+                        points.extend(arrowhead_points(tip, neighbor, s.arrow_size))
+        return bbox_of(points)
     if s.kind == "circle":
         return (s.c[0] - s.r, s.c[1] - s.r, s.c[0] + s.r, s.c[1] + s.r)
     if s.kind == "arc":
@@ -537,6 +545,7 @@ def trim(s: Shape, pick: Point, cutters: Iterable[Shape], next_id) -> Optional[l
         o = copy.deepcopy(s)
         o.pts = _sub_path(work, 0.0, lower)
         o.kind = "line" if len(o.pts) == 2 else "polyline"
+        o.arrow_end = False
         out.append(o)
     if upper is not None:
         o = copy.deepcopy(s)
@@ -544,6 +553,7 @@ def trim(s: Shape, pick: Point, cutters: Iterable[Shape], next_id) -> Optional[l
             o.id = next_id()
         o.pts = _sub_path(work, upper, total)
         o.kind = "line" if len(o.pts) == 2 else "polyline"
+        o.arrow_start = False
         out.append(o)
     return [o for o in out if len(o.pts) >= 2]
 
