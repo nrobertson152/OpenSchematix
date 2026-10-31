@@ -131,10 +131,10 @@ class App:
                 return
             if kind == "load":
                 message = ("Some preferences could not be loaded; defaults were used. "
-                           "The existing settings file will be backed up before it is replaced.\\n\\n" + detail)
+                           "The existing settings file will be backed up before it is replaced.\n\n" + detail)
             else:
                 message = ("Preferences could not be saved. Changes remain available for this session "
-                           "but may be lost after restart.\\n\\n" + detail)
+                           "but may be lost after restart.\n\n" + detail)
             messagebox.showwarning("OpenSchematix preferences", message, parent=self.root)
         self.root.after(300, show)
 
