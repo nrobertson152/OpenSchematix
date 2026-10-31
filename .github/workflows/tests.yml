@@ -38,13 +38,17 @@ jobs:
         run: python -m pytest -q
 
   gui-smoke:
-    name: GUI smoke / Ubuntu / Python 3.13
+    name: GUI smoke / Ubuntu / Python ${{ matrix.python-version }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.13']
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.13'
+          python-version: ${{ matrix.python-version }}
       - name: Install project and test dependencies
         run: python -m pip install -e ".[dev]"
       - name: Install virtual display and Tk
@@ -55,14 +59,18 @@ jobs:
         run: xvfb-run -a python tests/gui_smoke.py "${{ runner.temp }}/gui-smoke"
 
   gui-smoke-windows:
-    name: GUI smoke / Windows / Python 3.13
+    name: GUI smoke / Windows / Python ${{ matrix.python-version }}
     runs-on: windows-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.13']
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.13'
+          python-version: ${{ matrix.python-version }}
       - name: Install project and test dependencies
         run: python -m pip install -e ".[dev]"
       - name: Run native Windows GUI smoke checks
