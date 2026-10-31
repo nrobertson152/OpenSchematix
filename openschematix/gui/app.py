@@ -122,6 +122,22 @@ class App:
         elif path:
             root.after(80, lambda: self.open_path(path))
         self.log(f"{APP_NAME} {VERSION}. Type a command (HELP lists them) or use the toolbar.", "info")
+        self.settings.set_warning_handler(self._settings_warning)
+
+    def _settings_warning(self, kind, detail):
+        """Notify once, after Tk initialization, without interrupting startup."""
+        def show():
+            if not self.root.winfo_exists():
+                return
+            if kind == "load":
+                message = ("Some preferences could not be loaded; defaults were used. "
+                           "The existing settings file will be backed up before it is replaced.\\n\\n" + detail)
+            else:
+                message = ("Preferences could not be saved. Changes remain available for this session "
+                           "but may be lost after restart.\\n\\n" + detail)
+            messagebox.showwarning("OpenSchematix preferences", message, parent=self.root)
+        self.root.after(300, show)
+
 
     def _default_size(self):
         from ..model import SHEET_SIZES_MM
