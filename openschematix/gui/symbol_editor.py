@@ -410,6 +410,20 @@ class SymbolEditor(tk.Toplevel):
         ttk.Checkbutton(tb, text="Filled", variable=self.fill_var,
                         command=lambda: self.apply_style(fill=bool(self.fill_var.get()))).pack(side="left")
         sep()
+        ttk.Label(tb, text="Arrows", style="Toolbar.TLabel").pack(side="left", padx=(4, 4))
+        self.arrow_start_var = tk.IntVar(value=0)
+        self.arrow_end_var = tk.IntVar(value=0)
+        ttk.Checkbutton(tb, text="Start", variable=self.arrow_start_var,
+                        command=lambda: self.apply_style(arrow_start=bool(self.arrow_start_var.get()))).pack(side="left")
+        ttk.Checkbutton(tb, text="End", variable=self.arrow_end_var,
+                        command=lambda: self.apply_style(arrow_end=bool(self.arrow_end_var.get()))).pack(side="left")
+        self.arrow_size_var = tk.StringVar(value="2.5")
+        ttk.Label(tb, text="Size mm", style="Toolbar.TLabel").pack(side="left", padx=(4, 2))
+        size_entry = ttk.Entry(tb, textvariable=self.arrow_size_var, width=5)
+        size_entry.pack(side="left")
+        size_entry.bind("<FocusOut>", self._apply_arrow_size)
+        size_entry.bind("<Return>", self._apply_arrow_size)
+        sep()
         ttk.Label(tb, text="Snap", style="Toolbar.TLabel").pack(side="left", padx=(4, 4))
         self.step_var = tk.StringVar(value="1.25 mm")
         cb = ttk.Combobox(tb, textvariable=self.step_var, values=list(SNAP_STEPS), state="readonly", width=16)
@@ -635,7 +649,25 @@ class SymbolEditor(tk.Toplevel):
             self.width_var.set(sel[0].width)
             self.dash_var.set(1 if sel[0].dash else 0)
             self.fill_var.set(1 if sel[0].fill else 0)
+            arrows = next((sh for sh in sel if sh.kind in ("line", "polyline")), None)
+            if arrows is not None:
+                self.arrow_start_var.set(int(arrows.arrow_start))
+                self.arrow_end_var.set(int(arrows.arrow_end))
+                self.arrow_size_var.set(f"{arrows.arrow_size * UNIT_MM:g}")
         self.canvas.redraw()
+
+    def _apply_arrow_size(self, event=None):
+        try:
+            size_mm = float(self.arrow_size_var.get().replace(",", "."))
+            size = size_mm / UNIT_MM
+            if not 0 < size <= 10000:
+                raise ValueError("out of range")
+        except (ValueError, OverflowError):
+            self.set_status("Arrow size must be a positive number.")
+            self.set_selection(self.selection)
+            return "break"
+        self.apply_style(arrow_size=size)
+        return "break"
 
     def apply_style(self, **kw):
         """Apply line properties to the selected objects (and remember them for new objects)."""
@@ -646,6 +678,8 @@ class SymbolEditor(tk.Toplevel):
         for sh in sel:
             for k, v in kw.items():
                 if k == "fill" and sh.kind not in ("rect", "polygon", "circle"):
+                    continue
+                if k.startswith("arrow_") and sh.kind not in ("line", "polyline"):
                     continue
                 setattr(sh, k, v)
         self.commit_change(s, "Line properties changed.")
