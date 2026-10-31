@@ -317,6 +317,18 @@ class Inspector(ttk.Frame):
         self.check(sec, "Dashed", _common(shapes, lambda s: s.dash), lambda v: app.edit_objects(shapes, dash=v))
         if all(s.kind in ("polygon", "rect", "circle") for s in shapes):
             self.check(sec, "Filled", _common(shapes, lambda s: s.fill), lambda v: app.edit_objects(shapes, fill=v))
+        arrow_shapes = [s for s in shapes if s.kind in ("line", "polyline")]
+        if arrow_shapes:
+            sec_arrows = self.section("Arrowheads")
+            self.check(sec_arrows, "At start", _common(arrow_shapes, lambda s: s.arrow_start),
+                       lambda v: app.edit_objects(arrow_shapes, arrow_start=v))
+            self.check(sec_arrows, "At end", _common(arrow_shapes, lambda s: s.arrow_end),
+                       lambda v: app.edit_objects(arrow_shapes, arrow_end=v))
+            self.entry(sec_arrows, "Arrow size mm",
+                       _common(arrow_shapes, lambda s: f"{s.arrow_size * UNIT_MM:g}"),
+                       lambda v: self._num(v, lambda f: app.edit_objects(arrow_shapes, arrow_size=f / UNIT_MM)
+                                         if 0 < f <= 10000 * UNIT_MM else
+                                         app.set_status("Arrow size must be greater than zero.")))
         self._layer_lock(sec, shapes)
         texts = [s for s in shapes if s.kind == "text"]
         if texts:
