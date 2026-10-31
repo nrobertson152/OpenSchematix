@@ -162,6 +162,34 @@ def test_degenerate_wires():
     assert_same_as_reference(doc)
 
 
+@pytest.mark.parametrize("sign", [-1.0, 1.0])
+def test_max_finite_coordinates_match_reference(sign):
+    """Extreme finite inputs may overflow when padding a segment bbox."""
+    import sys
+
+    edge = sign * sys.float_info.max
+    adjacent = math.nextafter(edge, 0.0)
+    doc = Document()
+    extreme = raw_wire(doc, [(edge, 0.0), (adjacent, 0.0)])
+    raw_wire(doc, [(edge, 0.0), (edge, 20.0)])
+    raw_wire(doc, [(0.0, 0.0), (100.0, 0.0)])
+    idx = connectivity._WireIndex(list(doc.wires.values()))
+    assert extreme in idx.always
+    assert_same_as_reference(doc)
+
+
+def test_extreme_finite_span_falls_back_to_full_scan():
+    import sys
+
+    m = sys.float_info.max
+    doc = Document()
+    span = raw_wire(doc, [(-m, 0.0), (m, 0.0)])
+    raw_wire(doc, [(0.0, 20.0), (0.0, 0.0)])
+    idx = connectivity._WireIndex(list(doc.wires.values()))
+    assert span in idx.always
+    assert_same_as_reference(doc)
+
+
 def test_non_finite_coordinates():
     doc = Document()
     inf = raw_wire(doc, [(math.inf, 0), (0, 0)])
