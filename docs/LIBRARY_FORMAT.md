@@ -49,7 +49,7 @@ symbols/0001.osym …
 
 ```json
 {"format": "OpenSchematix Symbol Library", "version": 1, "name": "Sensors", "description": "…",
- "author": "…", "created": "2026-10-31T10:00:00", "app": "OpenSchematix 1.0.0",
+ "author": "…", "created": "2026-10-31T10:00:00", "app": "OpenSchematix 1.0.1",
  "folders": ["Inductive", "Inductive/M12"],
  "symbols": [{"id": "user:…", "name": "…", "revision": 3, "folder": "Inductive/M12",
               "file": "symbols/0001.osym"}]}
