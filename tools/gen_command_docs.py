@@ -32,6 +32,14 @@ def main():
             lines.append(f"| `{c.name}` | {', '.join(f'`{a}`' for a in c.aliases) or '—'} | {c.summary} | "
                          f"`{c.usage}` |")
         lines.append("")
+    from openschematix.gui.symbol_editor import EDITOR_COMMANDS
+    ed = [c for c in commands.COMMANDS if c.name in EDITOR_COMMANDS]
+    lines += ["## Symbol editor", "",
+              "The symbol editor uses the same command line: the same aliases (including your own), Enter or "
+              "Space to run a command, Enter or Space on the drawing to finish the running command or repeat the "
+              "last one, and autocomplete. These commands are available there:", "",
+              ", ".join(f"`{c.name}`" + (f" ({', '.join(f'`{a}`' for a in c.aliases)})" if c.aliases else "")
+                        for c in ed), ""]
     lines += ["## Keyboard shortcuts", "", "Change them under *Help ▸ Keyboard shortcuts*. Shortcuts must use "
               "Ctrl, Alt or a function/navigation key because letters are reserved for the command line.", "",
               "| Default | Action |", "|---|---|"]

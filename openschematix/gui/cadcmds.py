@@ -318,6 +318,25 @@ DRAW_COMMANDS = {"LINE": cmd_line, "PLINE": cmd_pline, "RECTANGLE": cmd_rect, "C
                  "TEXT": cmd_text, "MOVE": cmd_move, "COPY": cmd_copy, "ROTATE": cmd_rotate, "SCALE": cmd_scale,
                  "MIRROR": cmd_mirror, "ERASE": cmd_erase, "TRIM": cmd_trim, "EXTEND": cmd_extend}
 
+# Toolbar descriptions of the drafting tools, shared by the schematic editor
+# and the symbol editor so both toolbars read the same. The typed alias and
+# any shortcut are appended by commands.tooltip().
+TOOL_TIPS = {
+    "LINE": "Line: draw straight segments",
+    "PLINE": "Polyline: draw connected segments (C closes)",
+    "RECTANGLE": "Rectangle: pick two corners",
+    "CIRCLE": "Circle: pick the centre, then the radius",
+    "ARC": "Arc: pick the centre, start point and end point",
+    "TEXT": "Text: place a note",
+    "MOVE": "Move the selection: base point, then target point",
+    "COPY": "Copy the selection: base point, then target points",
+    "ROTATE": "Rotate the selection about a base point",
+    "MIRROR": "Mirror the selection",
+    "SCALE": "Scale the selection about a base point",
+    "TRIM": "Trim objects at cutting edges",
+    "EXTEND": "Extend objects to boundaries",
+}
+
 
 # ---------------------------------------------------------------- shared transform helpers for shapes
 def transform_shape_copy(s: Shape, op) -> Shape:

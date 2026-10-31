@@ -37,7 +37,6 @@ SYMBOL_VERSION = 1
 USER_PREFIX = "user:"
 CATEGORIES = ("Electrical", "Electronic", "Hydraulic", "Pneumatic", "General")
 PRIM_KINDS = ("line", "poly", "circle", "arc", "text")
-PIN_LABEL_SIZE = 6
 
 
 class SymbolFormatError(ValueError):
@@ -142,19 +141,6 @@ def normalise(data) -> dict:
     return out
 
 
-def pin_label_prim(pin) -> dict:
-    """Small pin-identifier text drawn just inside the pin end, beside its lead."""
-    x, y, d = pin["x"], pin["y"], pin["dir"]
-    off = 4
-    if d == "l":
-        return {"k": "text", "p": (x + off, y - 2), "s": pin["name"], "size": PIN_LABEL_SIZE, "anchor": "sw"}
-    if d == "r":
-        return {"k": "text", "p": (x - off, y - 2), "s": pin["name"], "size": PIN_LABEL_SIZE, "anchor": "se"}
-    if d == "u":
-        return {"k": "text", "p": (x + 2, y + off), "s": pin["name"], "size": PIN_LABEL_SIZE, "anchor": "nw"}
-    return {"k": "text", "p": (x + 2, y - off), "s": pin["name"], "size": PIN_LABEL_SIZE, "anchor": "sw"}
-
-
 def build_geometry(doc: dict) -> Geometry:
     prims = [copy.deepcopy(p) for p in doc["prims"]]
     for p in prims:
@@ -164,8 +150,12 @@ def build_geometry(doc: dict) -> Geometry:
             if key in p:
                 p[key] = tuple(p[key])
     prims = flatten_prims(prims)
-    prims += [pin_label_prim(p) for p in doc["pins"] if p.get("show")]
-    terms = [Terminal(p["id"], p["x"], p["y"], p["dir"], label=p["name"], ptype=p.get("type", ""))
+    # Pin designations are not part of the artwork: like built-in symbols they
+    # are drawn once by the renderer (render.terminal_label_prims) according to
+    # the project's "show terminal designations" setting. Baking them into the
+    # prims here drew them regardless of that setting and twice when it was on.
+    terms = [Terminal(p["id"], p["x"], p["y"], p["dir"], label=p["name"], ptype=p.get("type", ""),
+                      show=bool(p.get("show", True)))
              for p in doc["pins"]]
     return Geometry(prims, terms)
 

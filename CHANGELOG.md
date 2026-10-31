@@ -2,6 +2,27 @@
 
 All notable changes to this project are documented here. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+- Custom symbols: terminal numbers were drawn on every placed custom symbol even with *Show terminal designations*
+  off, and twice with it on. Pin designations are no longer baked into the symbol artwork; they are drawn once by
+  the renderer and follow the project setting like built-in symbols. A pin can opt out ("Number this point on
+  drawings" in the symbol editor); a designation typed for a placed component always shows. Symbol and project
+  files are unchanged; existing custom symbols now follow the setting.
+- Toolbar tooltips never appeared (the button's own hover handlers replaced the tooltip's).
+- Symbol editor command line: Space now runs a typed command or alias (L, C, TR, M …) like Enter; Enter or Space
+  on the drawing finishes the running command or repeats the last one; user aliases and autocomplete work. The
+  editor uses the same command-line component as the main window.
+- Command line (both editors): pressing Enter or Space quickly after the last letter could run the stale
+  autocomplete suggestion (e.g. TR started TEXT, CO started CIRCLE).
+
+### Changed
+- New drawings and projects default to ANSI A (8.5 × 11 in, landscape). Existing files keep their page size and
+  a default sheet size already chosen in Preferences is kept.
+- Toolbar tooltips in both editors describe the function and give the shortcut and the alias to type, from one
+  shared table.
+
 ## [1.0.1] - 2026-10-30
 
 - Corrected startup splash-screen and panel layout initialization.

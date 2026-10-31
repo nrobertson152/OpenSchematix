@@ -78,10 +78,16 @@ def _xform_anchor(anchor, rotation, mirror):
 
 
 def terminal_label_prims(c: Component, only_overridden=False):
+    """Terminal designations of a placed component: the only place they are
+    drawn, so each appears at most once. With `only_overridden` (project
+    setting off) only user overrides are drawn; otherwise every terminal whose
+    symbol definition allows it (custom pins can opt out) plus any override."""
     out = []
     dirs = c.terminal_dirs()
+    shown = {t.name: t.show for t in c.terminal_defs()}
     for name, p in c.terminals().items():
-        if only_overridden and name not in c.terminal_labels:
+        overridden = bool(c.terminal_labels.get(name))
+        if not overridden and (only_overridden or not shown.get(name, True)):
             continue
         lab = c.terminal_label(name)
         if not lab:

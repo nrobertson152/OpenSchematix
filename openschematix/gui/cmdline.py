@@ -10,17 +10,24 @@ from .widgets import IconButton, current_theme
 
 
 class CommandLine(ttk.Frame):
+    """Command line shared by the schematic editor and the symbol editor.
+
+    `app` supplies the settings (aliases, history). `host` is the window the
+    commands run in (default: the app); it must provide `runner`
+    (interact.CommandRunner), `canvas` (with escape()) and
+    `execute_input(text)`. Both editors therefore share the alias registry
+    (commands.py), Enter/Space confirmation, autocomplete and history."""
     MAX_HISTORY = 100
 
-    def __init__(self, master, app):
-        super().__init__(master, style="Surface.TFrame", padding=(8, 5, 8, 5))
+    def __init__(self, master, app, host=None, tooltip="Command line — type a command and press Enter or Space "
+                                                         "(F2: command history)", padding=(8, 5, 8, 5)):
+        super().__init__(master, style="Surface.TFrame", padding=padding)
         self.app = app
+        self.host = host if host is not None else app
         self.history: list[str] = list(app.settings.data.get("command_history", []))[-self.MAX_HISTORY:]
         self.hpos = None
         self.last_command = ""
-        self.icon = IconButton(self, "command", self.focus_entry, "Command line — type a command and press "
-                                                                   "Enter (F2: command history)", size=15,
-                               bg_key="surface", pad=3)
+        self.icon = IconButton(self, "command", self.focus_entry, tooltip, size=15, bg_key="surface", pad=3)
         self.icon.pack(side="left")
         self.prompt = ttk.Label(self, text="Command:", style="Prompt.TLabel")
         self.prompt.pack(side="left", padx=(4, 6))
@@ -39,6 +46,7 @@ class CommandLine(ttk.Frame):
         self.popup = None
         self.listbox = None
         self.suggestions = []
+        self._popup_text = None     # the text the popup's suggestions were computed for
 
     # ---------------------------------------------------------------- prompt
     def set_prompt(self, text: str):
@@ -52,14 +60,23 @@ class CommandLine(ttk.Frame):
         self.entry.icursor("end")
 
     # ---------------------------------------------------------------- input
+    def _refresh_popup(self):
+        """Suggestions are recomputed on key release; when Enter/Space/Tab
+        arrives before the last letter's release (fast typing) the popup still
+        shows the suggestions for the shorter text (e.g. "T" while "TR" is
+        typed) and accepting its first entry ran the wrong command."""
+        if self.popup is not None and self._popup_text != self.var.get():
+            self._changed()
+
     def _enter(self, _e=None):
+        self._refresh_popup()
         if self.popup is not None and self.listbox is not None and self.listbox.curselection():
             self._accept_suggestion()
         text = self.var.get()
         self.var.set("")
         self._hide_popup()
         self.hpos = None
-        self.app.execute_input(text)
+        self.host.execute_input(text)
         if text.strip():
             if not self.history or self.history[-1] != text.strip():
                 self.history.append(text.strip())
@@ -70,7 +87,7 @@ class CommandLine(ttk.Frame):
         """Space acts as Enter for command names (AutoCAD); inside text and
         coordinates it is a normal space."""
         text = self.var.get()
-        runner = self.app.runner
+        runner = self.host.runner
         if runner.active:
             from .interact import GetText
             if isinstance(runner.req, GetText):
@@ -94,8 +111,8 @@ class CommandLine(ttk.Frame):
         elif self.var.get():
             self.var.set("")
         else:
-            self.app.canvas.escape()
-            self.app.canvas.focus_set()
+            self.host.canvas.escape()
+            self.host.canvas.focus_set()
         return "break"
 
     def _hist(self, d):
@@ -117,6 +134,7 @@ class CommandLine(ttk.Frame):
         self.entry.icursor("end")
 
     def _tab(self, _e):
+        self._refresh_popup()
         if self.suggestions:
             if self.listbox is not None and not self.listbox.curselection():
                 self.listbox.selection_set(0)
@@ -140,10 +158,13 @@ class CommandLine(ttk.Frame):
         if e is not None and e.keysym in ("Up", "Down", "Return", "Escape", "Tab", "KP_Enter"):
             return
         text = self.var.get()
-        if self.app.runner.active or not text or " " in text:
+        if self.host.runner.active or not text or " " in text:
             self._hide_popup()
             return
-        self.suggestions = cmdparse.complete(text, self.app.settings["aliases"], limit=10)
+        aliases = self.app.settings["aliases"]
+        allowed = getattr(self.host, "available_commands", None)    # None = every command
+        self.suggestions = [sg for sg in cmdparse.complete(text, aliases, limit=40)
+                            if allowed is None or cmdparse.resolve(sg[0], aliases) in allowed][:10]
         if not self.suggestions:
             self._hide_popup()
             return
@@ -175,6 +196,7 @@ class CommandLine(ttk.Frame):
             self.listbox.insert("end", line)
         self.listbox.configure(height=len(self.suggestions), width=min(70, width + 2))
         self.listbox.selection_set(0)
+        self._popup_text = self.var.get()
         self.update_idletasks()
         x = self.entry.winfo_rootx()
         h = self.listbox.winfo_reqheight() + 2
@@ -191,6 +213,7 @@ class CommandLine(ttk.Frame):
         self.popup = None
         self.listbox = None
         self.suggestions = []
+        self._popup_text = None
 
     def save_history(self):
         self.app.settings.data["command_history"] = self.history[-self.MAX_HISTORY:]

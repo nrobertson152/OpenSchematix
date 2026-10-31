@@ -133,6 +133,9 @@ class Terminal:
     dir: str = "r"
     label: str = ""     # displayed identifier (defaults to name)
     ptype: str = ""     # port type, see PORT_TYPES ("" = derived from the symbol category)
+    # Whether the designation is drawn when terminal designations are shown
+    # (project setting). A user override on a placed component is always drawn.
+    show: bool = True
 
 
 @dataclass

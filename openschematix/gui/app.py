@@ -125,8 +125,9 @@ class App:
 
     def _default_size(self):
         from ..model import SHEET_SIZES_MM
+        from ..project import DEFAULT_SHEET_SIZE
         s = self.settings["default_sheet"]
-        return s if s in SHEET_SIZES_MM else "A3"
+        return s if s in SHEET_SIZES_MM else DEFAULT_SHEET_SIZE
 
     # ================================================================ construction
     def _load_icon(self):
@@ -488,77 +489,78 @@ class App:
     def _build_toolbar(self):
         tb = self.toolbar
         self.tool_buttons = {}
+        # (button, description, keymap action or None, command-line command or None)
         self.tips = []
 
-        def btn(icon, cmd, tip, action=None, checkable=False, key=None):
+        def btn(icon, cmd, tip, action=None, checkable=False, key=None, command=None, side="left"):
             b = IconButton(tb, icon, cmd, tip, checkable=checkable)
-            b.pack(side="left", padx=1)
-            self.tips.append((b, tip, action))
+            b.pack(side=side, padx=1)
+            self.tips.append((b, tip, action, command))
             if key:
                 self.tool_buttons[key] = b
             return b
 
         def sep():
             ToolbarSeparator(tb).pack(side="left", padx=7, pady=3)
-        btn("new", self.new, "New project", "new")
-        btn("open", self.open, "Open project or drawing", "open")
-        btn("save", self.save, "Save", "save")
+        btn("new", self.new, "New project", "new", command="NEW")
+        btn("open", self.open, "Open a project or drawing", "open", command="OPEN")
+        btn("save", self.save, "Save the project", "save", command="SAVE")
         sep()
-        self.undo_btn = btn("undo", self.undo, "Undo", "undo")
-        self.redo_btn = btn("redo", self.redo, "Redo", "redo")
+        self.undo_btn = btn("undo", self.undo, "Undo the last change", "undo", command="UNDO")
+        self.redo_btn = btn("redo", self.redo, "Redo the last undone change", "redo", command="REDO")
         sep()
-        btn("select", lambda: self.canvas.set_tool("select"), "Select and move (Esc)", checkable=True, key="select")
-        btn("wire", lambda: self.canvas.set_tool("wire"), "Wire (W) — click terminals and bend points",
-            checkable=True, key="wire")
-        for icon, name, tip in (("line", "LINE", "Line (L)"), ("polyline", "PLINE", "Polyline (PL)"),
-                                ("rect", "RECTANGLE", "Rectangle (REC)"), ("circle", "CIRCLE", "Circle (C)"),
-                                ("arc", "ARC", "Arc (A)"), ("text", "TEXT", "Text (T)")):
-            btn(icon, lambda n=name: self.run_command(n), tip, checkable=True, key=name)
+        btn("select", lambda: self.canvas.set_tool("select"), "Select and move objects (Esc)", checkable=True,
+            key="select")
+        btn("wire", lambda: self.canvas.set_tool("wire"), "Draw wires: click terminals and bend points",
+            checkable=True, key="wire", command="WIRE")
+        for icon, name in (("line", "LINE"), ("polyline", "PLINE"), ("rect", "RECTANGLE"), ("circle", "CIRCLE"),
+                           ("arc", "ARC"), ("text", "TEXT")):
+            btn(icon, lambda n=name: self.run_command(n), cadcmds.TOOL_TIPS[name], checkable=True, key=name,
+                command=name)
         sep()
-        for icon, name, tip in (("move", "MOVE", "Move (M)"), ("copy", "COPY", "Copy (CO)"),
-                                ("rotate", "ROTATE", "Rotate (RO)"), ("mirror", "MIRROR", "Mirror (MI)"),
-                                ("scale", "SCALE", "Scale (SC)"), ("trim", "TRIM", "Trim (TR)"),
-                                ("extend", "EXTEND", "Extend (EX)")):
-            btn(icon, lambda n=name: self.run_command(n), tip, checkable=True, key=name)
-        btn("delete", self.delete, "Delete selection", "delete")
+        for icon, name in (("move", "MOVE"), ("copy", "COPY"), ("rotate", "ROTATE"), ("mirror", "MIRROR"),
+                           ("scale", "SCALE"), ("trim", "TRIM"), ("extend", "EXTEND")):
+            btn(icon, lambda n=name: self.run_command(n), cadcmds.TOOL_TIPS[name], checkable=True, key=name,
+                command=name)
+        btn("delete", self.delete, "Delete the selection", "delete", command="ERASE")
         sep()
-        btn("connect", lambda: self.run_command("CONNECT"), "Connect crossing wires (CW)", checkable=True,
-            key="CONNECT")
-        btn("bridge", lambda: self.run_command("DISCONNECT"), "Remove a junction (DW)", checkable=True,
-            key="DISCONNECT")
-        btn("wire_number", self.wire_number_dialog, "Wire numbers…")
+        btn("connect", lambda: self.run_command("CONNECT"), "Connect crossing wires with a junction",
+            checkable=True, key="CONNECT", command="CONNECT")
+        btn("bridge", lambda: self.run_command("DISCONNECT"), "Remove a junction", checkable=True,
+            key="DISCONNECT", command="DISCONNECT")
+        btn("wire_number", self.wire_number_dialog, "Wire numbers…", command="WIRENUMBER")
         sep()
         btn("zoom_in", lambda: self.canvas.zoom_by(1.25), "Zoom in (+)")
         btn("zoom_out", lambda: self.canvas.zoom_by(0.8), "Zoom out (-)")
-        btn("zoom_fit", self.canvas_fit_drawing, "Zoom to drawing", "zoom_extents")
+        btn("zoom_fit", self.canvas_fit_drawing, "Zoom to the whole drawing", "zoom_extents")
         sep()
-        btn("search", lambda: self.show_search(), "Search project", "find")
-        btn("check", self.run_check, "Check drawing", "check")
-        btn("bom", self.open_bom, "Bill of materials", "bom")
-        btn("revision", self.open_revisions, "Revision history")
-        btn("pdf", lambda: self.export_pdf_dialog(), "Export PDF", "export_pdf")
+        btn("search", lambda: self.show_search(), "Search the project", "find", command="SEARCH")
+        btn("check", self.run_check, "Check the drawing for errors", "check", command="CHECK")
+        btn("bom", self.open_bom, "Bill of materials", "bom", command="BOM")
+        btn("revision", self.open_revisions, "Revision history", command="REVISION")
+        btn("pdf", lambda: self.export_pdf_dialog(), "Export PDF…", "export_pdf")
         # right side: panel toggles and settings
         self.panel_buttons = {}
-        for side, icon, tip in (("right", "properties", "Show / hide the properties sidebar"),
-                                ("bottom", "command", "Show / hide the bottom panel"),
-                                ("left", "library", "Show / hide the left sidebar")):
-            b = IconButton(tb, icon, lambda s=side: self.toggle_panel(s), tip, checkable=True)
+        for side, icon, tip, action in (("right", "properties", "Show / hide the properties sidebar", "properties"),
+                                        ("bottom", "command", "Show / hide the bottom panel", None),
+                                        ("left", "library", "Show / hide the left sidebar", None)):
+            b = btn(icon, lambda s=side: self.toggle_panel(s), tip, action, checkable=True, side="right")
             b.set_checked(True)
-            b.pack(side="right", padx=1)
             self.panel_buttons[side] = b
         ToolbarSeparator(tb).pack(side="right", padx=7, pady=3)
-        b = IconButton(tb, "settings", self.preferences, "Preferences")
-        b.pack(side="right", padx=1)
-        self.tips.append((b, "Preferences", "preferences"))
-        b = IconButton(tb, "theme", self.cycle_theme, "Switch theme")
-        b.pack(side="right", padx=1)
+        btn("settings", self.preferences, "Preferences", "preferences", command="PREFERENCES", side="right")
+        btn("theme", self.cycle_theme, "Switch to the next colour theme", side="right")
         self._rebuild_toolbar_tips()
 
     def _rebuild_toolbar_tips(self):
-        for b, tip, action in self.tips:
+        """(Re)write toolbar tooltips with the current shortcuts and aliases."""
+        aliases = self.settings["aliases"]
+        for b, tip, action, command in self.tips:
             acc = self.keymap.accel(action) if action else ""
-            if b.tip is not None:
-                b.tip.set(f"{tip}  ({acc})" if acc else tip)
+            if command:
+                b.set_tooltip(cmdparse.tooltip(command, acc, aliases, summary=tip))
+            else:
+                b.set_tooltip(f"{tip} ({acc})" if acc else tip)
 
     # ---------------------------------------------------------------- status bar
     def _build_status(self):

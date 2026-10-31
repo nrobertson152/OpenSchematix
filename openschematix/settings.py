@@ -21,7 +21,7 @@ DEFAULTS = {
     "recent_files": [],
     "last_dir": "",
     "geometry": "",
-    "default_sheet": "A3",
+    "default_sheet": "ANSI A",       # new drawings: 8.5 x 11 in (a saved choice is kept)
     "autosave_minutes": 5,          # 0 = off
     "recent_symbols": [],
     "favorite_symbols": [],
