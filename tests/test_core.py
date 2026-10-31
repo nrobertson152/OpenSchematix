@@ -151,35 +151,10 @@ def test_load_drops_dangling_wire_refs():
     assert doc.wires[5].start is None and doc.next_id == 6
 
 
-def test_migrate_legacy_hps_file():
-    legacy = {
-        "format": "HPS Schematix", "version": "1.2.0",
-        "components": [
-            {"id": 1, "type": "Pump", "category": "Hydraulic", "x": 100, "y": 100, "tag": "PU-1", "label": "", "rotation": 0},
-            {"id": 2, "type": "Relief Valve", "category": "Hydraulic", "x": 200, "y": 100, "tag": "RE-2", "label": "200 bar", "rotation": 45},
-            {"id": 3, "type": "Custom Directional Valve", "category": "Hydraulic", "x": 300, "y": 200, "tag": "V-3",
-             "label": "x", "rotation": 0, "valve": {"positions": ["straight", "closed", "cross"], "left": "lever", "right": "spring"}},
-            {"id": 4, "type": "Custom Drawn Symbol", "category": "Custom", "x": 400, "y": 200, "tag": "X-4", "label": "thing",
-             "rotation": 0, "drawing": {"shapes": [], "ports": []}},
-            {"id": 5, "type": "Resistor", "category": "Electrical", "x": 500, "y": 300, "tag": "RE-5", "label": "", "rotation": 90},
-        ],
-        "connections": [{"a": 1, "b": 2, "ap": "P", "bp": "P"}, {"a": 2, "b": 3}, {"a": 1, "b": 99}],
-    }
-    res = fileio.load_data(legacy)
-    doc = res.document
-    assert res.migrated
-    syms = sorted(c.symbol for c in doc.components.values())
-    assert syms == sorted(["fl.hyd.pump", "fl.hyd.relief", "fl.hyd.dcv", "gen.unknown", "el.resistor.iec"])
-    relief = next(c for c in doc.components.values() if c.symbol == "fl.hyd.relief")
-    assert relief.rotation == 0 and relief.designator == "RE-2" and relief.label == "200 bar"
-    dcv = next(c for c in doc.components.values() if c.symbol == "fl.hyd.dcv")
-    assert dcv.params["positions"] == ["parallel", "closed", "crossed"] and dcv.params["left"] == ["spring", "lever"]
-    assert len(doc.wires) == 2
-    for w in doc.wires.values():
-        assert is_orthogonal(w.points)
-        assert same(doc.terminal_pos(w.start), w.points[0]) and same(doc.terminal_pos(w.end), w.points[-1])
-    assert any("Custom drawn" in m for m in res.warnings)
-    assert any("missing component" in m for m in res.warnings)
+def test_rejects_unsupported_legacy_format():
+    import pytest
+    with pytest.raises(fileio.FileFormatError, match="Not an OpenSchematix file"):
+        fileio.load_data({"format": "Unsupported legacy format", "components": [], "connections": []})
 
 
 # ---------------------------------------------------------------- editing
