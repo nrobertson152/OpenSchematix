@@ -2525,17 +2525,21 @@ def main(argv=None):
     splash = _startup_splash(root)
     started_at = time.monotonic()
     try:
-        App(root, argv[0] if argv else None)
+        app = App(root, argv[0] if argv else None)
     except BaseException:
         splash.destroy()
         root.destroy()
         raise
     # Never delay initialization itself: only keep the splash visible for
     # the remainder of the two-second minimum, then reveal the workspace.
-    remaining_ms = max(0, int(2000 - (__import__("time").monotonic() - started_at) * 1000))
+    remaining_ms = max(0, int(2000 - (time.monotonic() - started_at) * 1000))
     def reveal_workspace():
-        splash.destroy()
         root.deiconify()
+        root.update_idletasks()
+        # Restoring sash positions while the root is withdrawn sees a 1px
+        # pane and can make Properties cover the entire workspace.
+        root.after(100, lambda: app._restore_layout())
+        splash.destroy()
     root.after(remaining_ms, reveal_workspace)
     root.mainloop()
     return 0
