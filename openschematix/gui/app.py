@@ -1841,14 +1841,23 @@ class App:
         self.set_selection({i for i in self.doc.all_ids() if self.doc.item(i).layer == name})
 
     # ---------------------------------------------------------------- symbols / templates
-    def open_symbol_editor(self, doc=None, folder=None, from_builtin=None):
+    def open_symbol_editor(self, doc=None, folder=None, from_builtin=None, copy_of=None, params=None):
+        """Open the symbol editor: empty, on a custom symbol `doc` (edited in
+        place), or on an editable copy of any symbol `copy_of` (built-in,
+        library or project; `params` = variant of a parametric symbol)."""
         from .symbol_editor import SymbolEditor
         if not self.userlib.folders():
             try:
                 self.userlib.create_folder("", "My symbols")
             except OSError:
                 pass
-        SymbolEditor(self, doc=doc, folder=folder, from_builtin=from_builtin)
+        return SymbolEditor(self, doc=doc, folder=folder, copy_of=copy_of or from_builtin, params=params)
+
+    def edit_symbol_copy(self, sid, params=None):
+        """Open any symbol as an editable copy; the original is never changed."""
+        if symbols.get(sid) is None:
+            return None
+        return self.open_symbol_editor(copy_of=sid, params=params)
 
     def edit_custom_symbol(self, sid):
         sd = symbols.get(sid)
@@ -2118,9 +2127,10 @@ class App:
                 m.add_command(label="Configure valve…", command=lambda: self.configure_valve(one.id))
             if sd is not None and sd.is_custom:
                 m.add_command(label="Edit symbol…", command=lambda: self.edit_custom_symbol(one.symbol))
-            elif sd is not None:
-                m.add_command(label="Copy symbol to my library and edit…",
-                              command=lambda: self.open_symbol_editor(from_builtin=one.symbol))
+            if sd is not None:
+                # a configured valve opens as configured (its params)
+                m.add_command(label="Edit a copy of the symbol…",
+                              command=lambda: self.edit_symbol_copy(one.symbol, dict(one.params) or None))
             m.add_command(label="Replace symbol…", command=lambda: self.replace_symbol([one]))
             m.add_command(label="Find in project", command=lambda: self.show_search(one.designator)
                           if one.designator else None)

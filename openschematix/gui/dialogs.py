@@ -21,12 +21,15 @@ from .widgets import SearchEntry, Tooltip, current_theme  # noqa: F401  (Tooltip
 
 
 class Dialog(tk.Toplevel):
-    def __init__(self, app, title, resizable=False):
-        super().__init__(app.root)
+    def __init__(self, app, title, resizable=False, parent=None):
+        # parent: window the dialog belongs to (default: the main window), e.g.
+        # the symbol editor, so the dialog stays above it and is centred on it.
+        self.parent = parent if parent is not None else app.root
+        super().__init__(self.parent)
         self.app = app
         self.title(title)
         self.configure(bg=app.theme.ui["surface"])
-        self.transient(app.root)
+        self.transient(self.parent)
         self.resizable(resizable, resizable)
         self.bind("<Escape>", lambda e: self.cancel())
         self.protocol("WM_DELETE_WINDOW", self.cancel)
@@ -56,7 +59,7 @@ class Dialog(tk.Toplevel):
 
     def show_modal(self, wait=False):
         self.update_idletasks()
-        r = self.app.root
+        r = self.parent
         x = r.winfo_rootx() + (r.winfo_width() - self.winfo_reqwidth()) // 2
         y = r.winfo_rooty() + (r.winfo_height() - self.winfo_reqheight()) // 3
         self.geometry(f"+{max(0, x)}+{max(0, y)}")
@@ -380,8 +383,8 @@ class ChoiceDialog(Dialog):
 
 
 class SymbolPickerDialog(Dialog):
-    def __init__(self, app, title="Choose a symbol"):
-        super().__init__(app, title, resizable=True)
+    def __init__(self, app, title="Choose a symbol", parent=None, ok_text="Choose"):
+        super().__init__(app, title, resizable=True, parent=parent)
         self.search = SearchEntry(self.frame, "Search symbols", on_change=lambda q: self._fill())
         self.search.pack(fill="x")
         self.tree = ttk.Treeview(self.frame, columns=("cat",), show="tree headings", height=14)
@@ -391,14 +394,15 @@ class SymbolPickerDialog(Dialog):
         self.tree.pack(fill="both", expand=True, pady=6)
         self.tree.bind("<Double-1>", lambda e: self.ok())
         self._fill()
-        self.buttons("Choose")
+        self.buttons(ok_text)
         self.show_modal(wait=True)
 
     def _fill(self):
         self.tree.delete(*self.tree.get_children())
         for s in symbols.search(self.search.get()):
             if s.group != "Internal":
-                self.tree.insert("", "end", s.id, text=s.name, values=(f"{s.category} · {s.convention}",))
+                kind = " · custom" if s.is_custom else ""
+                self.tree.insert("", "end", s.id, text=s.name, values=(f"{s.category} · {s.convention}{kind}",))
 
     def ok(self):
         sel = self.tree.selection()
