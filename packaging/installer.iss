@@ -1,7 +1,7 @@
 ; Inno Setup 6 script for OpenSchematix (Windows x64).
 ; Run packaging\build_windows.bat first; it compiles this script if ISCC is on PATH.
 #define MyAppName "OpenSchematix"
-#define MyAppVersion "1.0.0"
+#define MyAppVersion "1.0.1"
 #define MyAppPublisher "Nate Robertson"
 #define MyAppURL "https://ko-fi.com/nr270343"
 #define MyAppExeName "OpenSchematix.exe"
