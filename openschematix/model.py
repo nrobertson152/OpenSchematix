@@ -328,11 +328,11 @@ class Shape:
         s.locked = bool(d.get("locked", False))
         s.group = str(d.get("group", "") or "")
         if kind in ("line", "polyline"):
-            s.arrow_start = bool(d.get("arrow_start", False))
-            s.arrow_end = bool(d.get("arrow_end", False))
+            s.arrow_start = d.get("arrow_start") is True
+            s.arrow_end = d.get("arrow_end") is True
             try:
                 arrow_size = float(d.get("arrow_size", 10.0))
-                if not math.isfinite(arrow_size) or not 0 < arrow_size <= 10000:
+                if isinstance(d.get("arrow_size"), bool) or not math.isfinite(arrow_size) or not 0 < arrow_size <= 10000:
                     arrow_size = 10.0
             except (TypeError, ValueError, OverflowError):
                 arrow_size = 10.0
