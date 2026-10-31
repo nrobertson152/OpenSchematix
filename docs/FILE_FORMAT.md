@@ -95,3 +95,12 @@ and only then renamed over the existing file. An interrupted save leaves the pre
 A single JSON document `{"format": "OpenSchematix", "schema": 1, "sheet": {…}, "components": […],
 "wires": […]}`; the same component and wire objects as above without the newer fields. OpenSchematix opens it as a
 one-sheet project (title-block fields move to the project metadata) and can export a sheet as schema 2.
+
+## Drafting line arrowheads
+
+Drawing `Shape` records with `kind: "line"` or `kind: "polyline"` may include optional
+`arrow_start` and `arrow_end` booleans, and `arrow_size` (positive finite drawing units).
+The defaults are `false`, `false`, and `10` units (2.5 mm). Malformed sizes fall back to 10;
+unknown fields are ignored by older readers. Arrowhead settings are omitted when no arrows
+are enabled. Custom symbol `line` primitives use the same optional fields; their arrowheads
+are rendered as filled vector triangles.
