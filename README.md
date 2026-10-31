@@ -24,6 +24,10 @@ feature limits. If you find it useful you can optionally [support development on
   and an **AutoCAD-style command line** with autocomplete, history and typed coordinates.
 - **Drafting tools**: line, polyline, rectangle, circle, arc and text; move, copy, rotate, mirror, scale,
   TRIM and EXTEND; grid snap, object snap (end, mid, centre, quadrant, intersection, terminal) and ortho.
+- **Boundary fill** (`FILL` / `HATCH`): click inside any area enclosed by lines, polylines, polygons,
+  rectangles, circles and arcs — including boundaries made of crossing or partial segments — to fill it solid.
+  Islands inside the area stay open as holes; open boundaries are refused (an optional gap tolerance closes
+  small openings). Fills are exact vector regions (arcs stay arcs) and export to SVG, PDF and DXF.
 - **Custom symbols**: a symbol editor with named, numbered and typed connection points, saved in your own
   **symbol libraries** (folders, tags, search, drag and drop) and shared as `.osymlib` packages. Any existing
   symbol, built-in included, can be opened as an editable copy and saved as a new variant.
@@ -167,6 +171,8 @@ openschematix/
   projectio.py      .schematix container, legacy drawing migration, atomic saving
   editing.py        editing operations, router, crossings/junctions, scaling, align (pure functions)
   shapes.py         CAD geometry: transforms, object snap, intersections, TRIM, EXTEND
+  boundary_fill.py  FILL/HATCH boundary detection (planar arrangement of lines and arcs, holes)
+  regions.py        vector regions with straight and arc edges (area, containment, export helpers)
   connectivity.py   junction dots and unconnected ends on one sheet
   netlist.py        project-wide nets, wire numbering, connection/wire/terminal reports, CSV
   render.py         one scene builder for screen, PDF, SVG and DXF

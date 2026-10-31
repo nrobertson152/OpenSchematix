@@ -15,6 +15,11 @@ this check when ezdxf is available.
 * Content: frame and title block (layer `FRAME`), wires (`Wires`), symbols exploded into lines, polylines,
   circles and solids on their OpenSchematix layer, text as TEXT entities with alignment, filled dots as
   donuts, dashed lines with the `DASHED` linetype. Layer names are made DXF-safe (spaces become `_`).
+* Boundary fills (`FILL` / `HATCH`): R12 has no HATCH entity, so each fill is written as one block
+  (`OSX_FILL_<n>`, inserted once at the origin on the fill's layer) made of SOLID trapezoids that tile the
+  region exactly, holes left open. Straight edges are exact; arc edges are approximated with a chord error of
+  at most 0.005 mm. In CAD the fill selects as one object and can be exploded into its SOLIDs. Some
+  anti-aliased viewers show hairline seams between the SOLIDs on screen; printed output is unaffected.
 * Not exported: symbol identities as blocks/attributes (everything is exploded geometry), screen-only markers.
 
 ## Import (*File ▸ Import ▸ DXF drawing*)
@@ -49,3 +54,5 @@ Reads ASCII DXF of any version (R12 to 2018 and later).
 * Paper-space layouts and viewports are ignored; only model space is imported.
 * Text fonts are not carried over (OpenSchematix uses Helvetica/Arial-style fonts).
 * Very large drawings (more than 200 000 entities) are refused to keep the editor responsive.
+* Exported fills are SOLID blocks, not associative HATCH entities (R12 limitation); imported HATCH entities
+  are skipped.

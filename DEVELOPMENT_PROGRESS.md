@@ -1,7 +1,8 @@
 # OpenSchematix - Development Progress
 
-_Last updated: 2026-10-31 (session 5: Phase 1 merged into main; Phase 2 item 6 (import/explode symbols) complete on
-branch `phase2-symbol-import-explode`, not merged). Read this first when resuming development._
+_Last updated: 2026-10-31 (session 6: boundary fill (FILL/HATCH) implemented and tested on branch
+`feature/boundary-fill`, draft PR #4, not merged. Session 5: Phase 2 item 6 (import/explode symbols)). Read this
+first when resuming development._
 
 ## Release / branding
 
@@ -88,6 +89,65 @@ Next action: Phase 2, item 5 (line-end arrows) — only after authorisation.
   polyline; only the two parametric valves take `params`; copying does not replace placed components
   automatically (use *Replace symbol*; wires on matching terminal ids stay connected).
 - **Next action:** wait for authorisation (Phase 3 localisation, or merging item 5 from the other branch).
+
+### Boundary fill — FILL / HATCH (done, session 6, branch `feature/boundary-fill`, PR #4)
+
+The owner's brief calls this "Phase 3: Boundary Fill"; the earlier specification above listed localisation as
+Phase 3 — the numbering is for the owner to reconcile. The draft on the branch (closed-contour chaining that
+rejected intersections and holes, fills stored as plain polygons, a failing test) was replaced.
+
+- **Engine (`boundary_fill.py`, GUI independent):** planar arrangement. Shapes → elementary edges (segments,
+  arcs ≤ 90°, world angles = −screen angles); pairwise intersections via sort-and-sweep on bounding boxes
+  (segment/segment, segment/circle and circle/circle with tangency tolerance, plus "end point on edge" for
+  T-junctions, overlaps and near misses); points within `SNAP_TOL` = 0.01 units (0.0025 mm) merged by grid
+  hashing; edges split at vertices, identical pieces deduplicated (shared edges, duplicates, co-circular
+  overlaps); dangling pieces pruned; half-edges sorted by tangent angle with curvature tie-break; faces traced
+  "next clockwise" (bounded faces positive area). Pick = smallest bounded face containing the point; edges walked
+  on both sides of the face (bridges) dropped so joined islands become separate rings; other connected
+  components inside the face become holes unless nested in another such component. Rings simplified (collinear
+  segments / co-circular arcs ≤ 180° merged). Rejects: no geometry, point outside all faces (open boundary),
+  point within `SNAP_TOL` of an edge, degenerate area. Optional gap tolerance (≤ 40 units / 10 mm) adds straight
+  bridges from open ends to the nearest open end or edge, then re-runs the arrangement.
+- **Regions (`regions.py`):** rings of `(x, y, bulge)` (DXF bulge convention in world coordinates, |b| ≤ 1);
+  exact signed area (shoelace + circular segments), exact even-odd containment (arcs split into y-monotone
+  pieces), bbox, boundary distance, flattening by chord tolerance, arc splitting, transforms (mirror negates
+  bulges), validation (`clean_rings`), slab trapezoid decomposition for DXF SOLIDs.
+- **Model / format:** `Shape(kind="hatch", rings=…)`; `to_dict` writes `rings` (bulge omitted when 0), no
+  width/dash/fill. `SHEET_SCHEMA = FILE_SCHEMA = 3`; `Document.required_schema()` returns 3 only when the sheet
+  has fills, `projectio.write_zip` writes the max over sheets → files without fills stay schema 2 (1.0.x
+  compatible). Revision snapshots are not considered (a 1.0.x reader could open a fill-free project whose old
+  revisions contain fills and fail only when restoring that revision).
+- **Shapes:** bbox, prims (`{"k": "region", "rings", "fill": True}`), move/rotate/scale/mirror, hit distance
+  (0 inside, distance to boundary outside / in holes), snap/grip points at vertices, not a TRIM/EXTEND edge,
+  `trim()` returns None. `render.scene` draws fills before other shapes; `editing.hit_test` tests fills last
+  (after components) and prefers the smallest fill.
+- **Output:** canvas = one Tk polygon per fill with keyhole cuts (holes oriented opposite → same result under
+  even-odd and non-zero), chord error ⅓ px; SVG = `<path fill-rule="evenodd">` with `A` arcs; PDF = path with
+  Bézier arcs + `f*`; DXF R12 = per fill a block `OSX_FILL_n` of SOLID trapezoids + INSERT on the fill's layer
+  (arc chord error 0.005 mm). `paper_items` scales `rings`; `prim_bbox` handles `region`.
+- **GUI:** `cadcmds.cmd_fill` loop (Enter finishes, keyword Gap → `GetNumber` mm stored in setting
+  `fill_gap_mm`), `GetPoint(osnap=False, snap_grid=False)` (new `osnap` field honoured by
+  `SchematicCanvas.resolve_point`); host hook `App.fill_boundary_shapes()` = drafting shapes on visible layers
+  except text/fills (wires and symbols are deliberately not boundaries); toolbar button (new `fill` icon), Draw
+  menu entry, aliases HATCH/H; inspector shows area/holes/extent and hides line style for fills; FILL excluded
+  from the symbol editor (`EDITOR_COMMANDS`), `shape_to_symbol_prim` degrades a fill to a filled outer polygon
+  defensively.
+- **Files:** `boundary_fill.py` (rewritten), `regions.py` (new), `model.py`, `__init__.py`, `projectio.py`,
+  `shapes.py`, `render.py`, `editing.py`, `export.py`, `dxf.py`, `symbols/base.py`, `settings.py`, `commands.py`,
+  `gui/cadcmds.py`, `gui/canvas_view.py`, `gui/interact.py`, `gui/app.py`, `gui/inspector.py`, `gui/icons.py`,
+  `gui/symbol_editor.py`, `tests/test_boundary_fill.py` (rewritten, 67 tests), `tests/gui_smoke.py` (+31
+  checks), docs (`BOUNDARY_FILL.md` new, `FILE_FORMAT.md`, `DXF.md`, `COMMANDS.md` regenerated), README,
+  CHANGELOG.
+- **Tests (session 6, Python 3.13 / Tk 9.0, ezdxf 1.4.6b0 from source, pypdf, pypdfium2):** `pytest` **421
+  passed, 0 skipped**; `tests/gui_smoke.py` under Xvfb **165/165 ok** (main: 354 / 134). Exports checked on real
+  files: SVG rendered in Chromium, PDF rasterised with pdfium (fill black, hole white), DXF audited and rendered
+  with ezdxf (SOLID area = region area within 3·10⁻⁴); randomised consistency test (any interior pick of a found
+  region finds the same region; exact area = finely flattened area).
+- **Limitations:** solid fills only; not associative; fixed "outer" island rule; DXF fills are SOLID blocks (R12
+  has no HATCH; some anti-aliased viewers show hairline seams); imported DXF HATCH still skipped and our
+  exported fill blocks re-import as many filled polygons; boundary search is global per pick (≈0.2 s for 3 300
+  sparse objects, seconds for thousands of densely crossing ones).
+- **Next action:** owner review of PR #4; do not merge without authorisation.
 
 ## Status summary
 

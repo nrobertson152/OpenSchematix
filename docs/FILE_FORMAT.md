@@ -26,9 +26,13 @@ revisions/objects/<sha256>        zlib-compressed JSON snapshots, content-addres
 
 * `version` is the container layout. A reader refuses files with a higher version and tells the user to
   update; it never guesses.
-* `sheet_schema` is the schema of the sheet documents (1 = legacy `.osch`, 2 = 1.0).
-  New optional fields can be added within a schema; anything that changes the meaning of existing data
-  increments it, with a migration step in `projectio.py`.
+* `sheet_schema` is the schema of the sheet documents (1 = legacy `.osch`, 2 = 1.0, 3 = adds boundary
+  fills, see below). New optional fields can be added within a schema; anything that changes the meaning of
+  existing data increments it, with a migration step in `projectio.py`.
+* Writers record the **lowest** schema that can represent the content: a project without boundary fills is
+  still written with `sheet_schema` 2 and opens in OpenSchematix 1.0.x. As soon as any sheet contains a fill
+  the project is written as schema 3, which 1.0.x refuses with a clear "newer schema" message instead of
+  failing on an unknown object.
 
 ## project.json
 
@@ -61,10 +65,29 @@ the sheet. The snap grid is 10 units (2.5 mm); symbol terminals always lie on it
                  "in_bom": true}],
  "wires": [{"id": 7, "points": [[400, 200], [400, 260]], "start": [1, "A1"], "end": null, "style": "solid",
             "auto": false, "number": "12", "number_manual": false, "props": {"colour": "BU"}}],
- "shapes": [{"id": 9, "kind": "line|polyline|polygon|rect|circle|arc|text", "pts": [[0, 0], [10, 0]],
+ "shapes": [{"id": 9, "kind": "line|polyline|polygon|rect|circle|arc|text|hatch", "pts": [[0, 0], [10, 0]],
              "c": [0, 0], "r": 10, "start": 0, "extent": 90, "p": [0, 0], "s": "text", "size": 10,
              "anchor": "w", "angle": 0, "width": "normal", "dash": false, "fill": false}]}
 ```
+
+### Boundary fills (`"kind": "hatch"`, sheet schema 3)
+
+```json
+{"id": 12, "kind": "hatch", "layer": "Drafting",
+ "rings": [[[100, 100], [300, 100], [300, 200], [100, 200]],
+           [[230, 150, 1.0], [170, 150, 1.0]]]}
+```
+
+A solid fill made by `FILL` / `HATCH`. It is an independent object: it does not reference the lines or arcs
+that bounded it. `rings` is a list of closed boundary loops; each vertex is `[x, y]` or `[x, y, bulge]`.
+The edge from a vertex to the next one (the last vertex connects back to the first) is straight when the
+bulge is 0 or omitted, otherwise a circular arc with `bulge = tan(sweep / 4)`, the DXF convention, where
+`sweep` is the signed angle measured in sheet coordinates (Y down, so a positive bulge turns clockwise on
+screen). |bulge| ≤ 1 (arcs of at most 180°). The region is filled with the **even-odd rule**; the first ring
+is the outer boundary (positive signed area) and the following rings are holes (negative signed area). Rings
+do not cross each other. Coordinates are rounded to 6 decimals, bulges to 9. `width`, `dash` and `fill` do
+not apply to fills and are not written. A file with a malformed ring (fewer than two vertices, non-numeric
+or non-finite values, |bulge| > 1) is rejected as damaged.
 
 Optional fields equal to their defaults are omitted when writing. Object ids are unique within a sheet and
 never reused (`next_id`); together with the sheet `uid` they identify an object permanently. Wire ends
