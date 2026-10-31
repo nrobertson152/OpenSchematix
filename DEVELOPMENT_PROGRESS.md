@@ -1,14 +1,14 @@
 # OpenSchematix - Development Progress
 
-_Last updated: 2026-10-31 (session 3: rebranded as public release 1.0.0). Read this first when resuming development._
+_Last updated: 2026-10-31 (session 3: updated for public release 1.0.1). Read this first when resuming development._
 
 ## Release / branding
 
-Public release is **v1.0.0** (earlier internal versions 2.0/3.0 are not used publicly). No publisher name appears in the program; copyright holder is Nate Robertson. Source is on GitHub: https://github.com/nrobertson152/OpenSchematix
+Current public release is **v1.0.1** (earlier internal versions 2.0/3.0 are not used publicly). No publisher name appears in the program; copyright holder is Nate Robertson. Source is on GitHub: https://github.com/nrobertson152/OpenSchematix
 
 ## Status summary
 
-**Version 1.0.0 (developed internally as "3.0") is implemented and tested on Linux** (engine + GUI). All 25 sections of the brief are
+**Version 1.0.1 (originally developed internally as "3.0") is implemented and tested on Linux** (engine + GUI). All 25 sections of the brief are
 implemented; a few sub-items are deliberately limited and documented (see *Known limitations*).
 **Still to do before public release:** build and test on Windows; build the Linux bundle with a distribution
 Python whose Tk has Xft fonts (see *Packaging*); manual usability pass on real hardware.
