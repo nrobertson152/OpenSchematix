@@ -84,7 +84,6 @@ F9 snap, F5 check).
 |---|---|
 | `.schematix` | Project: all sheets, metadata, layers, embedded custom symbols and revision history (ZIP + JSON, see [`docs/FILE_FORMAT.md`](docs/FILE_FORMAT.md)) |
 | `.osch` | Legacy single-sheet drawing from development builds. Opened and converted to a project; the original is never changed |
-| `.hpss` | HPS Schematix 1.x drawing (converted on open) |
 | `.osym` / `.osymlib` | One custom symbol / a shared symbol library ([`docs/LIBRARY_FORMAT.md`](docs/LIBRARY_FORMAT.md)) |
 | `.ostpl` | Circuit template |
 | `.dxf` | AutoCAD-compatible drawing exchange (import and export, [`docs/DXF.md`](docs/DXF.md)) |
@@ -97,9 +96,9 @@ renamed over the old file, so a crash or full disk cannot damage your last saved
 writes recovery copies to a separate folder every few minutes (Preferences); it never overwrites your own
 file. After an unexpected shutdown you are offered the recovery copies on the next start.
 
-## Opening older drawings (.osch, HPS Schematix)
+## Opening older drawings (.osch)
 
-Open the `.osch` or `.hpss` file. It becomes a one-sheet project; title-block fields move to the project
+Open an older `.osch` file. It becomes a one-sheet project; title-block fields move to the project
 properties. Nothing is lost, and the original file is not modified: when you save you choose a new
 `.schematix` name. `File ▸ Export ▸ Current sheet as .osch` writes a single sheet in the legacy layout
 (older builds will refuse files that use newer content such as drawing objects or layers).
@@ -164,7 +163,7 @@ python tools/gen_symbol_docs.py       # regenerate docs/SYMBOLS.md
 openschematix/
   model.py          sheets (Document): components, wires, drafting shapes, page setup
   project.py        projects: ordered sheets, metadata, layers, embedded custom symbols
-  projectio.py      .schematix container, migration of .osch/.hpss, atomic saving
+  projectio.py      .schematix container, legacy drawing migration, atomic saving
   editing.py        editing operations, router, crossings/junctions, scaling, align (pure functions)
   shapes.py         CAD geometry: transforms, object snap, intersections, TRIM, EXTEND
   connectivity.py   junction dots and unconnected ends on one sheet
