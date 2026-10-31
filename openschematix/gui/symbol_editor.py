@@ -36,7 +36,8 @@ DIR_LABEL = {"l": "Left", "r": "Right", "u": "Up", "d": "Down"}
 EXTENT = 200     # half-size of the editing area in units (50 mm)
 # Commands that can be typed in the symbol editor (names from commands.py;
 # every alias of these, built-in or user defined, works as well).
-EDITOR_COMMANDS = frozenset(cadcmds.DRAW_COMMANDS) | {"UNDO", "REDO", "ZOOM", "SAVE", "OPEN", "HELP"}
+# Boundary fills are sheet objects only (not part of the symbol format), so FILL is not offered here.
+EDITOR_COMMANDS = (frozenset(cadcmds.DRAW_COMMANDS) - {"FILL"}) | {"UNDO", "REDO", "ZOOM", "SAVE", "OPEN", "HELP"}
 
 
 class EditorCanvas(DrawingView):

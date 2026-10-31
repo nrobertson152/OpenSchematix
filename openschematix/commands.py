@@ -29,7 +29,8 @@ class CommandDef:
 
 COMMANDS = [
     # drafting
-    CommandDef("FILL", ("HATCH",), "Fill a closed region", "FILL  then click inside a closed boundary", "Draw"),
+    CommandDef("FILL", ("HATCH", "H"), "Fill closed areas solid (boundary fill)",
+               "FILL  then click inside closed areas (Enter to finish); G sets the gap tolerance", "Draw"),
     CommandDef("LINE", ("L",), "Draw lines", "LINE  then pick points (Enter to finish)", "Draw"),
     CommandDef("PLINE", ("PL",), "Draw a polyline", "PLINE  then pick points; C closes", "Draw"),
     CommandDef("RECTANGLE", ("REC", "RECT"), "Draw a rectangle", "RECTANGLE  then two corners", "Draw"),

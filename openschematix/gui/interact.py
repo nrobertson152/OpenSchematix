@@ -37,6 +37,7 @@ class GetPoint(Request):
     preview: Optional[Callable] = None        # fn(point) -> list of scene prims
     allow_enter: bool = False                 # Enter/right-click answers None
     snap_grid: Optional[bool] = None          # None = user setting
+    osnap: Optional[bool] = None              # None = user setting; False = never snap to objects
 
 
 @dataclass

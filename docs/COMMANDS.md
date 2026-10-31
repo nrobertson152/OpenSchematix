@@ -17,6 +17,7 @@ Type a command or alias anywhere on the drawing (the letters go to the command l
 
 | Command | Aliases | Description | Usage |
 |---|---|---|---|
+| `FILL` | `HATCH`, `H` | Fill closed areas solid (boundary fill) | `FILL  then click inside closed areas (Enter to finish); G sets the gap tolerance` |
 | `LINE` | `L` | Draw lines | `LINE  then pick points (Enter to finish)` |
 | `PLINE` | `PL` | Draw a polyline | `PLINE  then pick points; C closes` |
 | `RECTANGLE` | `REC`, `RECT` | Draw a rectangle | `RECTANGLE  then two corners` |
@@ -134,7 +135,7 @@ Type a command or alias anywhere on the drawing (the letters go to the command l
 
 The symbol editor uses the same command line: the same aliases (including your own), Enter or Space to run a command, Enter or Space on the drawing to finish the running command or repeat the last one, and autocomplete. These commands are available there:
 
-`LINE` (`L`), `PLINE` (`PL`), `RECTANGLE` (`REC`, `RECT`), `CIRCLE` (`C`), `ARC` (`A`), `TEXT` (`T`, `DT`), `MOVE` (`M`), `COPY` (`CO`, `CP`), `ROTATE` (`RO`), `MIRROR` (`MI`), `SCALE` (`SC`), `TRIM` (`TR`), `EXTEND` (`EX`), `ERASE` (`E`, `DEL`), `UNDO` (`U`), `REDO`, `ZOOM` (`Z`), `SAVE` (`QSAVE`), `HELP` (`?`)
+`LINE` (`L`), `PLINE` (`PL`), `RECTANGLE` (`REC`, `RECT`), `CIRCLE` (`C`), `ARC` (`A`), `TEXT` (`T`, `DT`), `MOVE` (`M`), `COPY` (`CO`, `CP`), `ROTATE` (`RO`), `MIRROR` (`MI`), `SCALE` (`SC`), `TRIM` (`TR`), `EXTEND` (`EX`), `ERASE` (`E`, `DEL`), `UNDO` (`U`), `REDO`, `ZOOM` (`Z`), `OPEN`, `SAVE` (`QSAVE`), `HELP` (`?`)
 
 ## Keyboard shortcuts
 

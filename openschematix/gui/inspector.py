@@ -314,9 +314,18 @@ class Inspector(ttk.Frame):
         app = self.app
         one = shapes[0] if len(shapes) == 1 else None
         sec = self.section("Style")
-        self.combo(sec, "Line width", _common(shapes, lambda s: s.width), ("thin", "normal", "thick"),
-                   lambda v: app.edit_objects(shapes, width=v), ["Thin 0.25 mm", "Normal 0.35 mm", "Thick 0.55 mm"])
-        self.check(sec, "Dashed", _common(shapes, lambda s: s.dash), lambda v: app.edit_objects(shapes, dash=v))
+        strokes = [s for s in shapes if s.kind != "hatch"]       # boundary fills have no outline
+        if strokes:
+            self.combo(sec, "Line width", _common(strokes, lambda s: s.width), ("thin", "normal", "thick"),
+                       lambda v: app.edit_objects(strokes, width=v),
+                       ["Thin 0.25 mm", "Normal 0.35 mm", "Thick 0.55 mm"])
+            self.check(sec, "Dashed", _common(strokes, lambda s: s.dash), lambda v: app.edit_objects(strokes, dash=v))
+        fills = [s for s in shapes if s.kind == "hatch"]
+        if fills:
+            from ..regions import region_area
+            area = sum(abs(region_area(s.rings)) for s in fills) * UNIT_MM * UNIT_MM
+            holes = sum(max(0, len(s.rings) - 1) for s in fills)
+            self.note(sec, f"Solid fill: {len(fills)} object(s), {area:.2f} mm², {holes} hole(s)", "Surface.TLabel")
         if all(s.kind in ("polygon", "rect", "circle") for s in shapes):
             self.check(sec, "Filled", _common(shapes, lambda s: s.fill), lambda v: app.edit_objects(shapes, fill=v))
         arrow_shapes = [s for s in shapes if s.kind in ("line", "polyline")]
@@ -357,6 +366,15 @@ class Inspector(ttk.Frame):
                                lambda v: self._num(v, lambda f: app.edit_objects([one], start=f % 360)))
                     self.entry(sec, "Sweep °", f"{one.extent:g}",
                                lambda v: self._num(v, lambda f: app.edit_objects([one], extent=f)))
+            elif one.kind == "hatch":
+                from ..regions import region_area, rings_bbox
+                b = rings_bbox(one.rings)
+                (x0, y0), (x1, y1) = app.to_user((b[0], b[3])), app.to_user((b[2], b[1]))
+                arcs = sum(1 for r in one.rings for v in r if v[2])
+                self.note(sec, f"Fill · {len(one.rings)} boundary ring(s) ({len(one.rings) - 1} hole(s)) · "
+                               f"{sum(len(r) for r in one.rings)} vertices, {arcs} arc edge(s)\n"
+                               f"Area {abs(region_area(one.rings)) * UNIT_MM * UNIT_MM:.2f} mm² · "
+                               f"extent ({x0:g}, {y0:g}) – ({x1:g}, {y1:g}) mm", "Surface.TLabel")
             else:
                 import math
                 length = sum(math.hypot(b[0] - a[0], b[1] - a[1]) for a, b in zip(one.pts, one.pts[1:]))
