@@ -7,13 +7,55 @@ Rules (common schematic practice):
     passes over a terminal is not connected to it (same rule as KiCad).
   * Two wires that merely cross are NOT connected.
   * A junction dot is drawn where three or more branches meet.
+
+Performance (spatial index)
+---------------------------
+For every wire end point and corner, the analysis counts the wires that end
+at or pass through that point. Testing every wire for every point is
+O(P * S) (P points, S segments), i.e. quadratic in drawing size. A
+`_WireIndex` built once per call narrows the wires examined for each point:
+
+  * The plane is divided into square cells of `_CELL` drawing units. Each
+    wire is registered in every cell overlapped by the bounding box of any of
+    its segments, padded by `_PAD`. A query looks at one cell only.
+  * The exact per-wire tests (`same`, `point_on_segment`, default tolerance)
+    are unchanged; the index only discards wires that cannot pass them, so
+    results, tolerances and output order are identical to a full scan.
+  * `_PAD` must cover every point `point_on_segment` accepts, not just the
+    perpendicular tolerance: its general (non axis-aligned) branch accepts
+    points up to tol/length beyond a segment end along the segment. That
+    branch requires |dx| > tol and |dy| > tol, so length > sqrt(2)*tol and
+    the overshoot is below 1/sqrt(2) units; `_PAD` = tol + 1 covers it.
+  * Memory is linear in the number of segments: a segment whose padded box
+    covers more than `_MAX_CELLS_PER_SEGMENT` cells (long diagonals, huge
+    coordinates), a wire with non-finite coordinates or fewer than two
+    points, and every wire once the total registrations would exceed
+    `_ENTRY_BUDGET_PER_SEGMENT * S + _ENTRY_BUDGET_MIN`, goes to an
+    "always examine" list instead of the grid. Those wires are tested for
+    every point, exactly as before, so correctness never depends on the cap.
+
+Complexity: building O(S * c) with c <= _MAX_CELLS_PER_SEGMENT cells per
+segment (c is about length/_CELL + 2 for axis-aligned wires); memory
+O(min(S * c, _ENTRY_BUDGET_PER_SEGMENT * S + _ENTRY_BUDGET_MIN)); each query
+O(k + A) wire tests, k = wires registered in the cell, A = always-examined
+wires. In the worst case (everything always-examined) it degrades to the
+previous full scan plus a small constant. The index is local to one call:
+nothing is cached between calls.
 """
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 
 from .geometry import point_on_segment, same
 from .model import Document
+
+_TOL = 0.01                       # default tolerance of same() / point_on_segment()
+_PAD = _TOL + 1.0                 # see module docstring
+_CELL = 50.0                      # grid cell size in drawing units (5 grid steps)
+_MAX_CELLS_PER_SEGMENT = 256      # larger segments are always examined
+_ENTRY_BUDGET_PER_SEGMENT = 32    # total grid registrations allowed per segment ...
+_ENTRY_BUDGET_MIN = 4096          # ... plus this many
 
 
 @dataclass
@@ -26,6 +68,57 @@ class Connectivity:
 
 def _key(p):
     return (round(p[0], 2), round(p[1], 2))
+
+
+def _cell(v: float) -> int:
+    return math.floor(v / _CELL)
+
+
+class _WireIndex:
+    """Uniform grid of wires by padded segment bounding box (see module docstring)."""
+
+    def __init__(self, wires):
+        self.cells: dict = {}
+        self.always: list = []
+        self.entries = 0
+        nseg = sum(max(0, len(w.points) - 1) for w in wires)
+        budget = _ENTRY_BUDGET_PER_SEGMENT * nseg + _ENTRY_BUDGET_MIN
+        for w in wires:
+            keys = self._cells_of(w.points)
+            if keys is None or self.entries + len(keys) > budget:
+                self.always.append(w)
+                continue
+            self.entries += len(keys)
+            for k in keys:
+                self.cells.setdefault(k, []).append(w)
+
+    @staticmethod
+    def _cells_of(pts):
+        """Set of cells for a wire, or None if it must always be examined."""
+        if len(pts) < 2:
+            return None
+        keys = set()
+        for a, b in zip(pts, pts[1:]):
+            x0, x1 = min(a[0], b[0]) - _PAD, max(a[0], b[0]) + _PAD
+            y0, y1 = min(a[1], b[1]) - _PAD, max(a[1], b[1]) + _PAD
+            if not (math.isfinite(x0) and math.isfinite(x1) and math.isfinite(y0) and math.isfinite(y1)):
+                return None
+            i0, i1, j0, j1 = _cell(x0), _cell(x1), _cell(y0), _cell(y1)
+            if (i1 - i0 + 1) * (j1 - j0 + 1) > _MAX_CELLS_PER_SEGMENT:
+                return None
+            for i in range(i0, i1 + 1):
+                for j in range(j0, j1 + 1):
+                    keys.add((i, j))
+        return keys
+
+    def candidates(self, p, wires):
+        """Wires that may end at or pass through p (a superset of the true ones)."""
+        if not (math.isfinite(p[0]) and math.isfinite(p[1])):
+            return wires
+        near = self.cells.get((_cell(p[0]), _cell(p[1])))
+        if not near:
+            return self.always
+        return near + self.always if self.always else near
 
 
 def analyse(doc: Document) -> Connectivity:
@@ -42,9 +135,11 @@ def analyse(doc: Document) -> Connectivity:
         for p in w.points:
             candidates[_key(p)] = p
 
+    index = _WireIndex(wires)
+
     def counts_at(p, exclude_wire=None):
         ends = through = 0
-        for w in wires:
+        for w in index.candidates(p, wires):
             if w.id == exclude_wire:
                 continue
             pts = w.points
