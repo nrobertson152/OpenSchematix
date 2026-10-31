@@ -218,6 +218,8 @@ def scale_shape(s: Shape, center: Point, k: float):
         s.r = clean(s.r * abs(k))
     if s.kind == "text":
         s.size = clean(s.size * abs(k))
+    if s.kind in ("line", "polyline"):
+        s.arrow_size = clean(s.arrow_size * abs(k))
 
 
 # ================================================================ hit testing
