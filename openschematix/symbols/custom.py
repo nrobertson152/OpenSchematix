@@ -105,15 +105,19 @@ def normalise(data) -> dict:
                 raise SymbolFormatError(f"primitive {i}: needs at least two points")
             q["pts"] = pts
             if k == "line":
-                q["arrow_start"] = p.get("arrow_start") is True
-                q["arrow_end"] = p.get("arrow_end") is True
+                start = p.get("arrow_start") is True
+                end = p.get("arrow_end") is True
+                if start or end:
+                    q["arrow_start"] = start
+                    q["arrow_end"] = end
                 try:
                     size = float(p.get("arrow_size", 10.0))
                     if isinstance(p.get("arrow_size"), bool) or not math.isfinite(size) or not 0 < size <= 10000:
                         size = 10.0
                 except (ValueError, TypeError, OverflowError):
                     size = 10.0
-                q["arrow_size"] = size
+                if start or end:
+                    q["arrow_size"] = size
             if k == "poly":
                 q["fill"] = bool(p.get("fill", False))
         elif k in ("circle", "arc"):
