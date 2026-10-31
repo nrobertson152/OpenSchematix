@@ -477,16 +477,16 @@ for alias, name in (("L", "LINE"), ("C", "CIRCLE"), ("TR", "TRIM"), ("M", "MOVE"
         check(ed.runner.active and ed.runner.name == name and ed.cmdline.var.get() == "",
               f"symbol editor: {alias} + {confirm} starts {name}")
 ed.runner.cancel()
-for key in ("Return", "space"):
+for kname in ("Return", "space"):
     ed.set_tool("LINE")
     pump()
     eclick((-30, 30))
     eclick((30, 30))
     ecv.focus_force()
     pump()
-    ecv.event_generate("<KeyPress>", keysym=key)
+    ecv.event_generate("<KeyPress>", keysym=kname)
     pump(3)
-    check(not ed.runner.active, f"symbol editor: {key} on the drawing finishes LINE")
+    check(not ed.runner.active, f"symbol editor: {kname} on the drawing finishes LINE")
 ed.set_tool("TEXT")
 pump()
 eclick((0, -30))
@@ -507,6 +507,100 @@ ed.runner.cancel()
 ed.dirty = False
 ed.close()
 pump()
+
+# ================================================================ 9c. Phase 2: open existing symbols as
+# editable copies (import and explode)
+from openschematix import symbols as symreg  # noqa: E402
+
+builtin_before = json.dumps(symreg.get("el.inductor").build(None).prims)
+ed = app.edit_symbol_copy("el.inductor")
+pump(6)
+ecv = ed.canvas
+check(ed is not None and ed.source == ("el.inductor", symreg.get("el.inductor").name),
+      "built-in symbol opens as an editable copy")
+kinds = sorted({sh.kind for sh in ed.doc.shapes.values()})
+check("arc" in kinds, f"built-in arcs become editable arcs {kinds}")
+check([p["id"] for p in ed.pins] == ["1", "2"] and ed.meta["id"].startswith("user:"),
+      "copy keeps the terminal identifiers and gets a new id")
+check(ed.save_btn.cget("text") == "Save to library" and "original is not changed" in ed.status.cget("text"),
+      "copy: save creates a new symbol; status explains it")
+arc_id = next(i for i, sh in ed.doc.shapes.items() if sh.kind == "arc")
+ed.set_selection({arc_id})
+ed._delete_key(None)
+check(arc_id not in ed.doc.shapes, "an exploded primitive can be deleted on its own")
+ed.set_tool("CIRCLE")
+eclick((0, 0))
+eclick((0, 8))
+check(any(sh.kind == "circle" for sh in ed.doc.shapes.values()), "new geometry added to the copy")
+ed.meta_vars["name"].set("Inductor variant")
+ed.folder_var.set("Variants")        # keep "My symbols" as section 10 expects it
+check(ed.save(), "copy saved to the library")
+var_id = ed.meta["id"]
+check(var_id in app.userlib.entries and app.userlib.entries[var_id].doc["derived_from"]["id"] == "el.inductor",
+      "saved variant records what it was derived from")
+check(json.dumps(symreg.get("el.inductor").build(None).prims) == builtin_before, "built-in symbol unchanged")
+check(ed.save_btn.cget("text") == "Save changes", "after saving, the editor edits the new symbol")
+ed.close()
+pump()
+app.library.populate()
+cv_ = place(var_id, (900, 900))
+t2 = cv_.terminals()["2"]
+wv = editing.add_wire(app.doc, [t2, (t2[0] + 60, t2[1])])
+check(wv.start == [cv_.id, "2"] and (cv_.id, "2") in analyse(app.doc).connected_terminals,
+      "placed variant connects at the original terminal identifiers")
+ind = place("el.inductor", (900, 1100))
+ti = ind.terminals()["1"]
+wi = editing.add_wire(app.doc, [ti, (ti[0] - 60, ti[1])])
+ind.symbol = var_id
+editing.sync_wire_ends(app.doc)
+check(app.doc.wires[wi.id].start == [ind.id, "1"], "replacing the built-in by its variant keeps the wire")
+
+# in-place edit of a library symbol, then Save as new: the original stays unchanged
+orig_entry = app.userlib.entries[var_id]
+with open(orig_entry.path, "rb") as fh:
+    orig_bytes = fh.read()
+app.edit_custom_symbol(var_id)
+pump(6)
+ed = app.windows[-1]
+ecv = ed.canvas
+check(ed.source is None and ed.save_btn.cget("text") == "Save changes", "library symbol opens for in-place editing")
+ed.set_tool("LINE")
+eclick((-20, 20))
+eclick((20, 20))
+ed.runner.enter()
+check(ed.save(as_new=True), "Save as new symbol")
+check(ed.meta["id"] != var_id and ed.meta["name"] == "Test" and ed.meta["derived_from"]["id"] == var_id,
+      "Save as new: new id and name, records the source")
+with open(orig_entry.path, "rb") as fh:
+    check(fh.read() == orig_bytes, "Save as new leaves the original symbol file untouched")
+# open another symbol from inside the editor (replaces this window)
+ed2 = ed.open_existing("fl.hyd.throttle")
+pump(6)
+check(ed2 is not None and not ed.winfo_exists() and ed2.source[0] == "fl.hyd.throttle",
+      "Open existing symbol from the editor")
+check([p["id"] for p in ed2.pins] == [t.name for t in symreg.get("fl.hyd.throttle").build(None).terminals],
+      "opened symbol keeps its terminal identifiers")
+ed2.close()
+pump()
+# a configured valve opens as configured
+valve = place("fl.hyd.dcv", (1300, 900))
+valve.params = dict(valve.params, type="4/2", positions=["parallel", "crossed"])
+ed3 = app.edit_symbol_copy(valve.symbol, dict(valve.params))
+pump(6)
+check(sorted(p["id"] for p in ed3.pins) == sorted(valve.terminals()), "configured valve opens with its own ports")
+ed3.close()
+pump()
+# library: built-in symbols open as copies from the panel
+if app.library.tree.exists("sym|el.resistor.iec"):
+    app.library.tree.selection_set("sym|el.resistor.iec")
+    pump()
+    n_win = len(app.windows)
+    app.library.edit_selected()
+    pump(6)
+    ed4 = app.windows[-1]
+    check(len(app.windows) == n_win + 1 and ed4.source[0] == "el.resistor.iec", "library: edit opens a copy")
+    ed4.close()
+    pump()
 
 # ================================================================ 10. library packages
 pkg = os.path.join(OUT, "mine.osymlib")

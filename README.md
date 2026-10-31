@@ -25,7 +25,8 @@ feature limits. If you find it useful you can optionally [support development on
 - **Drafting tools**: line, polyline, rectangle, circle, arc and text; move, copy, rotate, mirror, scale,
   TRIM and EXTEND; grid snap, object snap (end, mid, centre, quadrant, intersection, terminal) and ortho.
 - **Custom symbols**: a symbol editor with named, numbered and typed connection points, saved in your own
-  **symbol libraries** (folders, tags, search, drag and drop) and shared as `.osymlib` packages.
+  **symbol libraries** (folders, tags, search, drag and drop) and shared as `.osymlib` packages. Any existing
+  symbol, built-in included, can be opened as an editable copy and saved as a new variant.
 - **Wire crossings shown with bridges**; right-click *Connect wires* adds a junction and *Disconnect junction*
   removes it. Drawing and connectivity always agree.
 - **Engineering data**: component properties (manufacturer, part number, rating, custom fields), automatic
