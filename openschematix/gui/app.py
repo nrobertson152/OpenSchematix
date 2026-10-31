@@ -2473,6 +2473,38 @@ def Sheet_copy(sheet):
     return Sheet.from_dict(sheet.to_dict())
 
 
+
+def _startup_splash(root):
+    """Show a borderless startup window while the main workspace initializes."""
+    splash = tk.Toplevel(root)
+    splash.overrideredirect(True)
+    splash.configure(bg="#0d2343")
+    width, height = 480, 260
+    x = max(0, (root.winfo_screenwidth() - width) // 2)
+    y = max(0, (root.winfo_screenheight() - height) // 2)
+    splash.geometry(f"{width}x{height}+{x}+{y}")
+    frame = tk.Frame(splash, bg="#0d2343", highlightthickness=1,
+                     highlightbackground="#2765a3")
+    frame.pack(fill="both", expand=True)
+    # Keep a reference: Tk discards images when the PhotoImage is collected.
+    try:
+        splash.logo = tk.PhotoImage(file=resource_path("openschematix-256.png"))
+        splash.logo = splash.logo.subsample(3, 3)
+        tk.Label(frame, image=splash.logo, bg="#0d2343").pack(pady=(25, 10))
+    except tk.TclError:
+        tk.Label(frame, text="S", fg="#ffbd30", bg="#0d2343",
+                 font=("Arial", 48, "bold")).pack(pady=(22, 10))
+    tk.Label(frame, text=APP_NAME, fg="#ffffff", bg="#0d2343",
+             font=("Arial", 23, "bold")).pack()
+    tk.Label(frame, text=f"Version {VERSION}", fg="#b6cce5", bg="#0d2343",
+             font=("Arial", 11)).pack(pady=(5, 0))
+    tk.Label(frame, text="Loading engineering workspace…", fg="#b6cce5",
+             bg="#0d2343", font=("Arial", 10)).pack(side="bottom", pady=17)
+    splash.lift()
+    splash.update()
+    return splash
+
+
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
     if argv and argv[0] in ("--version", "-V"):
@@ -2488,6 +2520,12 @@ def main(argv=None):
             except Exception:  # noqa: BLE001
                 pass
     root = tk.Tk(className="OpenSchematix")
-    App(root, argv[0] if argv else None)
+    root.withdraw()
+    splash = _startup_splash(root)
+    try:
+        App(root, argv[0] if argv else None)
+    finally:
+        splash.destroy()
+        root.deiconify()
     root.mainloop()
     return 0
