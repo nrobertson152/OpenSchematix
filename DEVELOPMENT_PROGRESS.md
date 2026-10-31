@@ -1,10 +1,57 @@
 # OpenSchematix - Development Progress
 
-_Last updated: 2026-10-31 (session 3: updated for public release 1.0.1). Read this first when resuming development._
+_Last updated: 2026-10-31 (session 4: multi-phase specification, Phase 1 complete on branch `phase1-symbol-editor-usability`). Read this first when resuming development._
 
 ## Release / branding
 
 Current public release is **v1.0.1** (earlier internal versions 2.0/3.0 are not used publicly). No publisher name appears in the program; copyright holder is Nate Robertson. Source is on GitHub: https://github.com/nrobertson152/OpenSchematix
+
+## Multi-phase development specification (current objective)
+
+The master specification (symbol editor, drafting, usability, i18n) is implemented one phase at a time; stop after
+each phase for authorisation. Order: **Phase 1 ✅** → Phase 2 (line-end arrows; import/explode symbols) → Phase 3
+(i18n: EN/DE/FR/ES) → Phase 4 (sketch-import feasibility report only) → Phase 5 (scripting architecture proposal
+only) → revision-history verification (verify, do not rewrite).
+
+### Phase 1 — symbol editor defects and basic usability (done, session 4)
+
+1. **Duplicate terminal numbers.** Root cause: `symbols/custom.build_geometry` appended a text prim for every pin
+   with `show: true` (the default) to the symbol *artwork*, independent of the project setting
+   `show_terminal_labels`; with the setting on, `render.terminal_label_prims` drew a second set. Fix: artwork no
+   longer contains pin labels; `Terminal` has a `show` flag (default True) from the pin's `show`;
+   `render.terminal_label_prims` is the only place designations are drawn: setting on → every terminal with
+   `show`, setting off → only component overrides (`terminal_labels`). The editor checkbox is now "Number this
+   point on drawings". File formats unchanged (`show` already existed). Visible change: existing custom symbols
+   lose their always-on numbers unless the project setting is on.
+2. **ANSI A default.** `project.DEFAULT_SHEET_SIZE = "ANSI A"` used by `new_project()`, the settings default
+   `default_sheet` and `App._default_size()` fallback. The `Sheet` dataclass default stays "A3" on purpose: it
+   is the value used when a file has no `size`, so old files keep their size. Saved Preferences are respected
+   (settings.json stores all keys, so existing installs keep whatever is stored). Built-in project templates
+   (A3/A4/ANSI B) unchanged.
+3. **Tooltips.** Defect: `IconButton` bound `<Enter>/<Leave>` without `add="+"`, replacing the tooltip's handlers
+   — no IconButton tooltip ever showed. Fixed (and the tooltip now hides on click). New
+   `commands.tooltip()/typed_forms()` format "Description (Ctrl+Z · type U)" from the command registry, keymap
+   and user aliases; `cadcmds.TOOL_TIPS` holds the drafting-tool descriptions shared by both toolbars. Main
+   toolbar tips are rebuilt on shortcut changes (`App._rebuild_toolbar_tips`, now also for panel toggles,
+   preferences and theme). Symbol-editor Save button and section chevrons got tooltips.
+4. **Symbol-editor command line.** Defects: no Space confirmation (Space was inserted), Enter/Space on the
+   drawing did nothing while a command ran, user aliases ignored, no repeat-last-command. Fix: the editor now
+   hosts the shared `cmdline.CommandLine` (new `host` parameter: object with `runner`, `canvas`,
+   `execute_input`; optional `available_commands` filters autocomplete). `SymbolEditor.execute_input` resolves
+   through `commands.resolve` with user aliases; `EDITOR_COMMANDS` = drafting commands + UNDO/REDO/ZOOM/SAVE/HELP.
+   Space on buttons/check boxes and inside text/coordinate prompts keeps its normal meaning. Also fixed in the
+   shared command line: Enter/Space before the last key's release accepted a stale autocomplete entry
+   (`_refresh_popup`).
+
+Affected files: `symbols/base.py`, `symbols/custom.py`, `render.py`, `project.py`, `settings.py`, `commands.py`,
+`gui/app.py`, `gui/cadcmds.py`, `gui/cmdline.py`, `gui/symbol_editor.py`, `gui/widgets.py`, `tests/test_phase1.py`
+(new), `tests/test_engine.py` (two size assertions now use the sheet's size), `tests/gui_smoke.py` (+22 checks),
+`tools/gen_command_docs.py` + `docs/COMMANDS.md`, `docs/LIBRARY_FORMAT.md`, `CHANGELOG.md`.
+
+Phase 1 test results (session 4): `pytest` **246 passed, 0 skipped** (with ezdxf); `tests/gui_smoke.py` under
+Xvfb **105/105 ok** (83 previous + 22 new). New tests were confirmed to fail on the pre-fix code (9 unit tests;
+GUI: page size, hidden/duplicate numbers, tooltip, command line). ANSI A PDF with title block inspected.
+Next action: Phase 2, item 5 (line-end arrows) — only after authorisation.
 
 ## Status summary
 
@@ -113,6 +160,14 @@ All phases 1–8 of the brief:
    undo/redraw for very large projects.
 
 ## Resuming in a new session
+
+Sandbox recipe that works (session 4): system Python has no Tk and PyPI/apt are blocked, but
+`uv python install 3.12` (from GitHub) has Tk 9.0 and `git clone --depth 1 https://github.com/mozman/ezdxf`
+gives ezdxf. Then:
+`EZDXF_PYTHON=python3 EZDXF_PATH=/tmp/ezdxf-src/src python3 -m pytest -q tests` and
+`xvfb-run -a -s "-screen 0 1600x1000x24" $(uv python find 3.12) tests/gui_smoke.py OUT`.
+
+Older notes:
 
 Source: GitHub repository nrobertson152/OpenSchematix. Unzip, then `python -m pytest`. In a sandbox without
 system Tk: `uv python install 3.12` (includes Tkinter); PyPI may be blocked — clone pytest-free deps from

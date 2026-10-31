@@ -46,6 +46,7 @@ root = tk.Tk()
 root.geometry("1500x930+0+0")
 app = App(root, check_recovery=False)
 cv = app.canvas
+INITIAL_SHEET_SIZE = app.project.sheets[0].sheet.size
 
 
 def check(cond, msg):
@@ -409,6 +410,103 @@ app.userlib.save_symbol(doc2, "My symbols")
 app.update_project_symbol(sid)
 check(app.doc.wires[wc.id].start == [cs.id, "p2"], "renaming a pin in the symbol keeps existing wires connected")
 check(app.doc.components[cs.id].terminal_label("p2") == "OUT", "updated symbol shows the new pin name")
+
+# ================================================================ 9b. Phase 1: terminal numbers, page size,
+# tooltips, symbol-editor command line
+from openschematix import render  # noqa: E402
+from openschematix.gui.widgets import IconButton  # noqa: E402
+
+check(INITIAL_SHEET_SIZE == "ANSI A", "new project uses the ANSI A default page size")
+
+
+def cs_pin_texts():
+    items = render.scene(app.doc, project=app.project, frame=False)
+    return sorted(it["s"] for it in items if it["k"] == "text" and it.get("item") == cs.id
+                  and it.get("role") not in ("designator", "text"))
+
+
+app.set_project_setting("show_terminal_labels", False)
+check(cs_pin_texts() == [], "custom symbol: terminal numbers hidden when the setting is off")
+app.set_project_setting("show_terminal_labels", True)
+check(cs_pin_texts() == ["1", "OUT"], f"custom symbol: terminal numbers shown once when on {cs_pin_texts()}")
+app.edit_components([cs], rotation=90)
+check(cs_pin_texts() == ["1", "OUT"], "custom symbol: terminal numbers shown once after rotating")
+app.set_project_setting("show_terminal_labels", False)
+app.edit_components([cs], rotation=0)
+
+
+def wait(ms):
+    import time
+    t0 = time.time()
+    while time.time() - t0 < ms / 1000:
+        root.update()
+
+
+tb_buttons = [w for w in app.toolbar.winfo_children() if isinstance(w, IconButton)]
+check(tb_buttons and all(b.tip is not None and b.tip.text for b in tb_buttons), "every toolbar button has a tooltip")
+undo_b = app.undo_btn
+undo_b.event_generate("<Enter>")
+wait(700)
+check(undo_b.tip.tip is not None and "Ctrl+Z" in undo_b.tip.text, f"toolbar tooltip appears: {undo_b.tip.text!r}")
+undo_b.event_generate("<Leave>")
+pump()
+check(undo_b.tip.tip is None, "toolbar tooltip hides on leave")
+
+app.open_symbol_editor()
+pump(6)
+ed = app.windows[-1]
+ecv = ed.canvas
+ed_btns = [w for w in ed.winfo_children()[0].winfo_children() if isinstance(w, IconButton)]
+check(ed_btns and all(b.tip is not None and b.tip.text for b in ed_btns), "every symbol-editor button has a tooltip")
+
+
+def etype(text, confirm):
+    ecv.focus_force()
+    pump(2)
+    for ch in text:
+        root.focus_get().event_generate("<KeyPress>", keysym={" ": "space", ",": "comma"}.get(ch, ch))
+        pump(1)
+    root.focus_get().event_generate("<KeyPress>", keysym=confirm)
+    pump(3)
+
+
+for alias, name in (("L", "LINE"), ("C", "CIRCLE"), ("TR", "TRIM"), ("M", "MOVE"), ("CO", "COPY")):
+    for confirm in ("Return", "space"):
+        ed.runner.cancel()
+        etype(alias, confirm)
+        check(ed.runner.active and ed.runner.name == name and ed.cmdline.var.get() == "",
+              f"symbol editor: {alias} + {confirm} starts {name}")
+ed.runner.cancel()
+for key in ("Return", "space"):
+    ed.set_tool("LINE")
+    pump()
+    eclick((-30, 30))
+    eclick((30, 30))
+    ecv.focus_force()
+    pump()
+    ecv.event_generate("<KeyPress>", keysym=key)
+    pump(3)
+    check(not ed.runner.active, f"symbol editor: {key} on the drawing finishes LINE")
+ed.set_tool("TEXT")
+pump()
+eclick((0, -30))
+ed.cmd_entry.focus_force()
+for ch in "MAIN PUMP":
+    ed.cmd_entry.event_generate("<KeyPress>", keysym={" ": "space"}.get(ch, ch))
+    pump(1)
+ed.cmd_entry.event_generate("<KeyPress>", keysym="Return")
+pump(3)
+check(any(sh.kind == "text" and sh.s == "MAIN PUMP" for sh in ed.doc.shapes.values()),
+      "symbol editor: Space inside typed text stays a space")
+ecv.focus_force()
+pump()
+ecv.event_generate("<KeyPress>", keysym="space")
+pump(3)
+check(ed.runner.active and ed.runner.name == "COPY", "symbol editor: Space repeats the last typed command")
+ed.runner.cancel()
+ed.dirty = False
+ed.close()
+pump()
 
 # ================================================================ 10. library packages
 pkg = os.path.join(OUT, "mine.osymlib")
