@@ -3,7 +3,7 @@ import math
 import unittest
 
 from openschematix.model import Shape
-from openschematix.shapes import shape_prims, rotate_shape, move_shape
+from openschematix.shapes import shape_prims, rotate_shape, move_shape, scale_shape
 
 
 class ArrowheadTests(unittest.TestCase):
@@ -47,6 +47,15 @@ class ArrowheadTests(unittest.TestCase):
         arrow = shape_prims(shape)[1]["pts"]
         self.assertAlmostEqual(arrow[0][0], 5)
         self.assertAlmostEqual(arrow[0][1], 27)
+
+    def test_scale_changes_arrowhead_size(self):
+        shape = Shape(6, "line", pts=[(0, 0), (20, 0)],
+                      arrow_end=True, arrow_size=5)
+        scale_shape(shape, (0, 0), 2)
+        self.assertEqual(shape.arrow_size, 10)
+        arrow = shape_prims(shape)[1]["pts"]
+        self.assertEqual(arrow[0], (40, 0))
+        self.assertAlmostEqual((arrow[1][0] + arrow[2][0]) / 2, 30)
 
     def test_invalid_arrow_size_rejected(self):
         data = Shape(5, "line", pts=[(0, 0), (20, 0)]).to_dict()
