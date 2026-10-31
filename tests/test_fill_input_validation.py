@@ -1,7 +1,5 @@
 """Regression tests for malformed boundary-fill ring input."""
 
-import math
-
 import pytest
 
 from openschematix.regions import clean_rings
