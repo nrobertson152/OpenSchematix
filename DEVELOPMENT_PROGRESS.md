@@ -1,7 +1,8 @@
 # OpenSchematix - Development Progress
 
-_Last updated: 2026-10-31 (session 6: boundary fill (FILL/HATCH) implemented and tested on branch
-`feature/boundary-fill`, draft PR #4, not merged. Session 5: Phase 2 item 6 (import/explode symbols)). Read this
+_Last updated: 2026-10-31 (session 7: boundary-fill stabilisation — schema/revision compatibility, Tk 8.6
+verification, performance — on `feature/boundary-fill`, draft PR #4, not merged. Session 6: boundary fill (FILL/HATCH)
+implemented. Session 5: Phase 2 item 6 (import/explode symbols)). Read this
 first when resuming development._
 
 ## Release / branding
@@ -148,6 +149,36 @@ rejected intersections and holes, fills stored as plain polygons, a failing test
   exported fill blocks re-import as many filled polygons; boundary search is global per pick (≈0.2 s for 3 300
   sparse objects, seconds for thousands of densely crossing ones).
 - **Next action:** owner review of PR #4; do not merge without authorisation.
+
+#### Session 7 — stabilisation and compatibility (same branch)
+
+- **Defect 1 (fixed): fills only in revision history were saved as schema 2.** Reproduced with the released
+  v1.0.0 code (extracted from the tag): it opened such a project and failed with "unknown shape kind 'hatch'"
+  only when restoring that revision. Now `projectio.required_schema(project)` = max(current sheets,
+  `RevisionStore.required_schema()`), the latter scanning every snapshot sheet object (`model.sheet_dict_schema`,
+  cached per content hash; objects are immutable). Schema drops back to 2 once no snapshot holds a fill.
+  Templates with fills are written as `.ostpl` version 2 (1.0.x refuses them as newer instead of "damaged").
+  Tests: `tests/test_fill_compat.py` (13) — including running the real v1.0.0 reader (`git archive v1.0.0`,
+  skipped without git/tag) against files written now: fill files refused, fill-free files open.
+- **Tk 8.6:** python-build-standalone Tk 8.6.12/8.6.14 builds abort on `tk.Menu` under Xvfb (xcb assertion,
+  also on `main`: a toolchain defect, not ours), so Tcl/Tk 8.6.13 was built from source (no Xft) with a
+  `_tkinter` built for the system Python 3.13 (wrapper `/home/claude/tk86/py86` in the dev container, not in
+  the repo). Results: pytest 447 passed / 1 skipped (ezdxf subprocess probe), GUI smoke 169/169. The only
+  failures before were two **test** defects (menubar cascades indexed by position; Tk 8.6 menubars have a
+  tear-off entry at index 0) — fixed in the test. New pixel checks in `gui_smoke.py` (ImageMagick `import`, 24-bit
+  display; skipped otherwise): fill, empty hole, separately filled island, selection colour, zoom, pan, MOVE —
+  identical results under Tk 8.6.13 and 9.0.3. Windows: Tk's GC default fill rule is EvenOddRule → GDI
+  ALTERNATE (`win/tkWinDraw.c`); source-checked only, not run.
+- **Defect 2 (fixed): gap tolerance was O(open ends × edges)** — 33.2 s for a 3 300-object sheet. Now
+  sort-and-sweep candidate pairs (`_point_edge_pairs`, `_point_point_pairs`): 0.21 s; output proven identical to
+  the old all-pairs algorithm (reference copy in the tests, 12 randomised drawings × 3 gaps, incl. exact ties).
+- **Measured speed-ups (no behaviour change):** island nesting with bounding-box prefilters (sparse sheet 0.28 →
+  0.08 s); cycle area / bbox computed from edge data, bulge rings built lazily (dense 400 lines+arcs 0.73 → 0.61 s,
+  600 circles 0.69 → 0.59 s). Areas and hole counts identical before/after on every benchmark case.
+- **Robustness:** `tools/fuzz_boundary_fill.py` (7 degenerate scenario families × 30 seeds, 1 398 accepted
+  regions): 0 failures before and after — no numerical defect found, so the arrangement maths was not changed.
+- **Python 3.10.14** (minimum supported; pbs build, Tk 8.6.12): pytest 445 passed / 3 skipped (pypdfium2, ezdxf);
+  GUI not runnable there (same pbs Menu abort).
 
 ## Status summary
 

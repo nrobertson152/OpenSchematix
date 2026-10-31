@@ -30,9 +30,13 @@ revisions/objects/<sha256>        zlib-compressed JSON snapshots, content-addres
   fills, see below). New optional fields can be added within a schema; anything that changes the meaning of
   existing data increments it, with a migration step in `projectio.py`.
 * Writers record the **lowest** schema that can represent the content: a project without boundary fills is
-  still written with `sheet_schema` 2 and opens in OpenSchematix 1.0.x. As soon as any sheet contains a fill
-  the project is written as schema 3, which 1.0.x refuses with a clear "newer schema" message instead of
-  failing on an unknown object.
+  still written with `sheet_schema` 2 and opens in OpenSchematix 1.0.x. As soon as a fill exists anywhere in
+  the file — on a current sheet **or in any revision snapshot** (automatic or approved) — the project is
+  written as schema 3, which 1.0.x refuses with a clear "newer schema" message instead of opening it and
+  failing later on an unknown object. Once every snapshot containing fills has been deleted or pruned, the
+  project is written as schema 2 again.
+* Circuit templates (`.ostpl`) follow the same rule: `version` 2 when their content contains a fill,
+  otherwise 1.
 
 ## project.json
 

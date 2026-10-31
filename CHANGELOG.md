@@ -14,6 +14,7 @@ All notable changes to this project are documented here. Versions follow [Semant
   regions (arcs stay arcs), independent objects that can be selected, moved, copied, rotated, scaled,
   mirrored, deleted and undone, are drawn underneath other objects, and export to SVG (even-odd path with
   arcs), PDF (even-odd fill) and DXF (block of SOLIDs). See `docs/BOUNDARY_FILL.md`.
+- `tools/bench_boundary_fill.py` and `tools/fuzz_boundary_fill.py`: boundary-fill benchmarks and robustness fuzz.
 
 - Adjustable vector arrowheads at either or both ends of drafting lines and polylines, with
   Properties inspector and custom symbol editor controls, project persistence and exports.
@@ -47,7 +48,9 @@ All notable changes to this project are documented here. Versions follow [Semant
 ### Changed
 - File format: new `hatch` drafting shape and sheet schema 3. Projects and `.osch` sheets are written with the
   lowest schema that can hold their content, so files without fills remain schema 2 and open in 1.0.x;
-  1.0.x refuses files with fills with a clear "newer schema" message.
+  1.0.x refuses files with fills with a clear "newer schema" message. A fill stored only in the revision
+  history also makes a project schema 3 (otherwise 1.0.x opened it and failed when restoring that revision).
+  Circuit templates containing fills are written as template version 2.
 - Clicking a point now selects anything drawn over a fill before the fill itself.
 - New drawings and projects default to ANSI A (8.5 × 11 in, landscape). Existing files keep their page size and
   a default sheet size already chosen in Preferences is kept.

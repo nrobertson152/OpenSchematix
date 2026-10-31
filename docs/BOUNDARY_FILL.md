@@ -67,5 +67,17 @@ area would be degenerate. Nothing is ever filled on a guess.
 * Fills are not associative: changing the boundary does not update the fill (delete and refill).
 * The island rule is fixed ("outer": islands are holes, islands within islands are not filled by the same
   pick).
-* Boundary detection considers every boundary object on the sheet; with many thousands of densely crossing
-  objects a pick can take a few seconds.
+* Boundary detection considers every boundary object on the sheet. Typical picks take well under a second;
+  `tools/bench_boundary_fill.py` measures representative cases (for example 0.08 s for a sheet with 3 300
+  sparse objects and ~290 islands, 0.2 s for the same sheet with a 1 mm gap tolerance, 0.6 s for 400 densely
+  crossing lines and arcs). `tools/fuzz_boundary_fill.py` checks degenerate drawings (huge and tiny radii,
+  near-parallel and concurrent lines, sub-tolerance noise, far-from-origin coordinates, tangent chains).
+
+## Display compatibility
+
+Tk canvas polygons cannot have holes, so a fill is drawn as one polygon whose holes are joined to the outer
+boundary by zero-width cuts; holes are oriented opposite to the outer ring, so the result is the same under
+the even-odd and the non-zero fill rule. The GUI test suite, including on-screen pixel checks of fills, holes,
+islands, selection, zoom, pan and move, passes under Tk 8.6.13 and Tk 9.0.3 on Linux (X11). On Windows, Tk
+8.6 and 9.0 fill polygons with GDI's ALTERNATE (even-odd) mode by default (`tkWinDraw.c`); this has been
+checked in the Tk source but not run on Windows.
