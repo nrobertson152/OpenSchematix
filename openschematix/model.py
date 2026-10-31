@@ -184,9 +184,6 @@ class Wire:
     layer: str = DEFAULT_LAYER_WIRES
     locked: bool = False
     group: str = ""
-    arrow_start: bool = False
-    arrow_end: bool = False
-    arrow_size: float = 10.0
 
     def bbox(self):
         return bbox_of(self.points)
@@ -260,6 +257,9 @@ class Shape:
     layer: str = DEFAULT_LAYER_SHAPES
     locked: bool = False
     group: str = ""
+    arrow_start: bool = False
+    arrow_end: bool = False
+    arrow_size: float = 10.0
 
     def bbox(self):
         from .shapes import shape_bbox
