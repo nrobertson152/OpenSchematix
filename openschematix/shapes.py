@@ -16,8 +16,9 @@ import copy
 import math
 from typing import Iterable, Optional
 
+from . import regions
 from .geometry import Point, arc_points, bbox_of, bbox_union, clean, seg_distance
-from .model import Shape
+from .model import Shape, clean_bulge
 
 EPS = 1e-7
 LINE_W = {"thin": 1.0, "normal": 1.4, "thick": 2.2}
@@ -102,6 +103,8 @@ def shape_bbox(s: Shape):
         return bbox_of(pts)
     if s.kind == "text":
         return text_extent(s)
+    if s.kind == "hatch":
+        return regions.rings_bbox(s.rings)
     return None
 
 
@@ -161,6 +164,9 @@ def shape_prims(s: Shape, item=None, role="shape") -> list:
         return [dict(base, k="line", pts=arc_polyline(s.c, s.r, s.start, s.extent), fill=False)]
     if s.kind == "text":
         return [dict(base, k="text", p=s.pts[0], s=s.s, size=s.size, anchor=s.anchor, angle=s.angle)]
+    if s.kind == "hatch":
+        # solid fill: no outline, no dash; exact rings (arcs as bulges)
+        return [dict(base, k="region", rings=[list(r) for r in s.rings], fill=True, dash=False, wpx=0.0)]
     return []
 
 
@@ -170,6 +176,9 @@ def _map_points(s: Shape, fn):
         s.pts = [tuple(clean(v) for v in fn(p)) for p in s.pts]
     if s.kind in ("circle", "arc"):
         s.c = tuple(clean(v) for v in fn(s.c))
+    if s.kind == "hatch":
+        s.rings = [[(clean(q[0]), clean(q[1]), b) for q, b in ((fn((x, y)), b) for x, y, b in ring)]
+                   for ring in s.rings]
 
 
 def move_shape(s: Shape, dx: float, dy: float):
@@ -208,6 +217,8 @@ def mirror_shape(s: Shape, axis_p: Point, axis_q: Point):
         fx, fy = axis_p[0] + t * dx, axis_p[1] + t * dy
         return (2 * fx - p[0], 2 * fy - p[1])
     _map_points(s, m)
+    if s.kind == "hatch":      # a reflection reverses the turning direction of every arc
+        s.rings = [[(x, y, clean_bulge(-b)) for x, y, b in ring] for ring in s.rings]
     axis_ang = angle_of(axis_q, axis_p)
     if s.kind == "arc":
         st, ex = arc_norm(s.start, s.extent)
@@ -249,6 +260,12 @@ def shape_distance(s: Shape, p: Point) -> float:
         st, ex = arc_norm(s.start, s.extent)
         e1, e2 = point_at(s.c, s.r, st), point_at(s.c, s.r, st + ex)
         return min(math.hypot(p[0] - e1[0], p[1] - e1[1]), math.hypot(p[0] - e2[0], p[1] - e2[1]))
+    if s.kind == "hatch":
+        if not s.rings:
+            return 1e9
+        if regions.point_in_rings(s.rings, p):
+            return 0.0
+        return regions.boundary_distance(s.rings, p)
     if s.kind == "text":
         b = text_extent(s)
         if b[0] <= p[0] <= b[2] and b[1] <= p[1] <= b[3]:
@@ -299,6 +316,8 @@ def snap_points(s: Shape) -> list:
                 out.append(("quad", point_at(s.c, s.r, q)))
     elif s.kind == "text":
         out.append(("node", s.pts[0]))
+    elif s.kind == "hatch":
+        out += [("end", (x, y)) for ring in s.rings for x, y, _b in ring]
     return [(k, (clean(p[0]), clean(p[1]))) for k, p in out]
 
 
@@ -472,7 +491,7 @@ def trim(s: Shape, pick: Point, cutters: Iterable[Shape], next_id) -> Optional[l
     if nothing could be trimmed (no intersections). `next_id()` supplies ids
     for any extra pieces."""
     cutters = list(cutters)
-    if s.kind == "text":
+    if s.kind in ("text", "hatch"):
         return None
     if s.kind == "circle":
         cuts = _cut_params(s, cutters)
@@ -620,8 +639,13 @@ def extend(s: Shape, pick: Point, boundaries: Iterable[Shape]) -> bool:
 # ================================================================ conversions
 def shape_to_symbol_prim(s: Shape) -> dict:
     """Shape (symbol-local coordinates) -> symbol primitive dict. Arcs are kept
-    as native arcs ({"k": "arc"}); the symbol framework flattens them."""
+    as native arcs ({"k": "arc"}); the symbol framework flattens them.
+    Boundary fills are not part of the symbol format (they stay on sheets);
+    a fill reaching this point becomes a filled polygon of its outer ring."""
     w = s.width
+    if s.kind == "hatch":
+        outer = regions.flatten_ring(s.rings[0]) if s.rings else []
+        return {"k": "poly", "pts": [tuple(p) for p in outer], "fill": True, "dash": False, "w": w}
     if s.kind in ("line", "polyline"):
         return {"k": "line", "pts": [tuple(p) for p in s.pts], "dash": s.dash, "w": w,
                 "arrow_start": s.arrow_start, "arrow_end": s.arrow_end, "arrow_size": s.arrow_size}

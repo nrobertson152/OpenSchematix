@@ -64,7 +64,8 @@ def write_zip(project: Project, fileobj):
     manifest = {
         "format": PROJECT_FORMAT,
         "version": PROJECT_VERSION,
-        "sheet_schema": SHEET_SCHEMA,
+        # lowest schema that can represent the sheets (2 unless boundary fills are used)
+        "sheet_schema": max((doc.required_schema() for doc in project.sheets), default=2),
         "app": f"OpenSchematix {VERSION}",
         "project_uid": project.uid,
         "sheets": [{"uid": s["uid"], "name": s["name"], "path": f"sheets/{s['uid']}.json"} for s in sheets],

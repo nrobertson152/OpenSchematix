@@ -159,6 +159,9 @@ def prim_bbox(p):
     if k == "circle":
         (cx, cy), r = p["c"], p["r"]
         return (cx - r, cy - r, cx + r, cy + r)
+    if k == "region":
+        from ..regions import rings_bbox
+        return rings_bbox(p["rings"])
     if k == "text":
         x, y = p["p"]
         h = p.get("size", 8)

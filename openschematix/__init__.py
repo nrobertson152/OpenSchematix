@@ -20,6 +20,6 @@ DONATE_URL = "https://ko-fi.com/nr270343"
 # and can export a sheet as schema 2; projects use the .schematix container
 # (see openschematix.projectio and docs/FILE_FORMAT.md).
 FILE_FORMAT = "OpenSchematix"
-FILE_SCHEMA = 2
+FILE_SCHEMA = 3          # = model.SHEET_SCHEMA (3 adds boundary fills; written only when used)
 FILE_EXTENSION = ".osch"
 PROJECT_EXTENSION = ".schematix"
