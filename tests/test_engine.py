@@ -169,16 +169,12 @@ def test_migrate_osch_keeps_original_and_content(tmp_path):
     assert len(a.junctions) == len(b.junctions) and a.open_wire_ends == b.open_wire_ends
 
 
-def test_migrate_hps(tmp_path):
-    data = {"format": "HPS Schematix", "version": "1.2.0",
-            "components": [{"id": 1, "type": "Resistor", "x": 0, "y": 0, "tag": "R1"},
-                           {"id": 2, "type": "Lamp", "x": 100, "y": 0, "tag": "H1"}],
-            "connections": [{"a": 1, "b": 2}]}
-    f = tmp_path / "x.hpss"
+def test_rejects_unsupported_legacy_project(tmp_path):
+    data = {"format": "Unsupported legacy format", "components": [], "connections": []}
+    f = tmp_path / "unsupported.json"
     f.write_text(json.dumps(data))
-    res = projectio.open_any(str(f))
-    assert res.migrated and res.source_format == "hpss"
-    assert len(res.project.sheets[0].wires) == 1
+    with pytest.raises(projectio.ProjectFormatError, match="Not an OpenSchematix file"):
+        projectio.open_any(str(f))
 
 
 # ================================================================ revisions & compare
