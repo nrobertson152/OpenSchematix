@@ -16,6 +16,7 @@ holds an ordered list of sheets plus project-wide metadata.
 from __future__ import annotations
 
 import copy
+import math
 import uuid
 from dataclasses import dataclass, field
 from typing import Optional
