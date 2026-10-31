@@ -623,7 +623,8 @@ def shape_to_symbol_prim(s: Shape) -> dict:
     as native arcs ({"k": "arc"}); the symbol framework flattens them."""
     w = s.width
     if s.kind in ("line", "polyline"):
-        return {"k": "line", "pts": [tuple(p) for p in s.pts], "dash": s.dash, "w": w}
+        return {"k": "line", "pts": [tuple(p) for p in s.pts], "dash": s.dash, "w": w,
+                "arrow_start": s.arrow_start, "arrow_end": s.arrow_end, "arrow_size": s.arrow_size}
     if s.kind in ("polygon", "rect"):
         return {"k": "poly", "pts": [tuple(p) for p in s.pts], "fill": s.fill, "dash": s.dash, "w": w}
     if s.kind == "circle":
@@ -639,7 +640,9 @@ def symbol_prim_to_shape(p: dict, ident: int) -> Shape:
     w = p.get("w", "normal")
     if k == "line":
         pts = [tuple(q) for q in p["pts"]]
-        return Shape(ident, "line" if len(pts) == 2 else "polyline", pts=pts, width=w, dash=p.get("dash", False))
+        return Shape(ident, "line" if len(pts) == 2 else "polyline", pts=pts, width=w, dash=p.get("dash", False),
+                     arrow_start=p.get("arrow_start", False), arrow_end=p.get("arrow_end", False),
+                     arrow_size=p.get("arrow_size", 10.0))
     if k == "poly":
         pts = [tuple(q) for q in p["pts"]]
         is_rect = len(pts) == 4 and all(abs(a[0] - b[0]) < 1e-6 or abs(a[1] - b[1]) < 1e-6
