@@ -135,7 +135,13 @@ packaging/build_linux.sh         # Linux: dist/OpenSchematix-<version>-linux-x86
 ```
 
 Both scripts create a private virtual environment, install PyInstaller and pytest, run the tests and build
-with `packaging/openschematix.spec`. Build each platform on that platform.
+with `packaging/openschematix.spec`. Build each platform on that platform. After `build_linux.sh`,
+`packaging/linux/build_appimage.sh` turns the bundle into `dist/OpenSchematix-<version>-x86_64.AppImage`.
+
+Publishing a GitHub release runs `.github/workflows/release.yml`, which builds the Linux tarball and
+AppImage and the Windows installer and portable zip, and attaches them (with `SHA256SUMS.txt`) to the
+release. The release tag must match the version in `openschematix/__init__.py` (e.g. `v1.0.0`). The
+workflow can also be started by hand from the Actions tab; the packages are then kept as run artifacts.
 
 ## Development
 
