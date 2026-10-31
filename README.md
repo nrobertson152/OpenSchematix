@@ -1,5 +1,9 @@
 # OpenSchematix
 
+<p align="center">
+  <img src="openschematix/resources/openschematix-256.png" alt="OpenSchematix logo" width="160">
+</p>
+
 [![Download Latest Release](https://img.shields.io/github/v/release/nrobertson152/openschematix?label=Download%20Latest%20Release&style=for-the-badge&logo=github)](https://github.com/nrobertson152/openschematix/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/nrobertson152/openschematix/total?style=flat-square&label=Total%20Downloads)](https://github.com/nrobertson152/openschematix/releases)
 
