@@ -4,6 +4,17 @@ All notable changes to this project are documented here. Versions follow [Semant
 
 ## [Unreleased]
 
+### Added
+- Open any existing symbol — built-in, user library or project — in the symbol editor as an editable copy:
+  *Edit a copy…* in the library and on placed components (a configured valve opens as configured), the editor's
+  *Open existing symbol* button (or `OPEN`), and the library's edit button for built-in symbols. The symbol is
+  converted into individual lines, polylines, arcs, circles and text; arcs that built-in symbols store as sampled
+  polylines become real arcs again. Connection points keep their identifiers, positions, lead directions and port
+  types. Saving a copy always creates a new symbol (new id) and records what it was derived from; the original is
+  never changed.
+- *Save as new symbol…* asks for a name. When a library symbol is edited in place the primary button reads
+  *Save changes* and its tooltip says that it overwrites the symbol.
+
 ### Fixed
 - Custom symbols: terminal numbers were drawn on every placed custom symbol even with *Show terminal designations*
   off, and twice with it on. Pin designations are no longer baked into the symbol artwork; they are drawn once by
