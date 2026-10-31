@@ -395,7 +395,10 @@ class SymbolEditor(tk.Toplevel):
         cmd("redo", self.redo, cp.tooltip("REDO", "Ctrl+Y", aliases, summary="Redo the last undone change"))
         cmd("zoom_fit", lambda: self.canvas.fit(), cp.tooltip("ZOOM", extra_aliases=aliases,
                                                               summary="Zoom to the whole symbol"))
-        sep()
+        # Keep drawing commands on the first row; style and snap controls need
+        # their own row so they remain accessible at the default window width.
+        tb = ttk.Frame(self, style="Toolbar.TFrame", padding=(8, 4))
+        tb.pack(fill="x")
         ttk.Label(tb, text="Line", style="Toolbar.TLabel").pack(side="left", padx=(4, 4))
         self.width_var = tk.StringVar(value="normal")
         wcb = ttk.Combobox(tb, textvariable=self.width_var, values=("thin", "normal", "thick"), state="readonly",
@@ -656,6 +659,15 @@ class SymbolEditor(tk.Toplevel):
                 self.arrow_size_var.set(f"{arrows.arrow_size * UNIT_MM:g}")
         self.canvas.redraw()
 
+    def _current_arrow_size(self):
+        try:
+            value = float(self.arrow_size_var.get().replace(",", ".")) / UNIT_MM
+            if math.isfinite(value) and 0 < value <= 10000:
+                return value
+        except (ValueError, OverflowError):
+            pass
+        return 10.0
+
     def _apply_arrow_size(self, event=None):
         try:
             size_mm = float(self.arrow_size_var.get().replace(",", "."))
@@ -691,7 +703,10 @@ class SymbolEditor(tk.Toplevel):
         return "Drafting"
 
     def new_shape_style(self):
-        return {"width": self.width_var.get(), "dash": bool(self.dash_var.get())}
+        return {"width": self.width_var.get(), "dash": bool(self.dash_var.get()),
+                "arrow_start": bool(self.arrow_start_var.get()),
+                "arrow_end": bool(self.arrow_end_var.get()),
+                "arrow_size": self._current_arrow_size()}
 
     def rotation_step(self, ids):
         return 90 if any(isinstance(i, str) for i in ids) else 0
