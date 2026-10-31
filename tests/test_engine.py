@@ -379,7 +379,7 @@ def test_fit_to_sheet_sets_presentation_scale_only():
     assert r.bbox()[2] - r.bbox()[0] == width   # symbol size unchanged
     # exported page is still the paper size
     items, ext = export.paper_items(d, True, p)
-    assert ext[2] * UNIT_MM == pytest.approx(420)
+    assert ext[2] * UNIT_MM == pytest.approx(d.sheet.size_mm()[0])
 
 
 # ================================================================ netlist, wire numbers, reports
@@ -821,7 +821,7 @@ def test_pdf_scaled_sheet_and_rotated_text():
     d.sheet.scale = "1:2"
     d.add_shape(Shape(d.new_id(), "text", pts=[(800, 600)], s="ROTATED", size=20, angle=90))
     r = pypdf.PdfReader(io.BytesIO(export.project_pdf(p)))
-    assert round(float(r.pages[0].mediabox.width) / 72 * 25.4) == 420
+    assert round(float(r.pages[0].mediabox.width) / 72 * 25.4) == round(d.sheet.size_mm()[0])
     assert "ROTATED" in r.pages[0].extract_text()
 
 

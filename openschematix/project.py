@@ -310,7 +310,10 @@ def next_free(prefix: str, taken: set) -> str:
     return f"{prefix}{n}"
 
 
-def new_project(title: str = "", size: str = "A3") -> Project:
+DEFAULT_SHEET_SIZE = "ANSI A"   # 8.5 x 11 in; used for new projects (existing files keep their size)
+
+
+def new_project(title: str = "", size: str = DEFAULT_SHEET_SIZE) -> Project:
     p = Project(title)
     doc = p.add_sheet("Sheet 1")
     doc.sheet.size = size
