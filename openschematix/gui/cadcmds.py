@@ -41,6 +41,21 @@ def _ghost(kind, **kw):
     return shape_prims(Shape(-1, kind, **kw), role="ghost")
 
 
+def cmd_fill(host):
+    """Create a separate vector polygon from a closed drafting boundary."""
+    from ..boundary_fill import find_boundary
+    point = yield GetPoint("Click inside a closed region to fill")
+    if point is None:
+        return "Cancelled."
+    boundary = find_boundary(host.doc.shapes.values(), point)
+    if boundary is None:
+        return "No unambiguous closed boundary found (open or nested regions are not supported yet)."
+    shape = _shape(host, "polygon", pts=boundary, fill=True)
+    shape.fill = True
+    host.set_selection({shape.id})
+    return "Filled region created."
+
+
 def cmd_line(host):
     pts = []
     made = []
@@ -314,7 +329,7 @@ def cmd_extend(host):
     return f"{n} extension(s)."
 
 
-DRAW_COMMANDS = {"LINE": cmd_line, "PLINE": cmd_pline, "RECTANGLE": cmd_rect, "CIRCLE": cmd_circle, "ARC": cmd_arc,
+DRAW_COMMANDS = {"FILL": cmd_fill, "LINE": cmd_line, "PLINE": cmd_pline, "RECTANGLE": cmd_rect, "CIRCLE": cmd_circle, "ARC": cmd_arc,
                  "TEXT": cmd_text, "MOVE": cmd_move, "COPY": cmd_copy, "ROTATE": cmd_rotate, "SCALE": cmd_scale,
                  "MIRROR": cmd_mirror, "ERASE": cmd_erase, "TRIM": cmd_trim, "EXTEND": cmd_extend}
 
@@ -322,6 +337,7 @@ DRAW_COMMANDS = {"LINE": cmd_line, "PLINE": cmd_pline, "RECTANGLE": cmd_rect, "C
 # and the symbol editor so both toolbars read the same. The typed alias and
 # any shortcut are appended by commands.tooltip().
 TOOL_TIPS = {
+    "FILL": "Fill: click inside a closed boundary",
     "LINE": "Line: draw straight segments",
     "PLINE": "Polyline: draw connected segments (C closes)",
     "RECTANGLE": "Rectangle: pick two corners",
