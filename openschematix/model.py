@@ -329,9 +329,12 @@ class Shape:
         if kind in ("line", "polyline"):
             s.arrow_start = bool(d.get("arrow_start", False))
             s.arrow_end = bool(d.get("arrow_end", False))
-            arrow_size = float(d.get("arrow_size", 10.0))
-            if not 0 < arrow_size <= 10000:
-                raise ValueError("arrow_size must be positive and at most 10000")
+            try:
+                arrow_size = float(d.get("arrow_size", 10.0))
+                if not math.isfinite(arrow_size) or not 0 < arrow_size <= 10000:
+                    arrow_size = 10.0
+            except (TypeError, ValueError, OverflowError):
+                arrow_size = 10.0
             s.arrow_size = arrow_size
         return s
 
