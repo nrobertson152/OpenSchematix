@@ -83,4 +83,9 @@ def find_boundary(shapes, point):
     inside = [p for p in contours if point_in_polygon(point, p)]
     if len(inside) != 1:
         return None
-    return inside[0]
+    outer = inside[0]
+    # Reject an outer contour with holes instead of painting over the holes.
+    if any(other is not outer and point_in_polygon(other[0], outer)
+           for other in contours):
+        return None
+    return outer
