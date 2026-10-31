@@ -15,6 +15,8 @@ All notable changes to this project are documented here. Versions follow [Semant
   mirrored, deleted and undone, are drawn underneath other objects, and export to SVG (even-odd path with
   arcs), PDF (even-odd fill) and DXF (block of SOLIDs). See `docs/BOUNDARY_FILL.md`.
 - `tools/bench_boundary_fill.py` and `tools/fuzz_boundary_fill.py`: boundary-fill benchmarks and robustness fuzz.
+- `tools/bench_phase4.py`: reproducible performance baseline (connectivity, crossings, scene, canvas redraw
+  split into CPU and Tk time, hit-testing, object snap, undo snapshots, boundary fill, save/load, peak memory).
 
 - Adjustable vector arrowheads at either or both ends of drafting lines and polylines, with
   Properties inspector and custom symbol editor controls, project persistence and exports.
@@ -46,6 +48,10 @@ All notable changes to this project are documented here. Versions follow [Semant
   autocomplete suggestion (e.g. TR started TEXT, CO started CIRCLE).
 
 ### Changed
+- Performance: connection analysis (junction dots, open wire ends, open terminals) uses a per-call spatial
+  grid index instead of testing every wire for every wire end and corner. Results are identical; canvas
+  redraws on a 1,152-component / 1,728-wire sheet drop from about 10 s to about 0.6 s (see
+  `tools/bench_phase4.py`). No caching was introduced.
 - File format: new `hatch` drafting shape and sheet schema 3. Projects and `.osch` sheets are written with the
   lowest schema that can hold their content, so files without fills remain schema 2 and open in 1.0.x;
   1.0.x refuses files with fills with a clear "newer schema" message. A fill stored only in the revision

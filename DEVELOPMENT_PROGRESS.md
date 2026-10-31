@@ -180,6 +180,22 @@ rejected intersections and holes, fills stored as plain polygons, a failing test
 - **Python 3.10.14** (minimum supported; pbs build, Tk 8.6.12): pytest 445 passed / 3 skipped (pypdfium2, ezdxf);
   GUI not runnable there (same pbs Menu abort).
 
+### Phase 4 (performance) — optimization 1: connectivity spatial index (session 8, branch `perf/connectivity-index`)
+
+- Baseline (`tools/bench_phase4.py`, new): `connectivity.analyse` was 90–95 % of every canvas redraw and
+  O(points × wires); a hover change on a 1,152-component sheet froze the editor ~10 s.
+- Change: `connectivity._WireIndex`, a uniform grid (50-unit cells) of wires by padded segment bounding box,
+  built per call and used only to narrow which wires `counts_at` tests. Per-wire tests, tolerances and output
+  order unchanged; no caching. Padding is tol + 1 because `point_on_segment` accepts points up to tol/length
+  beyond very short diagonal segments (pre-existing behaviour, preserved). Memory is linear: segments over 256
+  cells, non-finite wires and anything beyond a 32-per-segment registration budget are always examined.
+- Tests: `tests/test_connectivity_index.py` (oracle = verbatim old algorithm; seeded differential fuzz,
+  tolerance/cell-boundary/overshoot/degenerate/non-finite/huge-segment cases, memory bound, superset property,
+  example projects).
+- Result: analyse 19×/72×/193× faster (small/medium/large); full redraw 0.14→0.03 s, 1.06→0.11 s,
+  10.1→0.57 s. analyse peak memory +26 % (index). Next candidate: `editing.crossings()` (now the largest
+  redraw cost on large sheets) — not started.
+
 ## Status summary
 
 **Version 1.0.1 (originally developed internally as "3.0") is implemented and tested on Linux** (engine + GUI). All 25 sections of the brief are
