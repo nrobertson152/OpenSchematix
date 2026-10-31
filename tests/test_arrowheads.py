@@ -57,11 +57,21 @@ class ArrowheadTests(unittest.TestCase):
         self.assertEqual(arrow[0], (40, 0))
         self.assertAlmostEqual((arrow[1][0] + arrow[2][0]) / 2, 30)
 
-    def test_invalid_arrow_size_rejected(self):
+    def test_bbox_includes_arrowhead(self):
+        shape = Shape(7, "line", pts=[(0, 0), (30, 0)],
+                      arrow_start=True, arrow_end=True, arrow_size=10)
+        x0, y0, x1, y1 = shape.bbox()
+        self.assertLess(y0, 0)
+        self.assertGreater(y1, 0)
+        self.assertEqual((x0, x1), (0, 30))
+
+    def test_invalid_arrow_size_falls_back(self):
         data = Shape(5, "line", pts=[(0, 0), (20, 0)]).to_dict()
         data["arrow_size"] = -1
-        with self.assertRaises(ValueError):
-            Shape.from_dict(data)
+        self.assertEqual(Shape.from_dict(data).arrow_size, 10.0)
+        for bad in (0, "abc", None, float("nan"), float("inf")):
+            data["arrow_size"] = bad
+            self.assertEqual(Shape.from_dict(data).arrow_size, 10.0)
 
 
 if __name__ == "__main__":
