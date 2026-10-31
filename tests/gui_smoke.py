@@ -657,6 +657,16 @@ se.geometry("1240x780+0+0")
 pump(5)
 check(se.step_var.get() == "1.25 mm",
       "symbol editor snap setting initialized")
+
+def _descendants(widget):
+    for child in widget.winfo_children():
+        yield child
+        yield from _descendants(child)
+
+snap_controls = [w for w in _descendants(se) if isinstance(w, __import__("tkinter.ttk", fromlist=["Combobox"]).Combobox)
+                 and str(w.cget("textvariable")) == str(se.step_var)]
+check(bool(snap_controls) and snap_controls[0].winfo_rootx() + snap_controls[0].winfo_width()
+      <= se.winfo_rootx() + se.winfo_width(), "symbol editor Snap control fits at 1240 px")
 se.arrow_end_var.set(1)
 style = se.new_shape_style()
 check(style["arrow_end"] and not style["arrow_start"] and style["arrow_size"] == 10,
