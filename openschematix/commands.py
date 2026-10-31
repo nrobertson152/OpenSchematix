@@ -121,6 +121,31 @@ def resolve(word: str, extra_aliases: dict | None = None) -> str | None:
     return alias_table(extra_aliases).get(word.strip().upper())
 
 
+def typed_forms(name: str, extra_aliases: dict | None = None) -> list[str]:
+    """What can be typed for a command: its shortest built-in alias first
+    (the usual way to start it), then user aliases; the full name if none."""
+    c = get(name)
+    if c is None:
+        return []
+    user = sorted(a.strip().upper() for a, n in (extra_aliases or {}).items()
+                  if a.strip() and n.upper() == c.name and a.strip().upper() not in c.aliases)
+    forms = sorted(c.aliases, key=len)[:1] + user
+    return forms or [c.name]
+
+
+def tooltip(name: str, accel: str = "", extra_aliases: dict | None = None, summary: str | None = None) -> str:
+    """Toolbar tooltip for a command: what it does, then how to start it from
+    the keyboard, e.g. "Draw lines (type L)" or "Undo (Ctrl+Z · type U)".
+    Used by every toolbar so wording and shortcut format stay consistent."""
+    c = get(name)
+    text = summary or (c.summary if c else name)
+    keys = [accel] if accel else []
+    forms = typed_forms(name, extra_aliases)
+    if forms:
+        keys.append("type " + " / ".join(forms))
+    return f"{text} ({' · '.join(keys)})" if keys else text
+
+
 def split(line: str) -> tuple[str, str]:
     line = line.strip()
     if not line:

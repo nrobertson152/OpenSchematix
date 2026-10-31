@@ -56,6 +56,9 @@ class Tooltip:
         tk.Label(self.tip, text=self.text, bg=bg, fg=fg, padx=8, pady=4, justify="left",
                  font=t.fonts["small"] if t else None).pack()
 
+    def hide(self):
+        self._hide()
+
     def _hide(self, _e=None):
         if self.after:
             try:
@@ -95,11 +98,13 @@ class IconButton(tk.Canvas):
             w += self._text_w
         super().__init__(master, width=int(w), height=int(self.size + 2 * self.pad), highlightthickness=0,
                          borderwidth=0, cursor="hand2", takefocus=0)
+        # add="+": the tooltip binds <Enter>/<Leave> on this widget too; a plain
+        # bind() here replaced its handlers, so toolbar tooltips never appeared.
         self.tip = Tooltip(self, tooltip) if tooltip else None
-        self.bind("<Enter>", lambda e: self._set(hover=True))
-        self.bind("<Leave>", lambda e: self._set(hover=False, pressed=False))
-        self.bind("<ButtonPress-1>", lambda e: self._set(pressed=True))
-        self.bind("<ButtonRelease-1>", self._release)
+        self.bind("<Enter>", lambda e: self._set(hover=True), add="+")
+        self.bind("<Leave>", lambda e: self._set(hover=False, pressed=False), add="+")
+        self.bind("<ButtonPress-1>", self._press, add="+")
+        self.bind("<ButtonRelease-1>", self._release, add="+")
         th.subscribe(self._retheme)
         self.bind("<Destroy>", lambda e: th.unsubscribe(self._retheme) if e.widget is self else None)
         self.draw()
@@ -111,6 +116,20 @@ class IconButton(tk.Canvas):
         for k, v in kw.items():
             setattr(self, k, v)
         self.draw()
+
+    def _press(self, _e):
+        # <ButtonPress-1> is more specific than the tooltip's <ButtonPress>, so
+        # Tk runs only this handler: hide the tooltip here.
+        if self.tip is not None:
+            self.tip.hide()
+        self._set(pressed=True)
+
+    def set_tooltip(self, text: str):
+        """Set or replace the tooltip text (creates the tooltip if needed)."""
+        if self.tip is None:
+            self.tip = Tooltip(self, text)
+        else:
+            self.tip.set(text)
 
     def _release(self, e):
         was = self.pressed
@@ -199,8 +218,8 @@ class Section(ttk.Frame):
         self.on_toggle = on_toggle
         head = ttk.Frame(self, style="Surface.TFrame", padding=(8, 7, 8, 3))
         head.pack(fill="x")
-        self.chev = IconButton(head, "chevron_down" if expanded else "chevron_right", self.toggle, size=12,
-                               bg_key="surface", pad=2)
+        self.chev = IconButton(head, "chevron_down" if expanded else "chevron_right", self.toggle,
+                               "Expand / collapse this section", size=12, bg_key="surface", pad=2)
         self.chev.pack(side="left")
         lab = ttk.Label(head, text=title.upper(), style="Heading.TLabel", cursor="hand2")
         lab.pack(side="left", padx=(4, 0))
