@@ -141,7 +141,9 @@ pump(4)
 # ================================================================ 1. theme switching keeps menus
 mb = root.nametowidget(root.cget("menu"))
 check(menu_labels(mb) == ["File", "Edit", "View", "Draw", "Sheet", "Tools", "Help"], "menubar has all menus")
-view = root.nametowidget(mb.entrycget(2, "menu"))
+# look the cascade up by label: under Tk 8.6 the menubar has a (hidden) tear-off entry at index 0
+view = root.nametowidget(mb.entrycget([i for i in range(mb.index("end") + 1) if mb.type(i) == "cascade"
+                                       and mb.entrycget(i, "label") == "View"][0], "menu"))
 theme_menu = None
 for i in range(view.index("end") + 1):
     if view.type(i) == "cascade" and view.entrycget(i, "label") == "Theme":
@@ -155,7 +157,7 @@ for rep in range(2):
         mb_now = root.nametowidget(root.cget("menu"))
         ok = root.cget("menu") == before_menu and menu_labels(mb_now)[:3] == ["File", "Edit", "View"]
         ok = ok and all(root.nametowidget(mb_now.entrycget(j, "menu")).index("end") is not None
-                        for j in range(mb_now.index("end") + 1))
+                        for j in range(mb_now.index("end") + 1) if mb_now.type(j) == "cascade")
         if not ok:
             check(False, f"menus intact after switching to {app.theme.name}")
         if rep == 0:
@@ -941,6 +943,68 @@ check(len(sheet) == 1 and {s.id: s.to_dict() for s in sheet[0].shapes.values() i
       "fills survive saving and reopening")
 # the symbol editor does not offer FILL (fills are sheet objects)
 check("FILL" not in _se.EDITOR_COMMANDS, "symbol editor does not offer FILL")
+
+# on-screen pixels: holes stay empty, an island in the hole is filled separately, selection recolours the whole
+# fill, zoom / pan / move redraw it correctly (Tk polygons have no holes: fills use keyhole polygons)
+import shutil  # noqa: E402
+if shutil.which("import") and cv.winfo_depth() >= 24:
+    def pixel(world):
+        pump(8)
+        x, y = cv.to_screen(world)
+        out = subprocess.run(["import", "-window", hex(cv.winfo_id()), "-crop", f"1x1+{int(x)}+{int(y)}", "-depth",
+                              "8", "rgb:-"], capture_output=True).stdout
+        return "#%02x%02x%02x" % tuple(out[:3]) if len(out) >= 3 else None
+
+    app.add_sheet()
+    pump(4)
+    grid_was = app.settings["show_grid"]
+    app.settings["show_grid"] = False
+    M = app.to_model
+    cmd("REC")
+    cmd("20,20")
+    cmd("@100,60")
+    cmd("CIRCLE")
+    cmd("70,50")
+    cmd("20")
+    cmd("CIRCLE")
+    cmd("70,50")
+    cmd("8")
+    cv.fit()
+    pump(4)
+    cmd("FILL")
+    click(M((25, 25)))
+    cmd("")
+    cmd("FILL")
+    click(M((70, 50)))
+    cmd("")
+    outer = min((s for s in app.doc.shapes.values() if s.kind == "hatch"), key=lambda s: s.id)
+    app.set_selection(set())
+    INK, PAPER, SEL = (cv.colors[k].lower() for k in ("ink", "paper", "select"))
+    P = {"fill": (48, 30), "annulus": (70, 64), "island": (70, 50), "outside": (130, 50)}
+    got = {k: pixel(M(v)) for k, v in P.items()}
+    check(got == {"fill": INK, "annulus": PAPER, "island": INK, "outside": PAPER},
+          f"screen: fill drawn, hole empty, island filled separately ({got})")
+    app.set_selection({outer.id})
+    got = {k: pixel(M(v)) for k, v in P.items()}
+    check(got == {"fill": SEL, "annulus": PAPER, "island": INK, "outside": PAPER},
+          f"screen: selection recolours the fill but not its hole ({got})")
+    cv.set_zoom(cv.zoom * 2.7, anchor=cv.to_screen(M((70, 50))))
+    cv.ox += 15
+    cv.redraw()
+    got = {k: pixel(M(P[k])) for k in ("fill", "annulus", "island")}
+    check(got == {"fill": SEL, "annulus": PAPER, "island": INK}, f"screen: correct after zoom and pan ({got})")
+    cv.fit()
+    cmd("M")
+    cmd("20,20")
+    cmd("@130,0")
+    app.set_selection(set())
+    got = {k: pixel(M(v)) for k, v in P.items()}
+    moved = {k: pixel(M((P[k][0] + 130, P[k][1]))) for k in ("fill", "annulus", "island")}
+    check(got == {"fill": PAPER, "annulus": PAPER, "island": INK, "outside": PAPER} and
+          moved == {"fill": INK, "annulus": PAPER, "island": PAPER}, f"screen: correct after MOVE ({got}, {moved})")
+    app.settings["show_grid"] = grid_was
+else:
+    print("  (ImageMagick 'import' or a 24-bit display not available: pixel checks skipped)")
 
 # ================================================================ final screenshots
 app.set_active_sheet(app.project.sheets[0].uid)
