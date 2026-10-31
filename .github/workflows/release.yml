@@ -71,7 +71,7 @@ jobs:
           name: linux
           path: |
             dist/*.tar.gz
-            dist/*.AppImage
+            dist/OpenSchematix-*-x86_64.AppImage
 
   windows:
     name: Windows (installer + portable zip)
