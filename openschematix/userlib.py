@@ -333,8 +333,8 @@ class UserLibrary:
             elif on_conflict == "replace":
                 old = self.entries[doc["id"]]
                 doc["revision"] = max(doc.get("revision", 0), old.doc.get("revision", 0))
-                os.unlink(old.path)
-                del self.entries[doc["id"]]
+                # save_symbol writes the replacement atomically and only then
+                # removes the previous file, preserving it on write failure.
         return self.save_symbol(doc, folder)
 
     # ---------------------------------------------------------------- packages
