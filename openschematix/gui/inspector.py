@@ -328,7 +328,7 @@ class Inspector(ttk.Frame):
                        _common(arrow_shapes, lambda s: f"{s.arrow_size * UNIT_MM:g}"),
                        lambda v: self._num(v, lambda f: app.edit_objects(arrow_shapes, arrow_size=f / UNIT_MM)
                                          if 0 < f <= 10000 * UNIT_MM else
-                                         app.set_status("Arrow size must be greater than zero.")))
+                                         (app.set_status("Arrow size must be greater than zero."), self.show_selection())))
         self._layer_lock(sec, shapes)
         texts = [s for s in shapes if s.kind == "text"]
         if texts:
