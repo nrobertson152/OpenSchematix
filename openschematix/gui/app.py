@@ -314,8 +314,7 @@ class App:
             self.menu_accels.append((menu, menu.index("end"), action))
 
     def _build_menu(self):
-        self.root.option_add("*tearOff", 0)
-        m = tk.Menu(self.root, tearoff=0)
+        m = tk.Menu(self.root)
         self.menubar = m
         f = tk.Menu(m, tearoff=0)
         self._add(f, "New project", self.new, "new")
