@@ -3,7 +3,7 @@ import math
 import unittest
 
 from openschematix.model import Shape
-from openschematix.shapes import shape_prims, rotate_shape, move_shape, scale_shape
+from openschematix.shapes import shape_prims, rotate_shape, move_shape, scale_shape, shape_to_symbol_prim, symbol_prim_to_shape
 
 
 class ArrowheadTests(unittest.TestCase):
@@ -64,6 +64,23 @@ class ArrowheadTests(unittest.TestCase):
         self.assertLess(y0, 0)
         self.assertGreater(y1, 0)
         self.assertEqual((x0, x1), (0, 30))
+
+    def test_custom_symbol_primitive_roundtrip(self):
+        shape = Shape(8, "line", pts=[(0, 0), (20, 0)],
+                      arrow_start=True, arrow_end=True, arrow_size=7)
+        primitive = shape_to_symbol_prim(shape)
+        restored = symbol_prim_to_shape(primitive, 9)
+        self.assertTrue(restored.arrow_start and restored.arrow_end)
+        self.assertEqual(restored.arrow_size, 7)
+        self.assertEqual(len(shape_prims(restored)), 3)
+
+    def test_strict_arrow_flag_decoding(self):
+        data = Shape(10, "line", pts=[(0, 0), (20, 0)]).to_dict()
+        data.update(arrow_start="false", arrow_end=1, arrow_size=True)
+        restored = Shape.from_dict(data)
+        self.assertFalse(restored.arrow_start)
+        self.assertFalse(restored.arrow_end)
+        self.assertEqual(restored.arrow_size, 10)
 
     def test_invalid_arrow_size_falls_back(self):
         data = Shape(5, "line", pts=[(0, 0), (20, 0)]).to_dict()
