@@ -27,11 +27,15 @@ from . import cadcmds
 from . import interact as ia
 from . import theme as th
 from .canvas_view import DrawingView, draw_items
+from .cmdline import CommandLine
 from .widgets import IconButton, ToolbarSeparator, Tooltip, current_theme
 
 SNAP_STEPS = {"0.25 mm": 1, "0.625 mm": 2.5, "1.25 mm": 5, "2.5 mm (pin grid)": 10}
 DIR_LABEL = {"l": "Left", "r": "Right", "u": "Up", "d": "Down"}
 EXTENT = 200     # half-size of the editing area in units (50 mm)
+# Commands that can be typed in the symbol editor (names from commands.py;
+# every alias of these, built-in or user defined, works as well).
+EDITOR_COMMANDS = frozenset(cadcmds.DRAW_COMMANDS) | {"UNDO", "REDO", "ZOOM", "SAVE", "HELP"}
 
 
 class EditorCanvas(DrawingView):
@@ -330,6 +334,8 @@ class SymbolEditor(tk.Toplevel):
         self.dirty = False
         self.change_counter = 0
         self.runner = ia.CommandRunner(self)
+        self.available_commands = EDITOR_COMMANDS      # filters command-line autocomplete
+        self.last_command = ""
         self._build()
         self._update_title()
         self.bind("<Escape>", lambda e: self.canvas.escape())
@@ -338,6 +344,8 @@ class SymbolEditor(tk.Toplevel):
         self.bind("<Control-s>", lambda e: self.save())
         self.bind("<Delete>", lambda e: self._delete_key(e))
         self.bind("<KeyPress>", self._key)
+        self.bind("<Return>", self._confirm_key)
+        self.bind("<KP_Enter>", self._confirm_key)
 
     # ---------------------------------------------------------------- construction
     def _from_builtin(self, sid):
@@ -367,25 +375,26 @@ class SymbolEditor(tk.Toplevel):
 
         def sep():
             ToolbarSeparator(tb).pack(side="left", padx=6, pady=4)
-        tool("select", "select", "Select / move (Esc)")
+        from .. import commands as cp
+        aliases = self.app.settings["aliases"]
+        tool("select", "select", "Select and move objects (Esc)")
         sep()
-        for icon, name, tip in (("line", "LINE", "Line (L)"), ("polyline", "PLINE", "Polyline (PL)"),
-                                ("rect", "RECTANGLE", "Rectangle (REC)"), ("circle", "CIRCLE", "Circle (C)"),
-                                ("arc", "ARC", "Arc: centre, start, end (A)"), ("text", "TEXT", "Text (T)")):
-            tool(icon, name, tip)
-        tool("pin", "pin", "Connection point: click on the 2.5 mm grid")
-        tool("origin", "origin", "Set the insertion point (origin)")
+        for icon, name in (("line", "LINE"), ("polyline", "PLINE"), ("rect", "RECTANGLE"), ("circle", "CIRCLE"),
+                           ("arc", "ARC"), ("text", "TEXT")):
+            tool(icon, name, cp.tooltip(name, extra_aliases=aliases, summary=cadcmds.TOOL_TIPS[name]))
+        tool("pin", "pin", "Add a connection point: click on the 2.5 mm grid")
+        tool("origin", "origin", "Set the insertion point (origin) of the symbol")
         sep()
-        for icon, name, tip in (("move", "MOVE", "Move (M)"), ("copy", "COPY", "Copy (CO)"),
-                                ("rotate", "ROTATE", "Rotate (RO)"), ("mirror", "MIRROR", "Mirror (MI)"),
-                                ("scale", "SCALE", "Scale (SC)"), ("trim", "TRIM", "Trim (TR)"),
-                                ("extend", "EXTEND", "Extend (EX)")):
-            tool(icon, name, tip)
-        cmd("delete", lambda: self._delete_key(None), "Delete selection (Del)")
+        for icon, name in (("move", "MOVE"), ("copy", "COPY"), ("rotate", "ROTATE"), ("mirror", "MIRROR"),
+                           ("scale", "SCALE"), ("trim", "TRIM"), ("extend", "EXTEND")):
+            tool(icon, name, cp.tooltip(name, extra_aliases=aliases, summary=cadcmds.TOOL_TIPS[name]))
+        cmd("delete", lambda: self._delete_key(None),
+            cp.tooltip("ERASE", "Delete", aliases, summary="Delete the selection"))
         sep()
-        cmd("undo", self.undo, "Undo (Ctrl+Z)")
-        cmd("redo", self.redo, "Redo (Ctrl+Y)")
-        cmd("zoom_fit", lambda: self.canvas.fit(), "Zoom to symbol")
+        cmd("undo", self.undo, cp.tooltip("UNDO", "Ctrl+Z", aliases, summary="Undo the last change"))
+        cmd("redo", self.redo, cp.tooltip("REDO", "Ctrl+Y", aliases, summary="Redo the last undone change"))
+        cmd("zoom_fit", lambda: self.canvas.fit(), cp.tooltip("ZOOM", extra_aliases=aliases,
+                                                              summary="Zoom to the whole symbol"))
         sep()
         ttk.Label(tb, text="Line", style="Toolbar.TLabel").pack(side="left", padx=(4, 4))
         self.width_var = tk.StringVar(value="normal")
@@ -414,14 +423,11 @@ class SymbolEditor(tk.Toplevel):
         self.canvas.pack(fill="both", expand=True)
         bottom = ttk.Frame(left, style="Surface.TFrame", padding=(8, 4))
         bottom.pack(fill="x")
-        self.prompt = ttk.Label(bottom, text="Command:", style="Prompt.TLabel")
-        self.prompt.pack(side="left")
-        self.cmd_var = tk.StringVar()
-        ent = ttk.Entry(bottom, textvariable=self.cmd_var, style="Command.TEntry")
-        ent.pack(side="left", fill="x", expand=True, padx=6)
-        ent.bind("<Return>", self._cmd_enter)
-        ent.bind("<Escape>", lambda e: (self.cmd_var.set(""), self.canvas.escape()))
-        self.cmd_entry = ent
+        self.cmdline = CommandLine(bottom, self.app, host=self, padding=0,
+                                   tooltip="Command line — type a command or alias (L, C, TR, M …) and press Enter "
+                                           "or Space. Enter or Space on its own repeats the last command.")
+        self.cmdline.pack(side="left", fill="x", expand=True, padx=(0, 6))
+        self.cmd_entry = self.cmdline.entry
         self.coords = ttk.Label(bottom, text="", style="Muted.TLabel", width=26)
         self.coords.pack(side="right")
         pane.add(left, weight=1)
@@ -435,8 +441,9 @@ class SymbolEditor(tk.Toplevel):
         self.status.pack(fill="x", pady=(6, 0))
         btns = ttk.Frame(right, style="Surface.TFrame")
         btns.pack(fill="x", pady=(8, 0))
-        ttk.Button(btns, text="Save to library", style="Accent.TButton", command=self.save).pack(side="left",
-                                                                                               fill="x", expand=True)
+        save_btn = ttk.Button(btns, text="Save to library", style="Accent.TButton", command=self.save)
+        save_btn.pack(side="left", fill="x", expand=True)
+        Tooltip(save_btn, "Save this symbol to the selected library folder (Ctrl+S · type SAVE)")
         ttk.Button(btns, text="Save as new symbol", command=lambda: self.save(as_new=True)).pack(side="left",
                                                                                               padx=(6, 0))
         self.set_tool("select")
@@ -515,8 +522,10 @@ class SymbolEditor(tk.Toplevel):
         ttk.Label(form_, text="Lead direction", style="Muted.TLabel").grid(row=2, column=0, sticky="w", pady=3)
         ttk.Combobox(form_, textvariable=self.pin_dir, values=list(DIR_LABEL.values()), state="readonly",
                      width=10).grid(row=2, column=1, sticky="w")
-        ttk.Checkbutton(form_, text="Show the name on the symbol", variable=self.pin_show).grid(row=3, column=0,
-                                                                                               columnspan=2, sticky="w")
+        show_cb = ttk.Checkbutton(form_, text="Number this point on drawings", variable=self.pin_show)
+        show_cb.grid(row=3, column=0, columnspan=2, sticky="w")
+        Tooltip(show_cb, "When the project shows terminal designations (Project settings), draw this point's "
+                         "name next to it. Clear it for points that should never be numbered.")
         row = ttk.Frame(form_, style="Surface.TFrame")
         row.grid(row=4, column=0, columnspan=2, sticky="ew", pady=(6, 0))
         ttk.Button(row, text="Apply", style="Accent.TButton", command=self._pin_apply).pack(side="left")
@@ -592,7 +601,7 @@ class SymbolEditor(tk.Toplevel):
         self.set_status(msg)
 
     def show_prompt(self, text):
-        self.prompt.configure(text=(text + " ") if text else "Command:")
+        self.cmdline.set_prompt(text)
         if text:
             self.cmd_entry.focus_set()
 
@@ -756,23 +765,62 @@ class SymbolEditor(tk.Toplevel):
         self.set_status(hints.get(name, ""))
         self.canvas.redraw()
 
+    # ---------------------------------------------------------------- keyboard / command line
+    # Same behaviour as the schematic editor (app.py _on_key/_enter_key and
+    # cmdline.CommandLine): letters go to the command line; Enter or Space on
+    # the drawing confirms the running command or repeats the last one. Space
+    # inside a text prompt or a typed coordinate stays a normal space
+    # (CommandLine._space). Keys typed into other fields are left alone.
+    TEXT_WIDGETS = (tk.Entry, ttk.Entry, ttk.Combobox, tk.Text, tk.Spinbox, ttk.Spinbox, tk.Listbox, ttk.Treeview)
+
+    def _on_drawing(self, w):
+        return w is self.canvas or w is self
+
     def _key(self, e):
         w = e.widget
-        if isinstance(w, (tk.Entry, ttk.Entry, ttk.Combobox)):
-            return
-        if e.char and e.char.isprintable() and not e.state & 0x000C and e.char != " ":
-            self.cmd_entry.focus_set()
-            self.cmd_entry.insert("end", e.char)
-            return "break"
+        if isinstance(w, self.TEXT_WIDGETS) or e.state & 0x000C:
+            return None
+        ch = e.char
+        if not ch or not ch.isprintable():
+            return None
+        if ch == " ":
+            # buttons and check boxes keep Space for themselves
+            return self._confirm_key(e) if self._on_drawing(w) else None
+        self.cmdline.focus_entry(ch)
+        return "break"
 
-    def _cmd_enter(self, _e):
-        text = self.cmd_var.get()
-        self.cmd_var.set("")
+    def _confirm_key(self, e):
+        if e is not None and not self._on_drawing(e.widget):
+            return None
         if self.runner.active:
-            self.runner.text(text)
-            return "break"
+            self.runner.enter()
+        elif self.last_command:
+            self.execute_input(self.last_command)
+        return "break"
+
+    def execute_input(self, text: str):
+        """Run a line typed in the command line (CommandLine host API)."""
         from .. import commands as cp
-        name = cp.resolve(text.split(" ")[0]) if text.strip() else ""
+        if self.runner.active:
+            if not self.runner.text(text):
+                self.set_status(f"Not understood: {text}")
+            return
+        text = text.strip()
+        if not text:
+            if not self.last_command:
+                return
+            text = self.last_command
+        aliases = self.app.settings["aliases"]
+        word, _args = cp.split(text)
+        name = cp.resolve(word, aliases)
+        if name is None:
+            self.set_status(f"Unknown command “{word}”. Type HELP for the symbol editor's commands.")
+            return
+        if name not in EDITOR_COMMANDS:
+            self.set_status(f"{name} is not available in the symbol editor. Type HELP for its commands.")
+            return
+        if name in cadcmds.DRAW_COMMANDS:      # Enter/Space repeats drawing commands only
+            self.last_command = word
         if name in cadcmds.DRAW_COMMANDS:
             self.set_tool(name)
         elif name == "UNDO":
@@ -781,10 +829,13 @@ class SymbolEditor(tk.Toplevel):
             self.redo()
         elif name == "ZOOM":
             self.canvas.fit()
-        elif text.strip():
-            self.set_status(f"Unknown command in the symbol editor: {text}")
-        self.canvas.focus_set()
-        return "break"
+        elif name == "SAVE":
+            self.save()
+        elif name == "HELP":
+            self.set_status("Commands: " + ", ".join(
+                f"{n} ({'/'.join(cp.typed_forms(n, aliases))})" for n in sorted(EDITOR_COMMANDS)))
+        if not self.runner.active:
+            self.canvas.focus_set()
 
     def _delete_key(self, e):
         if e is not None and isinstance(e.widget, (tk.Entry, ttk.Entry)):
