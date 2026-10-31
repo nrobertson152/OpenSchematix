@@ -218,92 +218,100 @@ def test_corrupted_and_malformed_project_handling(tmp_dir):
     assert "newer version" in str(exc_info.value).lower()
 
 # ==============================================================================
-# Priority 2: Undo/redo correctness
+# Priority 2: Undo/redo correctness (Production App Undo/Redo Engine)
 # ==============================================================================
 
-def test_undo_redo_complex_sequence_and_netlist_fidelity():
+def test_production_app_undo_redo_sequence_and_invalidation():
     """
-    Test undo/redo sequences across operations:
-    - Placing, moving, rotating, copying, and deleting components and shapes.
-    - Wire connections and junction creation/removal.
-    - Verify connectivity & netlists restore accurately.
+    Exercise the actual production undo/redo implementation on openschematix.gui.app.App:
+    - Component placement, property edits, rotation, deletion.
+    - Wire additions and crossing junction connections / disconnections.
+    - Consecutive undo and redo steps verifying netlist and connectivity restoration.
+    - Redo-history invalidation upon a new commit.
     """
-    history = []
-    future = []
+    try:
+        import tkinter as tk
+        root = tk.Tk()
+        root.withdraw()
+    except Exception as e:
+        pytest.skip(f"Tk GUI display not available: {e}")
 
-    p = project.new_project()
-    s = p.sheets[0]
+    try:
+        from openschematix.gui.app import App
+        app = App(root, check_recovery=False)
 
-    def record_step():
-        history.append(json.dumps(p.to_dict()))
-        future.clear()
+        # Step 1: Place 2 resistors using production app.place_at
+        app.place_at("el.resistor.iec", (100, 100))
+        r1_id = next(iter(app.doc.components))
+        app.place_at("el.resistor.iec", (200, 100))
+        r2_id = [cid for cid in app.doc.components if cid != r1_id][0]
+        r1 = app.doc.components[r1_id]
+        r2 = app.doc.components[r2_id]
+        assert len(app.undo_stack) == 2
+        assert len(app.redo_stack) == 0
 
-    def do_undo():
-        future.append(json.dumps(p.to_dict()))
-        restored = project.Project.from_dict(json.loads(history.pop()))
-        return restored
+        # Step 2: Edit component properties via production app.edit_components
+        app.edit_components([r1], props={"Tolerance": "1%"})
+        assert r1.props["Tolerance"] == "1%"
+        assert len(app.undo_stack) == 3
 
-    def do_redo():
-        history.append(json.dumps(p.to_dict()))
-        restored = project.Project.from_dict(json.loads(future.pop()))
-        return restored
+        # Step 3: Wire them together via production change tracking
+        snap = app.begin_change()
+        w1 = editing.add_wire(app.doc, [r1.terminals()["2"], r2.terminals()["1"]])
+        app.commit_change(snap, "Wire added")
+        assert len(netlist.compute_nets(app.project)) == 1
+        assert len(app.undo_stack) == 4
 
-    # Step 0: Empty
-    record_step()
+        # Step 4: Add crossing wire and connect via production _connect_at
+        snap = app.begin_change()
+        w2 = editing.add_wire(app.doc, [(150, 50), (150, 150)])
+        app.commit_change(snap, "Crossing wire added")
+        assert len(editing.crossings(app.doc)) == 1
+        assert len(netlist.compute_nets(app.project)) == 2
+        app._connect_at((150, 100))
+        assert len(connectivity.analyse(app.doc).junctions) == 1
+        assert len(netlist.compute_nets(app.project)) == 1
 
-    # Step 1: Place 2 resistors
-    r1 = editing.place(s, "el.resistor.iec", 100, 100)
-    r2 = editing.place(s, "el.resistor.iec", 200, 100)
-    record_step()
+        # Step 5: Rotate R2 via production app.rotate
+        app.set_selection({r2_id})
+        rot_before = r2.rotation
+        app.rotate(cw=True)
+        assert app.doc.components[r2_id].rotation != rot_before
 
-    # Step 2: Wire them together
-    w1 = editing.add_wire(s, [r1.terminals()["2"], r2.terminals()["1"]])
-    nets_step2 = netlist.compute_nets(p)
-    assert len(nets_step2) == 1
-    assert set(nets_step2[0].terminals) == {(s.uid, r1.id, "2"), (s.uid, r2.id, "1")}
-    record_step()
+        # Step 6: Delete R1 via production app.delete
+        app.set_selection({r1_id})
+        app.delete()
+        assert r1_id not in app.doc.components
 
-    # Step 3: Add crossing wire and convert to junction
-    w2 = editing.add_wire(s, [(150, 50), (150, 150)])
-    editing.connect_crossing(s, (150, 100))
-    nets_step3 = netlist.compute_nets(p)
-    # Both wires are now part of the same net via the junction
-    assert len(nets_step3) == 1
-    assert len(connectivity.analyse(s).junctions) == 1
-    record_step()
+        # Undo Step 6: R1 deletion undone
+        app.undo()
+        assert r1_id in app.doc.components
 
-    # Step 4: Rotate R2
-    editing.rotate_items(s, [r2.id], [w1.id], clockwise=True)
-    record_step()
+        # Undo Step 5: R2 rotation undone
+        app.undo()
+        assert app.doc.components[r2_id].rotation == rot_before
 
-    # Step 5: Delete R1
-    editing.delete_items(s, [r1.id])
-    nets_step5 = netlist.compute_nets(p)
+        # Undo Step 4: Junction undone -> crossing restored, 2 nets restored
+        app.undo()
+        assert len(connectivity.analyse(app.doc).junctions) == 0
+        assert len(editing.crossings(app.doc)) == 1
+        assert len(netlist.compute_nets(app.project)) == 2
 
-    # Now verify Undo backwards
-    # Undo step 5 -> R1 restored (restores Step 4)
-    p = do_undo()
-    s = p.sheets[0]
-    assert any(c.designator == r1.designator for c in s.components.values())
+        # Redo Step 4: Junction redone -> 1 net restored
+        app.redo()
+        assert len(connectivity.analyse(app.doc).junctions) == 1
+        assert len(editing.crossings(app.doc)) == 0
+        assert len(netlist.compute_nets(app.project)) == 1
 
-    # Undo step 4 -> Rotation undone
-    p = do_undo()
-    s = p.sheets[0]
-
-    # Undo step 3 -> Junction undone, back to step 2 nets
-    p = do_undo()
-    s = p.sheets[0]
-    nets_after_undo3 = netlist.compute_nets(p)
-    assert len(nets_after_undo3) == 1
-    r1_curr = next(c for c in s.components.values() if c.designator == r1.designator)
-    r2_curr = next(c for c in s.components.values() if c.designator == r2.designator)
-    assert set(nets_after_undo3[0].terminals) == {(s.uid, r1_curr.id, "2"), (s.uid, r2_curr.id, "1")}
-    assert len(connectivity.analyse(s).junctions) == 0
-
-    # Redo step 3
-    p = do_redo()
-    s = p.sheets[0]
-    assert len(connectivity.analyse(s).junctions) == 1
+        # Redo-history invalidation test:
+        # Undo once (redo_stack now has 1 entry), then commit a new action.
+        app.undo()
+        assert len(app.redo_stack) > 0
+        app.place_at("el.lamp.iec", (300, 300))
+        # After new commit, redo_stack must be invalidated (empty)
+        assert len(app.redo_stack) == 0
+    finally:
+        root.destroy()
 
 # ==============================================================================
 # Priority 3: Electrical connectivity
