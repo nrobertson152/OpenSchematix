@@ -46,9 +46,9 @@ from .panels import CheckPanel, LayersPanel, ProjectPanel, SearchPanel, Template
 from .widgets import IconButton, ToastHost, ToolbarSeparator, Tooltip, make_menu, set_current_theme
 
 UNDO_LIMIT = 150
-FILETYPES_OPEN = [("OpenSchematix files", "*.schematix *.osch *.hpss"),
+FILETYPES_OPEN = [("OpenSchematix files", "*.schematix *.osch"),
                   ("OpenSchematix project", "*" + PROJECT_EXTENSION), ("OpenSchematix legacy drawing", "*.osch"),
-                  ("HPS Schematix drawing (legacy)", "*.hpss"), ("All files", "*.*")]
+                  ("All files", "*.*")]
 
 
 def resource_path(name: str) -> str:
