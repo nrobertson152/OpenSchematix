@@ -613,3 +613,11 @@ class Document:
 # 3 = adds "hatch" shapes (boundary fills). Sheets without fills are still
 # written as schema 2 so older releases can open them (Document.required_schema).
 SHEET_SCHEMA = 3
+
+
+def sheet_dict_schema(d) -> int:
+    """Schema needed by a serialised sheet (as stored in revision snapshots)."""
+    shapes = d.get("shapes") if isinstance(d, dict) else None
+    if isinstance(shapes, list) and any(isinstance(s, dict) and s.get("kind") == "hatch" for s in shapes):
+        return 3
+    return 2

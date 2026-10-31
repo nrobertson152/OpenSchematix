@@ -58,6 +58,7 @@ class RevisionStore:
     def __init__(self):
         self.entries: list[dict] = []
         self.objects: dict[str, bytes] = {}   # sha -> zlib-compressed canonical JSON
+        self._schema_cache: dict[str, int] = {}   # sha -> sheet schema needed (objects never change)
 
     # ---------------------------------------------------------------- objects
     def _put(self, obj) -> str:
@@ -155,6 +156,27 @@ class RevisionStore:
 
     def approved(self) -> list[dict]:
         return [e for e in self.entries if e["kind"] == "approved"]
+
+    def required_schema(self) -> int:
+        """Lowest sheet schema able to represent every stored snapshot.
+
+        The revision history is part of the project file, so a project whose
+        current sheets have no boundary fills but whose history does must
+        still be written as schema 3: an older reader would otherwise open it
+        and fail (or misbehave) only when that revision is restored."""
+        from .model import sheet_dict_schema
+        need = 2
+        for e in self.entries:
+            for _uid, _name, h in e.get("sheets", []):
+                v = self._schema_cache.get(h)
+                if v is None:
+                    try:
+                        v = sheet_dict_schema(self._get(h))
+                    except (KeyError, ValueError, zlib.error):
+                        v = 2               # unreadable objects are dropped on load anyway
+                    self._schema_cache[h] = v
+                need = max(need, v)
+        return need
 
     def stored_bytes(self) -> int:
         return sum(len(b) for b in self.objects.values())

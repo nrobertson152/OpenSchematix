@@ -28,7 +28,7 @@ from .settings import config_dir
 from .userlib import _atomic_json, _rel_ok, safe_name
 
 TPL_FORMAT = "OpenSchematix Template"
-TPL_VERSION = 1
+TPL_VERSION = 2          # 2 = content may contain boundary fills ("hatch" shapes); written only then
 TPL_EXT = ".ostpl"
 BUILTIN_PREFIX = "builtin:"
 
@@ -52,9 +52,12 @@ def normalise_content(clip: dict) -> dict:
 
 
 def make_template(name: str, clip: dict, description: str = "", category: str = "Custom") -> dict:
-    return {"format": TPL_FORMAT, "version": TPL_VERSION, "name": name.strip() or "Template",
+    content = normalise_content(clip)
+    # lowest version able to hold the content, so fill-free templates still load in 1.0.x
+    version = 2 if any(s.get("kind") == "hatch" for s in content.get("shapes", [])) else 1
+    return {"format": TPL_FORMAT, "version": version, "name": name.strip() or "Template",
             "description": description, "category": category or "Custom",
-            "created": _dt.datetime.now().isoformat(timespec="seconds"), "content": normalise_content(clip)}
+            "created": _dt.datetime.now().isoformat(timespec="seconds"), "content": content}
 
 
 def validate(data) -> dict:

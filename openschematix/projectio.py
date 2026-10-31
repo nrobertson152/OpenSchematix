@@ -57,6 +57,16 @@ def project_bytes(project: Project) -> bytes:
     return buf.getvalue()
 
 
+def required_schema(project: Project) -> int:
+    """Sheet schema written to the manifest: the lowest one able to hold
+    every sheet AND every revision snapshot stored in the file (2 unless a
+    boundary fill exists anywhere, so fill-free projects open in 1.0.x)."""
+    need = max((doc.required_schema() for doc in project.sheets), default=2)
+    if project.revisions is not None:
+        need = max(need, project.revisions.required_schema())
+    return need
+
+
 def write_zip(project: Project, fileobj):
     d = project.to_dict()
     sheets = d.pop("sheets")
@@ -64,8 +74,7 @@ def write_zip(project: Project, fileobj):
     manifest = {
         "format": PROJECT_FORMAT,
         "version": PROJECT_VERSION,
-        # lowest schema that can represent the sheets (2 unless boundary fills are used)
-        "sheet_schema": max((doc.required_schema() for doc in project.sheets), default=2),
+        "sheet_schema": required_schema(project),
         "app": f"OpenSchematix {VERSION}",
         "project_uid": project.uid,
         "sheets": [{"uid": s["uid"], "name": s["name"], "path": f"sheets/{s['uid']}.json"} for s in sheets],
@@ -248,5 +257,5 @@ def export_sheet_osch(doc: Document, path: str):
     fileio.save(doc, path)
 
 
-__all__ = ["PROJECT_EXTENSION", "ProjectFormatError", "OpenResult", "save_project", "open_any", "read_zip",
+__all__ = ["required_schema", "PROJECT_EXTENSION", "ProjectFormatError", "OpenResult", "save_project", "open_any", "read_zip",
            "project_bytes", "FILE_FORMAT"]
