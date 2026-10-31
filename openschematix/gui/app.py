@@ -200,19 +200,38 @@ class App:
                               "bottom": lay.get("bottom", True)}
         self.root.after(60, self._restore_layout)
 
-    def _restore_layout(self):
+    def _restore_layout(self, attempts=0):
+        """Apply the saved three-column layout only after Tk has sized the panes.
+
+        On first launch ttk.PanedWindow may still be 1px wide when the
+        original 60ms timer fires. Setting sash positions at that point
+        can leave the Properties pane occupying nearly the entire window.
+        """
+        self.root.update_idletasks()
+        total = self.hpane.winfo_width()
+        height = self.vpane.winfo_height()
+        if (total < 900 or height < 300) and attempts < 20:
+            self.root.after(100, lambda: self._restore_layout(attempts + 1))
+            return
         lay = self.settings["layout"]
-        try:
-            total = self.hpane.winfo_width()
-            lw = int(lay.get("left_w", 290 * th.dpi_factor(self.root)))
-            rw = int(lay.get("right_w", 310 * th.dpi_factor(self.root)))
-            self.hpane.sashpos(0, lw)
-            self.hpane.sashpos(1, max(lw + 400, total - rw))
-            h = self.vpane.winfo_height()
-            bh = int(lay.get("bottom_h", 170 * th.dpi_factor(self.root)))
-            self.vpane.sashpos(0, max(200, h - bh))
-        except tk.TclError:
-            pass
+        f = th.dpi_factor(self.root)
+        if total >= 900:
+            left_w = max(180, min(int(lay.get("left_w", 290 * f)), int(total * .30)))
+            right_w = max(200, min(int(lay.get("right_w", 310 * f)), int(total * .30)))
+            # Keep the drawing canvas wider than either sidebar.
+            if left_w + right_w > total - 450:
+                right_w = max(200, total - 450 - left_w)
+            try:
+                self.hpane.sashpos(0, left_w)
+                self.hpane.sashpos(1, total - right_w)
+            except tk.TclError:
+                pass
+        if height >= 300:
+            bottom_h = max(100, min(int(lay.get("bottom_h", 170 * f)), int(height * .40)))
+            try:
+                self.vpane.sashpos(0, height - bottom_h)
+            except tk.TclError:
+                pass
         for side in ("left", "right", "bottom"):
             if not self.panel_visible[side]:
                 self.panel_visible[side] = True
