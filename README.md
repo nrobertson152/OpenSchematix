@@ -1,5 +1,10 @@
 # OpenSchematix
 
+[![Download Latest Release](https://img.shields.io/github/v/release/nrobertson152/openschematix?label=Download%20Latest%20Release&style=for-the-badge&logo=github)](https://github.com/nrobertson152/openschematix/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/nrobertson152/openschematix/total?style=flat-square&label=Total%20Downloads)](https://github.com/nrobertson152/openschematix/releases)
+
+**[Download the latest version for Windows or Linux](https://github.com/nrobertson152/openschematix/releases/latest)**
+
 **Free and open-source schematic editor for electrical, electronic, hydraulic and pneumatic circuits.**
 Windows and Linux. Version 1.0.0.
 
