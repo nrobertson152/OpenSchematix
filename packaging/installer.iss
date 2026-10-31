@@ -7,7 +7,7 @@
 #define MyAppExeName "OpenSchematix.exe"
 
 [Setup]
-; New product identity (not the HPS Schematix AppId) so both can coexist.
+; Independent application identity for OpenSchematix.
 AppId={{6C3B0E9A-3F7D-4C55-9B57-2E0D4A8F9C21}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
