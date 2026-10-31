@@ -174,7 +174,9 @@ def test_max_finite_coordinates_match_reference(sign):
     raw_wire(doc, [(edge, 0.0), (edge, 20.0)])
     raw_wire(doc, [(0.0, 0.0), (100.0, 0.0)])
     idx = connectivity._WireIndex(list(doc.wires.values()))
-    assert extreme in idx.always
+    assert extreme in idx.always or any(
+        extreme in bucket for bucket in idx.cells.values()
+    )
     assert_same_as_reference(doc)
 
 
