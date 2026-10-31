@@ -17,7 +17,7 @@ First public release of **OpenSchematix**: a free, offline schematic editor for 
 - Multiple sheets per project: add, duplicate, rename, reorder, delete, sheet tabs, next/previous sheet,
   sheet templates (reuse a sheet's page setup) and project templates. Identifiers are unique project-wide.
 - Sheet connectors with automatic cross-reference text (`/sheet.zone`), nets across sheets.
-- Opening legacy `.osch` drawings and HPS Schematix `.hpss` files converts them to projects without modifying the originals.
+- Opening legacy `.osch` drawings and older-format files converts them to projects without modifying the originals.
 - Sheet sizes ISO A0–A4, ANSI A–E, Letter, Legal, Tabloid and custom; portrait/landscape; reference zones.
 - Title-block styles (standard, compact, ISO 7200 style, none) fed by project metadata with per-sheet
   overrides: drawing and sheet numbers, revision, drawn/checked/approved, dates, scale.
@@ -82,4 +82,4 @@ First public release of **OpenSchematix**: a free, offline schematic editor for 
 - Autosave to a separate recovery folder (configurable interval, three snapshots kept), recovery prompt
   after an unexpected exit, automatic clean-up of old recovery data.
 
-Before 1.0, OpenSchematix was developed privately as a rewrite of HPS Schematix 1.2.0; files from those development builds (`.osch`) and from HPS Schematix (`.hpss`) open in 1.0.
+Older single-sheet drawing formats can be opened and converted into projects.
