@@ -642,3 +642,94 @@ def test_dxf_without_fills_is_unchanged():
     p.sheets[0].add_shape(R(p.sheets[0].new_id(), 0, 0, 10, 10))
     text = to_dxf(p.sheets[0], p)
     assert "INSERT" not in text and "BLOCK\n" not in text.replace("BLOCKS", "")
+
+
+# ================================================================ performance regressions
+def _reference_gap_bridges(raw, gap, tol):
+    """The original all-pairs gap bridging (kept here as the behavioural reference)."""
+    from openschematix.boundary_fill import _Points, _ends, _on_edge, _project
+    vs = _Points(tol)
+    deg = {}
+    for e in raw:
+        for p in _ends(e):
+            k = vs.add(p)
+            deg[k] = deg.get(k, 0) + 1
+    open_ends = []
+    for k, d in deg.items():
+        if d != 1:
+            continue
+        p = vs.pts[k]
+        if any(_on_edge(e, p, tol) and all(math.dist(p, q) > tol for q in _ends(e)) for e in raw):
+            continue
+        open_ends.append(p)
+    bridges, done = [], set()
+    for i, p in enumerate(open_ends):
+        best = None
+        for j, q in enumerate(open_ends):
+            if j != i:
+                d = math.dist(p, q)
+                if tol < d <= gap and (best is None or d < best[0]):
+                    best = (d, q, ("end", min(i, j), max(i, j)))
+        if best is None:
+            for e in raw:
+                if any(math.dist(p, q) <= tol for q in _ends(e)):
+                    continue
+                q = _project(e, p, gap)
+                if q is not None:
+                    d = math.dist(p, q)
+                    if d > tol and (best is None or d < best[0]):
+                        best = (d, q, ("edge", i, q))
+        if best is not None and best[2] not in done:
+            done.add(best[2])
+            bridges.append(("L", p, best[1]))
+    return bridges
+
+
+@pytest.mark.parametrize("seed", range(12))
+def test_indexed_gap_bridging_matches_the_reference(seed):
+    from openschematix.boundary_fill import _gap_bridges, collect_edges
+    rnd = random.Random(seed)
+    sh = []
+    for i in range(rnd.randint(5, 60)):
+        x, y = rnd.uniform(0, 100), rnd.uniform(0, 100)
+        if rnd.random() < 0.7:
+            sh.append(L(i, (x, y), (x + rnd.uniform(-15, 15), y + rnd.uniform(-15, 15))))
+        else:
+            sh.append(Shape(i, "arc", c=(x, y), r=rnd.uniform(2, 15), start=rnd.uniform(0, 360),
+                            extent=rnd.uniform(20, 300)))
+    if seed % 3 == 0:          # grid-snapped geometry: exact ties between candidates
+        sh = [L(i, (rnd.randrange(0, 10) * 2, rnd.randrange(0, 10) * 2), (rnd.randrange(0, 10) * 2,
+                                                                          rnd.randrange(0, 10) * 2))
+              for i in range(40)]
+    raw = collect_edges(sh)
+    for gap in (0.5, 2.0, 6.0):
+        assert _gap_bridges(raw, gap, SNAP_TOL) == _reference_gap_bridges(raw, gap, SNAP_TOL)
+
+
+def _sparse_drawing(n):
+    rnd = random.Random(0)
+    sh = [R(1, 0, 0, 4000, 3000)]
+    for i in range(n // 10):
+        x, y = rnd.uniform(50, 3900), rnd.uniform(50, 2900)
+        sh.append(R(10 + i, x, y, x + 30, y + 20))
+    for i in range(n):
+        x, y = rnd.uniform(50, 3950), rnd.uniform(50, 2950)
+        sh.append(L(100000 + i, (x, y), (x + rnd.uniform(-20, 20), y + rnd.uniform(-20, 20))))
+    return sh
+
+
+def test_gap_tolerance_on_a_large_sparse_drawing_is_fast():
+    # 3 300 objects, ~6 000 open ends: took 33 s with all-pairs gap bridging
+    sh = _sparse_drawing(3000)
+    t = time.perf_counter()
+    res = find_region(sh, (10, 10), gap=4)
+    assert res.ok and res.holes > 300
+    assert time.perf_counter() - t < 5
+
+
+def test_many_islands_are_nested_quickly():
+    # ~290 islands: hole nesting used to test every island against every other one
+    t = time.perf_counter()
+    res = find_region(_sparse_drawing(3000), (10, 10))
+    assert res.ok and res.holes > 250
+    assert time.perf_counter() - t < 3

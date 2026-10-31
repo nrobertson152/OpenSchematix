@@ -440,11 +440,35 @@ class Arrangement:
             if ru != rv:
                 parent[ru] = rv
         self.comp_of_vertex = find
+        # Signed area and a conservative bounding box straight from the edge data;
+        # the bulge ring itself is built only for the few cycles that are needed.
         self.cycle_info = []
+        pts = self.vs.pts
         for cyc in self.cycles:
-            ring = self.ring(cyc)
-            self.cycle_info.append({"cycle": cyc, "ring": ring, "area": rg.ring_area(ring),
-                                    "bbox": rg.rings_bbox([ring]), "comp": find(self.origin(cyc[0]))})
+            area = 0.0
+            pad = 0.0
+            xs, ys = [], []
+            for h in cyc:
+                (x0, y0), (x1, y1) = pts[self.origin(h)], pts[self.dest(h)]
+                xs.append(x0)
+                ys.append(y0)
+                area += (x0 * y1 - x1 * y0) / 2
+                data = self.edges[h >> 1][3]
+                if data is not None:
+                    sw = -data[2] if h & 1 else data[2]
+                    r = math.hypot(x1 - x0, y1 - y0) / (2 * math.sin(abs(sw) / 2))
+                    area += r * r / 2 * (sw - math.sin(sw))
+                    pad = max(pad, r * (1 - math.cos(sw / 2)))    # an arc <= 90 deg stays this close to its chord
+            self.cycle_info.append({"cycle": cyc, "area": area,
+                                    "bbox": (min(xs) - pad, min(ys) - pad, max(xs) + pad, max(ys) + pad),
+                                    "comp": find(self.origin(cyc[0]))})
+
+    def cycle_ring(self, info):
+        """Bulge ring of a traced cycle (built on first use)."""
+        ring = info.get("ring")
+        if ring is None:
+            ring = info["ring"] = self.ring(info["cycle"])
+        return ring
 
     def distance(self, p) -> float:
         """Distance from p to the nearest remaining edge."""
@@ -531,44 +555,82 @@ def _simplify(ring, tol):
 
 
 # ================================================================ public API
+def _point_edge_pairs(points, boxes, pad):
+    """(point index, edge index) pairs whose point, padded by `pad`, overlaps
+    the edge's bounding box (sort and sweep instead of all pairs)."""
+    n = len(points)
+    allb = [(x - pad, y - pad, x + pad, y + pad) for x, y in points] + list(boxes)
+    for i, j in _overlapping_pairs(allb):
+        if i < n <= j:
+            yield i, j - n
+
+
+def _point_point_pairs(points, dist):
+    """Index pairs (i < j) of points closer than `dist` (sort and sweep)."""
+    h = dist / 2
+    return _overlapping_pairs([(x - h, y - h, x + h, y + h) for x, y in points])
+
+
 def _gap_bridges(raw, gap, tol):
-    """Straight bridges closing open ends that are within `gap` of other geometry."""
+    """Straight bridges closing open ends that are within `gap` of other geometry.
+
+    An open end is joined to the nearest other open end farther than `tol`
+    and at most `gap` away; failing that, to the nearest point (farther than
+    `tol`) of an edge it does not belong to. Ties go to the lower index, as
+    in a plain double loop. Candidate pairs come from a sort-and-sweep on
+    bounding boxes, so the cost grows with the number of nearby pairs rather
+    than with (open ends x edges)."""
     vs = _Points(tol)
     deg = {}
     for e in raw:
         for p in _ends(e):
             k = vs.add(p)
             deg[k] = deg.get(k, 0) + 1
-    # an end point lying on another edge is not open
-    open_ends = []
-    for k, d in deg.items():
-        if d != 1:
-            continue
-        p = vs.pts[k]
-        if any(_on_edge(e, p, tol) and all(math.dist(p, q) > tol for q in _ends(e)) for e in raw):
-            continue
-        open_ends.append(p)
+    ends1 = [vs.pts[k] for k, d in deg.items() if d == 1]
+    boxes = [_bbox(e) for e in raw]
+    ends_of = [_ends(e) for e in raw]
+    # an end point lying on another edge (not at that edge's own end) is not open
+    blocked = set()
+    for i, k in _point_edge_pairs(ends1, boxes, tol):
+        p = ends1[i]
+        if i not in blocked and _on_edge(raw[k], p, tol) and all(math.dist(p, q) > tol for q in ends_of[k]):
+            blocked.add(i)
+    open_ends = [p for i, p in enumerate(ends1) if i not in blocked]
+    near_end = {}                                  # i -> (d, j)
+    for i, j in _point_point_pairs(open_ends, gap):
+        d = math.dist(open_ends[i], open_ends[j])
+        if tol < d <= gap:
+            for a, b in ((i, j), (j, i)):
+                if a not in near_end or (d, b) < near_end[a]:
+                    near_end[a] = (d, b)
+    near_edge = {}                                 # i -> (d, edge index, point)
+    lonely = [i for i in range(len(open_ends)) if i not in near_end]
+    if lonely:
+        pts = [open_ends[i] for i in lonely]
+        for li, k in _point_edge_pairs(pts, boxes, gap):
+            p = pts[li]
+            if any(math.dist(p, q) <= tol for q in ends_of[k]):
+                continue                           # the edge this end belongs to
+            q = _project(raw[k], p, gap)
+            if q is not None:
+                d = math.dist(p, q)
+                i = lonely[li]
+                if d > tol and (i not in near_edge or (d, k) < near_edge[i][:2]):
+                    near_edge[i] = (d, k, q)
     bridges = []
     done = set()
     for i, p in enumerate(open_ends):
-        best = None
-        for j, q in enumerate(open_ends):
-            if j != i:
-                d = math.dist(p, q)
-                if tol < d <= gap and (best is None or d < best[0]):
-                    best = (d, q, ("end", min(i, j), max(i, j)))
-        if best is None:
-            for e in raw:
-                if any(math.dist(p, q) <= tol for q in _ends(e)):
-                    continue                     # the edge this end belongs to
-                q = _project(e, p, gap)
-                if q is not None:
-                    d = math.dist(p, q)
-                    if d > tol and (best is None or d < best[0]):
-                        best = (d, q, ("edge", i, q))
-        if best is not None and best[2] not in done:
-            done.add(best[2])
-            bridges.append(("L", p, best[1]))
+        if i in near_end:
+            j = near_end[i][1]
+            key, target = ("end", min(i, j), max(i, j)), open_ends[j]
+        elif i in near_edge:
+            q = near_edge[i][2]
+            key, target = ("edge", i, q), q
+        else:
+            continue
+        if key not in done:
+            done.add(key)
+            bridges.append(("L", p, target))
     return bridges
 
 
@@ -603,7 +665,7 @@ def find_region(shapes, point, gap: float = 0.0, tol: float = SNAP_TOL) -> FillR
         b = info["bbox"]
         if not (b[0] <= point[0] <= b[2] and b[1] <= point[1] <= b[3]):
             continue
-        if rg.point_in_rings([info["ring"]], point) and (best is None or info["area"] < best["area"]):
+        if (best is None or info["area"] < best["area"]) and rg.point_in_rings([arr.cycle_ring(info)], point):
             best = info
     if best is None:
         return FillResult(message="No closed boundary around the picked point (the region is open or the point "
@@ -619,17 +681,19 @@ def find_region(shapes, point, gap: float = 0.0, tol: float = SNAP_TOL) -> FillR
     for info in arr.cycle_info:
         if info["comp"] != comp and info["area"] < 0:
             outers.setdefault(info["comp"], []).append(info)
+    fb = rg.rings_bbox(face)
     cands = {}
     for c, infos in outers.items():
-        rep = infos[0]["ring"][0][:2]
-        if rg.point_in_rings(face, rep):
+        rep = arr.vs.pts[arr.origin(infos[0]["cycle"][0])]       # any vertex of the piece
+        if fb[0] <= rep[0] <= fb[2] and fb[1] <= rep[1] <= fb[3] and rg.point_in_rings(face, rep):
             rings = [r for info in infos for r in arr.split_bridges(info["cycle"])
                      if abs(rg.ring_area(r)) > tol * tol]
             if rings:
-                cands[c] = (rep, rings)
+                cands[c] = (rep, rings, rg.rings_bbox(rings))
     holes = []
-    for c, (rep, rings) in cands.items():
-        if any(d != c and rg.point_in_rings(other, rep) for d, (_r, other) in cands.items()):
+    for c, (rep, rings, _b) in cands.items():
+        if any(d != c and ob[0] <= rep[0] <= ob[2] and ob[1] <= rep[1] <= ob[3] and rg.point_in_rings(other, rep)
+               for d, (_r, other, ob) in cands.items()):
             continue                          # nested inside another island
         holes.extend(rings)
     outer = [r for r in face if rg.ring_area(r) > 0]
