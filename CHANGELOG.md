@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.0.1] - 2026-10-30
+
+- Corrected startup splash-screen and panel layout initialization.
+- Removed obsolete historical product branding.
+- Updated release packaging and application version metadata.
+
 ## [1.0.0] - 2026-10-31
 
 First public release of **OpenSchematix**: a free, offline schematic editor for electrical, electronic, hydraulic and pneumatic circuits with multi-sheet projects, CAD drafting, custom symbols and libraries, engineering reports, revision management and a modern interface.
