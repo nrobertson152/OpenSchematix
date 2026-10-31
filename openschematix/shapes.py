@@ -102,12 +102,49 @@ def arc_polyline(c, r, start, extent):
     return arc_points(c[0], c[1], r, start, extent, steps)
 
 
+def arrowhead_points(tip, adjacent, size):
+    """Three vertices for a filled arrow pointing from adjacent toward tip.
+
+    A zero-length endpoint segment has no defined direction.
+    """
+    dx, dy = tip[0] - adjacent[0], tip[1] - adjacent[1]
+    length = math.hypot(dx, dy)
+    if length <= EPS or size <= 0:
+        return []
+    ux, uy = dx / length, dy / length
+    bx, by = tip[0] - ux * size, tip[1] - uy * size
+    half = size * 0.35
+    return [tuple(tip), (bx - uy * half, by + ux * half),
+            (bx + uy * half, by - ux * half)]
+
+
+def _endpoint_neighbor(pts, start):
+    """Find the first non-coincident vertex inward from an endpoint."""
+    ordered = pts if start else list(reversed(pts))
+    tip = ordered[0]
+    for point in ordered[1:]:
+        if math.dist(tip, point) > EPS:
+            return point
+    return None
+
+
 def shape_prims(s: Shape, item=None, role="shape") -> list:
     """Render primitives (same format as render.scene items)."""
     w = LINE_W.get(s.width, 1.4)
     base = {"role": role, "item": item, "wpx": w, "dash": s.dash, "layer": s.layer}
     if s.kind in ("line", "polyline"):
-        return [dict(base, k="line", pts=list(s.pts), fill=False)]
+        result = [dict(base, k="line", pts=list(s.pts), fill=False)]
+        for start, enabled in ((True, s.arrow_start), (False, s.arrow_end)):
+            if not enabled or len(s.pts) < 2:
+                continue
+            tip = s.pts[0] if start else s.pts[-1]
+            neighbor = _endpoint_neighbor(s.pts, start)
+            if neighbor is None:
+                continue
+            triangle = arrowhead_points(tip, neighbor, s.arrow_size)
+            if triangle:
+                result.append(dict(base, k="poly", pts=triangle, fill=True, dash=False))
+        return result
     if s.kind in ("polygon", "rect"):
         return [dict(base, k="poly", pts=list(s.pts), fill=s.fill)]
     if s.kind == "circle":
