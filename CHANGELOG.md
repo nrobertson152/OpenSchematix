@@ -5,6 +5,12 @@ All notable changes to this project are documented here. Versions follow [Semant
 ## [Unreleased]
 
 ### Added
+
+- Adjustable vector arrowheads at either or both ends of drafting lines and polylines, with
+  Properties inspector and custom symbol editor controls, project persistence and exports.
+- Optional arrowhead settings for custom symbol line primitives.
+
+
 - Open any existing symbol — built-in, user library or project — in the symbol editor as an editable copy:
   *Edit a copy…* in the library and on placed components (a configured valve opens as configured), the editor's
   *Open existing symbol* button (or `OPEN`), and the library's edit button for built-in symbols. The symbol is
@@ -14,6 +20,7 @@ All notable changes to this project are documented here. Versions follow [Semant
   never changed.
 - *Save as new symbol…* asks for a name. When a library symbol is edited in place the primary button reads
   *Save changes* and its tooltip says that it overwrites the symbol.
+
 
 ### Fixed
 - Custom symbols: terminal numbers were drawn on every placed custom symbol even with *Show terminal designations*

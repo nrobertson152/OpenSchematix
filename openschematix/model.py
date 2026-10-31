@@ -16,6 +16,7 @@ holds an ordered list of sheets plus project-wide metadata.
 from __future__ import annotations
 
 import copy
+import math
 import uuid
 from dataclasses import dataclass, field
 from typing import Optional
@@ -257,6 +258,9 @@ class Shape:
     layer: str = DEFAULT_LAYER_SHAPES
     locked: bool = False
     group: str = ""
+    arrow_start: bool = False
+    arrow_end: bool = False
+    arrow_size: float = 10.0
 
     def bbox(self):
         from .shapes import shape_bbox
@@ -275,6 +279,13 @@ class Shape:
             d.update(p=[clean(self.pts[0][0]), clean(self.pts[0][1])], s=self.s, size=self.size, anchor=self.anchor)
             if self.angle:
                 d["angle"] = self.angle
+        if self.kind in ("line", "polyline"):
+            if self.arrow_start:
+                d["arrow_start"] = True
+            if self.arrow_end:
+                d["arrow_end"] = True
+            if self.arrow_start or self.arrow_end:
+                d["arrow_size"] = clean(self.arrow_size)
         if self.width != "normal":
             d["width"] = self.width
         if self.dash:
@@ -316,6 +327,16 @@ class Shape:
         s.layer = str(d.get("layer") or DEFAULT_LAYER_SHAPES)
         s.locked = bool(d.get("locked", False))
         s.group = str(d.get("group", "") or "")
+        if kind in ("line", "polyline"):
+            s.arrow_start = d.get("arrow_start") is True
+            s.arrow_end = d.get("arrow_end") is True
+            try:
+                arrow_size = float(d.get("arrow_size", 10.0))
+                if isinstance(d.get("arrow_size"), bool) or not math.isfinite(arrow_size) or not 0 < arrow_size <= 10000:
+                    arrow_size = 10.0
+            except (TypeError, ValueError, OverflowError):
+                arrow_size = 10.0
+            s.arrow_size = arrow_size
         return s
 
 

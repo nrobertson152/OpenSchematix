@@ -741,6 +741,53 @@ check(app.dirty and app.filename is None and len(app.project.sheets) >= 1, "reco
 check(not os.path.exists(crash.folder), "recovered session data cleaned up")
 top2.destroy()
 
+# ================================================================ arrowhead editor controls
+from openschematix.gui.symbol_editor import SymbolEditor  # noqa: E402
+from openschematix.model import Shape  # noqa: E402
+from openschematix.symbols.custom import normalise  # noqa: E402
+
+se = SymbolEditor(app)
+se.geometry("1240x780+0+0")
+pump(5)
+check(se.step_var.get() == "1.25 mm",
+      "symbol editor snap setting initialized")
+
+def _descendants(widget):
+    for child in widget.winfo_children():
+        yield child
+        yield from _descendants(child)
+
+snap_controls = [w for w in _descendants(se) if isinstance(w, __import__("tkinter.ttk", fromlist=["Combobox"]).Combobox)
+                 and str(w.cget("textvariable")) == str(se.step_var)]
+check(bool(snap_controls) and snap_controls[0].winfo_rootx() + snap_controls[0].winfo_width()
+      <= se.winfo_rootx() + se.winfo_width(), "symbol editor Snap control fits at 1240 px")
+se.arrow_end_var.set(1)
+style = se.new_shape_style()
+check(style["arrow_end"] and not style["arrow_start"] and style["arrow_size"] == 10,
+      "symbol editor arrow settings carry to new lines")
+sh = Shape(se.doc.new_id(), "line", pts=[(0, 0), (40, 0)], **style)
+se.doc.add_shape(sh)
+se.set_selection({sh.id})
+pump(2)
+check(se.arrow_end_var.get() == 1 and se.arrow_size_var.get() == "2.5",
+      "symbol editor selection displays arrow properties")
+se.arrow_size_var.set("0")
+se._apply_arrow_size()
+check(se.arrow_size_var.get() == "2.5" and sh.arrow_size == 10,
+      "symbol editor rejects invalid arrow size and resets field")
+se.arrow_start_var.set(1)
+se.apply_style(arrow_start=True)
+check(sh.arrow_start, "symbol editor start arrow control applies")
+se.undo()
+check(not se.doc.shapes[sh.id].arrow_start, "symbol editor arrow change supports undo")
+se.redo()
+check(se.doc.shapes[sh.id].arrow_start, "symbol editor arrow change supports redo")
+prim = __import__("openschematix.shapes", fromlist=["shape_to_symbol_prim"]).shape_to_symbol_prim(se.doc.shapes[sh.id])
+check(normalise({**se.meta, "prims": [prim]})["prims"][0]["arrow_end"],
+      "symbol arrow settings survive normalization")
+se.destroy()
+pump(2)
+
 # ================================================================ final screenshots
 app.set_active_sheet(app.project.sheets[0].uid)
 cv.fit()

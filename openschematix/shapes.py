@@ -82,7 +82,15 @@ def text_extent(s: Shape):
 
 def shape_bbox(s: Shape):
     if s.kind in ("line", "polyline", "polygon", "rect"):
-        return bbox_of(s.pts)
+        points = list(s.pts)
+        if s.kind in ("line", "polyline") and len(points) >= 2:
+            for start, enabled in ((True, s.arrow_start), (False, s.arrow_end)):
+                if enabled:
+                    neighbor = _endpoint_neighbor(s.pts, start)
+                    if neighbor is not None:
+                        tip = s.pts[0] if start else s.pts[-1]
+                        points.extend(arrowhead_points(tip, neighbor, s.arrow_size))
+        return bbox_of(points)
     if s.kind == "circle":
         return (s.c[0] - s.r, s.c[1] - s.r, s.c[0] + s.r, s.c[1] + s.r)
     if s.kind == "arc":
@@ -102,12 +110,49 @@ def arc_polyline(c, r, start, extent):
     return arc_points(c[0], c[1], r, start, extent, steps)
 
 
+def arrowhead_points(tip, adjacent, size):
+    """Three vertices for a filled arrow pointing from adjacent toward tip.
+
+    A zero-length endpoint segment has no defined direction.
+    """
+    dx, dy = tip[0] - adjacent[0], tip[1] - adjacent[1]
+    length = math.hypot(dx, dy)
+    if length <= EPS or size <= 0:
+        return []
+    ux, uy = dx / length, dy / length
+    bx, by = tip[0] - ux * size, tip[1] - uy * size
+    half = size * 0.35
+    return [tuple(tip), (bx - uy * half, by + ux * half),
+            (bx + uy * half, by - ux * half)]
+
+
+def _endpoint_neighbor(pts, start):
+    """Find the first non-coincident vertex inward from an endpoint."""
+    ordered = pts if start else list(reversed(pts))
+    tip = ordered[0]
+    for point in ordered[1:]:
+        if math.dist(tip, point) > EPS:
+            return point
+    return None
+
+
 def shape_prims(s: Shape, item=None, role="shape") -> list:
     """Render primitives (same format as render.scene items)."""
     w = LINE_W.get(s.width, 1.4)
     base = {"role": role, "item": item, "wpx": w, "dash": s.dash, "layer": s.layer}
     if s.kind in ("line", "polyline"):
-        return [dict(base, k="line", pts=list(s.pts), fill=False)]
+        result = [dict(base, k="line", pts=list(s.pts), fill=False)]
+        for start, enabled in ((True, s.arrow_start), (False, s.arrow_end)):
+            if not enabled or len(s.pts) < 2:
+                continue
+            tip = s.pts[0] if start else s.pts[-1]
+            neighbor = _endpoint_neighbor(s.pts, start)
+            if neighbor is None:
+                continue
+            triangle = arrowhead_points(tip, neighbor, s.arrow_size)
+            if triangle:
+                result.append(dict(base, k="poly", pts=triangle, fill=True, dash=False))
+        return result
     if s.kind in ("polygon", "rect"):
         return [dict(base, k="poly", pts=list(s.pts), fill=s.fill)]
     if s.kind == "circle":
@@ -181,6 +226,8 @@ def scale_shape(s: Shape, center: Point, k: float):
         s.r = clean(s.r * abs(k))
     if s.kind == "text":
         s.size = clean(s.size * abs(k))
+    if s.kind in ("line", "polyline"):
+        s.arrow_size = clean(s.arrow_size * abs(k))
 
 
 # ================================================================ hit testing
@@ -498,6 +545,7 @@ def trim(s: Shape, pick: Point, cutters: Iterable[Shape], next_id) -> Optional[l
         o = copy.deepcopy(s)
         o.pts = _sub_path(work, 0.0, lower)
         o.kind = "line" if len(o.pts) == 2 else "polyline"
+        o.arrow_end = False
         out.append(o)
     if upper is not None:
         o = copy.deepcopy(s)
@@ -505,6 +553,7 @@ def trim(s: Shape, pick: Point, cutters: Iterable[Shape], next_id) -> Optional[l
             o.id = next_id()
         o.pts = _sub_path(work, upper, total)
         o.kind = "line" if len(o.pts) == 2 else "polyline"
+        o.arrow_start = False
         out.append(o)
     return [o for o in out if len(o.pts) >= 2]
 
@@ -574,7 +623,8 @@ def shape_to_symbol_prim(s: Shape) -> dict:
     as native arcs ({"k": "arc"}); the symbol framework flattens them."""
     w = s.width
     if s.kind in ("line", "polyline"):
-        return {"k": "line", "pts": [tuple(p) for p in s.pts], "dash": s.dash, "w": w}
+        return {"k": "line", "pts": [tuple(p) for p in s.pts], "dash": s.dash, "w": w,
+                "arrow_start": s.arrow_start, "arrow_end": s.arrow_end, "arrow_size": s.arrow_size}
     if s.kind in ("polygon", "rect"):
         return {"k": "poly", "pts": [tuple(p) for p in s.pts], "fill": s.fill, "dash": s.dash, "w": w}
     if s.kind == "circle":
@@ -590,7 +640,9 @@ def symbol_prim_to_shape(p: dict, ident: int) -> Shape:
     w = p.get("w", "normal")
     if k == "line":
         pts = [tuple(q) for q in p["pts"]]
-        return Shape(ident, "line" if len(pts) == 2 else "polyline", pts=pts, width=w, dash=p.get("dash", False))
+        return Shape(ident, "line" if len(pts) == 2 else "polyline", pts=pts, width=w, dash=p.get("dash", False),
+                     arrow_start=p.get("arrow_start", False), arrow_end=p.get("arrow_end", False),
+                     arrow_size=p.get("arrow_size", 10.0))
     if k == "poly":
         pts = [tuple(q) for q in p["pts"]]
         is_rect = len(pts) == 4 and all(abs(a[0] - b[0]) < 1e-6 or abs(a[1] - b[1]) < 1e-6
