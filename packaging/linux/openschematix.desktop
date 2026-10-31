@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=OpenSchematix
+GenericName=Schematic Editor
+Comment=Draw electrical, hydraulic and pneumatic schematics
+Keywords=schematic;CAD;electrical;hydraulic;pneumatic;wiring;
+Exec=@EXEC@ %f
+Icon=openschematix
+Terminal=false
+Categories=Graphics;Engineering;Electronics;
+MimeType=application/x-openschematix-project;application/x-openschematix;
+StartupWMClass=OpenSchematix

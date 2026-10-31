@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "openschematix"
+version = "1.0.0"
+description = "Free and open-source electrical, hydraulic and pneumatic schematic editor"
+readme = "README.md"
+license = { text = "GPL-3.0-or-later" }
+authors = [{ name = "Nate Robertson" }]
+requires-python = ">=3.10"
+dependencies = []          # standard library only (Tkinter required)
+classifiers = [
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Programming Language :: Python :: 3",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Topic :: Scientific/Engineering :: Electronic Design Automation (EDA)",
+    "Environment :: X11 Applications",
+    "Environment :: Win32 (MS Windows)",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "pypdf", "pyinstaller", "ezdxf"]   # ezdxf only used to validate DXF output in tests
+
+[project.urls]
+"Support development" = "https://ko-fi.com/nr270343"
+
+[project.gui-scripts]
+openschematix = "openschematix.gui.app:main"
+
+[tool.setuptools.packages.find]
+include = ["openschematix*"]
+
+[tool.setuptools.package-data]
+openschematix = ["resources/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

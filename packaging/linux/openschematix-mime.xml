@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/x-openschematix-project">
+    <comment>OpenSchematix project</comment>
+    <glob pattern="*.schematix"/>
+  </mime-type>
+  <mime-type type="application/x-openschematix">
+    <comment>OpenSchematix drawing (legacy single sheet)</comment>
+    <glob pattern="*.osch"/>
+  </mime-type>
+  <mime-type type="application/x-openschematix-library">
+    <comment>OpenSchematix symbol library</comment>
+    <glob pattern="*.osymlib"/>
+  </mime-type>
+</mime-info>
