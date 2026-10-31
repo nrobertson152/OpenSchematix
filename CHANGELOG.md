@@ -4,6 +4,12 @@ All notable changes to this project are documented here. Versions follow [Semant
 
 ## [Unreleased]
 
+### Added
+- Adjustable vector arrowheads at either or both ends of drafting lines and polylines, with
+  Properties inspector and custom symbol editor controls, project persistence and exports.
+- Optional arrowhead settings for custom symbol line primitives.
+
+
 ### Fixed
 - Custom symbols: terminal numbers were drawn on every placed custom symbol even with *Show terminal designations*
   off, and twice with it on. Pin designations are no longer baked into the symbol artwork; they are drawn once by
