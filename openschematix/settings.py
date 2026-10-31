@@ -8,6 +8,8 @@ from __future__ import annotations
 import json
 import os
 import sys
+import shutil
+import tempfile
 
 DEFAULTS = {
     "theme": "modern_light",        # UI theme (see gui/theme.py)
@@ -56,30 +58,90 @@ class Settings:
     def __init__(self, path: str | None = None):
         self.path = path or os.path.join(config_dir(), "settings.json")
         self.data = dict(DEFAULTS)
+        self.last_load_error = None
+        self.last_save_error = None
+        self._corrupt_file = False
+        self._warning_handler = None
+        self._warned = set()
         self.load()
 
+    def set_warning_handler(self, handler):
+        """Register a GUI callback after the window is initialized."""
+        self._warning_handler = handler
+        if self.last_load_error:
+            self._warn_once("load", self.last_load_error)
+        if self.last_save_error:
+            self._warn_once("save", self.last_save_error)
+
+    def _warn_once(self, kind, message):
+        if self._warning_handler is not None and kind not in self._warned:
+            self._warned.add(kind)
+            self._warning_handler(kind, message)
+
     def load(self):
+        self.last_load_error = None
+        self._corrupt_file = False
         try:
             with open(self.path, encoding="utf-8") as f:
                 loaded = json.load(f)
-            if isinstance(loaded, dict):
-                for k, v in loaded.items():
-                    if k in DEFAULTS and (isinstance(v, type(DEFAULTS[k])) or
-                                          (isinstance(DEFAULTS[k], float) and isinstance(v, int))):
-                        self.data[k] = v
-                self.data["theme"] = THEME_MIGRATION.get(self.data["theme"], self.data["theme"])
-        except (OSError, ValueError):
-            pass  # missing or corrupt settings: fall back to defaults
+            if not isinstance(loaded, dict):
+                raise ValueError("Settings must be a JSON object")
+            invalid = []
+            for k, v in loaded.items():
+                if k not in DEFAULTS:
+                    continue
+                expected = DEFAULTS[k]
+                valid = (type(v) is type(expected) or
+                         (type(expected) is float and type(v) is int))
+                if valid:
+                    self.data[k] = v
+                else:
+                    invalid.append(k)
+            self.data["theme"] = THEME_MIGRATION.get(self.data["theme"], self.data["theme"])
+            if invalid:
+                self.last_load_error = ("Invalid preferences were ignored: " +
+                                        ", ".join(sorted(invalid)))
+        except FileNotFoundError:
+            pass  # normal first run
+        except (OSError, ValueError, UnicodeError) as e:
+            self._corrupt_file = os.path.isfile(self.path)
+            self.last_load_error = f"Could not load preferences from {self.path}: {e}"
+        if self.last_load_error:
+            self._warn_once("load", self.last_load_error)
 
     def save(self):
+        tmp = None
         try:
-            os.makedirs(os.path.dirname(self.path), exist_ok=True)
-            tmp = self.path + ".tmp"
-            with open(tmp, "w", encoding="utf-8") as f:
+            directory = os.path.dirname(os.path.abspath(self.path))
+            os.makedirs(directory, exist_ok=True)
+            # Never destroy the only copy of a malformed configuration.
+            if self._corrupt_file and os.path.exists(self.path):
+                fd, backup = tempfile.mkstemp(prefix="settings-corrupt-", suffix=".bak", dir=directory)
+                os.close(fd)
+                try:
+                    shutil.copy2(self.path, backup)
+                except OSError:
+                    os.unlink(backup)
+                    raise
+                self._corrupt_file = False
+            fd, tmp = tempfile.mkstemp(prefix=".settings-", suffix=".tmp", dir=directory)
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
                 json.dump(self.data, f, indent=2)
+                f.flush()
+                os.fsync(f.fileno())
             os.replace(tmp, self.path)
-        except OSError:
-            pass  # settings are a convenience; never block the user
+            self.last_save_error = None
+            return True
+        except (OSError, TypeError, ValueError) as e:
+            self.last_save_error = f"Could not save preferences to {self.path}: {e}"
+            self._warn_once("save", self.last_save_error)
+            return False
+        finally:
+            if tmp and os.path.exists(tmp):
+                try:
+                    os.unlink(tmp)
+                except OSError:
+                    pass
 
     def __getitem__(self, k):
         import copy
