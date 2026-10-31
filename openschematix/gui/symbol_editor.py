@@ -23,6 +23,7 @@ from ..shapes import (move_shape, rotate_point, shape_distance, shape_prims, sha
                       snap_points, symbol_prim_to_shape)
 from ..symbols.base import PORT_TYPES
 from ..symbols.custom import CATEGORIES, SymbolFormatError, blank_symbol, new_symbol_id, normalise
+from ..symbols.explode import symbol_to_doc
 from . import cadcmds
 from . import interact as ia
 from . import theme as th
@@ -35,7 +36,7 @@ DIR_LABEL = {"l": "Left", "r": "Right", "u": "Up", "d": "Down"}
 EXTENT = 200     # half-size of the editing area in units (50 mm)
 # Commands that can be typed in the symbol editor (names from commands.py;
 # every alias of these, built-in or user defined, works as well).
-EDITOR_COMMANDS = frozenset(cadcmds.DRAW_COMMANDS) | {"UNDO", "REDO", "ZOOM", "SAVE", "HELP"}
+EDITOR_COMMANDS = frozenset(cadcmds.DRAW_COMMANDS) | {"UNDO", "REDO", "ZOOM", "SAVE", "OPEN", "HELP"}
 
 
 class EditorCanvas(DrawingView):
@@ -305,7 +306,16 @@ class EditorCanvas(DrawingView):
 
 
 class SymbolEditor(tk.Toplevel):
-    def __init__(self, app, doc=None, folder=None, from_builtin=None):
+    """Symbol editor window.
+
+    doc        a custom symbol document to edit in place (saving updates it)
+    copy_of    id of any symbol (built-in, library or project) to open as an
+               editable copy: new id, original untouched (symbols/explode.py)
+    params     variant of a parametric built-in for copy_of (e.g. a valve)
+    from_builtin  older name for copy_of (kept for callers)
+    """
+
+    def __init__(self, app, doc=None, folder=None, from_builtin=None, copy_of=None, params=None):
         super().__init__(app.root)
         self.app = app
         app.windows.append(self)
@@ -313,12 +323,20 @@ class SymbolEditor(tk.Toplevel):
         self.minsize(900, 560)
         self.configure(bg=app.theme.ui["bg"])
         self.protocol("WM_DELETE_WINDOW", self.close)
+        copy_of = copy_of or from_builtin
+        self.source = None              # (id, name) of the symbol this copy was made from
         if doc is not None:
             self.meta = normalise(copy.deepcopy(doc))
             self.is_new = doc.get("id") not in app.userlib.entries
-        elif from_builtin is not None:
-            self.meta = self._from_builtin(from_builtin)
+        elif copy_of is not None:
+            sd = symbols.get(copy_of)
+            if sd is None:
+                raise ValueError(f"unknown symbol {copy_of}")
+            self.meta = symbol_to_doc(sd, params, as_copy=True)
             self.is_new = True
+            self.source = (sd.id, sd.name)
+            if folder is None and sd.id in app.userlib.entries:
+                folder = app.userlib.entries[sd.id].folder
         else:
             self.meta = blank_symbol()
             self.meta["revision"] = 0
@@ -348,17 +366,6 @@ class SymbolEditor(tk.Toplevel):
         self.bind("<KP_Enter>", self._confirm_key)
 
     # ---------------------------------------------------------------- construction
-    def _from_builtin(self, sid):
-        sd = symbols.get(sid)
-        m = blank_symbol(f"{sd.name} (custom)", sd.category if sd.category in CATEGORIES else "General")
-        g = sd.build(None)
-        m.update(description=sd.description, group=sd.group, prefix=sd.prefix, convention="Custom (based on " +
-                 sd.convention + ")", tags=list(sd.keywords))
-        m["prims"] = [p for p in g.prims]
-        m["pins"] = [{"id": t.name, "name": t.label or t.name, "x": t.x, "y": t.y, "dir": t.dir,
-                      "type": sd.port_type(t), "show": False} for t in g.terminals]
-        return normalise(json.loads(json.dumps(m)))
-
     def _build(self):
         t = self.app.theme
         tb = ttk.Frame(self, style="Toolbar.TFrame", padding=(8, 4))
@@ -377,6 +384,9 @@ class SymbolEditor(tk.Toplevel):
             ToolbarSeparator(tb).pack(side="left", padx=6, pady=4)
         from .. import commands as cp
         aliases = self.app.settings["aliases"]
+        cmd("open", self.open_existing, cp.tooltip("OPEN", extra_aliases=aliases,
+                                                   summary="Open an existing symbol as an editable copy"))
+        sep()
         tool("select", "select", "Select and move objects (Esc)")
         sep()
         for icon, name in (("line", "LINE"), ("polyline", "PLINE"), ("rect", "RECTANGLE"), ("circle", "CIRCLE"),
@@ -458,12 +468,18 @@ class SymbolEditor(tk.Toplevel):
         self.status.pack(fill="x", pady=(6, 0))
         btns = ttk.Frame(right, style="Surface.TFrame")
         btns.pack(fill="x", pady=(8, 0))
-        save_btn = ttk.Button(btns, text="Save to library", style="Accent.TButton", command=self.save)
-        save_btn.pack(side="left", fill="x", expand=True)
-        Tooltip(save_btn, "Save this symbol to the selected library folder (Ctrl+S · type SAVE)")
-        ttk.Button(btns, text="Save as new symbol", command=lambda: self.save(as_new=True)).pack(side="left",
-                                                                                              padx=(6, 0))
+        self.save_btn = ttk.Button(btns, text="Save to library", style="Accent.TButton", command=self.save)
+        self.save_btn.pack(side="left", fill="x", expand=True)
+        self.save_tip = Tooltip(self.save_btn, "")
+        b = ttk.Button(btns, text="Save as new symbol…", command=lambda: self.save(as_new=True))
+        b.pack(side="left", padx=(6, 0))
+        Tooltip(b, "Save under a new name and id as a separate symbol. The symbol opened here is not changed.")
+        self._update_save_button()
         self.set_tool("select")
+        if self.source is not None:
+            self.set_status(f"Editing a copy of “{self.source[1]}”. Its lines, arcs, circles and text can be edited "
+                            "individually; connection points keep their identifiers. Saving creates a new symbol "
+                            "— the original is not changed.")
         _ = t
 
     def _build_meta(self, nb):
@@ -512,8 +528,9 @@ class SymbolEditor(tk.Toplevel):
             ttk.Entry(f, textvariable=v, width=26).grid(row=r, column=1, sticky="ew", pady=3)
             self.prop_vars[key] = v
             r += 1
-        ttk.Label(f, text=f"Revision {self.meta.get('revision', 0)} · id {self.meta['id']}", style="Faint.TLabel").grid(
-            row=r, column=0, columnspan=2, sticky="w", pady=(10, 0))
+        self.id_label = ttk.Label(f, text="", style="Faint.TLabel", wraplength=300, justify="left")
+        self.id_label.grid(row=r, column=0, columnspan=2, sticky="w", pady=(10, 0))
+        self._update_id_label()
 
     def _build_pins(self, nb):
         f = ttk.Frame(nb, style="Surface.TFrame", padding=10)
@@ -880,6 +897,8 @@ class SymbolEditor(tk.Toplevel):
             self.canvas.fit()
         elif name == "SAVE":
             self.save()
+        elif name == "OPEN":
+            self.open_existing()
         elif name == "HELP":
             self.set_status("Commands: " + ", ".join(
                 f"{n} ({'/'.join(cp.typed_forms(n, aliases))})" for n in sorted(EDITOR_COMMANDS)))
@@ -1023,6 +1042,44 @@ class SymbolEditor(tk.Toplevel):
             sh.s = d.result
             self.commit_change(s, "Text changed.")
 
+    # ---------------------------------------------------------------- open existing / labels
+    def _update_save_button(self):
+        if self.is_new:
+            self.save_btn.configure(text="Save to library")
+            self.save_tip.set("Save this symbol as a new symbol in the selected library folder (Ctrl+S · type SAVE)")
+        else:
+            self.save_btn.configure(text="Save changes")
+            self.save_tip.set("Overwrite this library symbol with the changes; its revision number increases "
+                              "(Ctrl+S · type SAVE). Use “Save as new symbol…” to keep it unchanged.")
+
+    def _update_id_label(self):
+        text = f"Revision {self.meta.get('revision', 0)} · id {self.meta['id']}"
+        src = self.meta.get("derived_from")
+        if src:
+            text += f"\nBased on “{src.get('name', src['id'])}” ({src['id']})"
+        self.id_label.configure(text=text)
+
+    def open_existing(self, sid=None, params=None):
+        """Open an existing symbol (built-in, library or project) as an
+        editable copy in a new editor window; this window closes. Returns the
+        new editor, or None if cancelled."""
+        if self.runner.active:
+            self.runner.cancel()
+        if sid is None:
+            from .dialogs import SymbolPickerDialog
+            sid = SymbolPickerDialog(self.app, "Open a symbol as an editable copy", parent=self,
+                                     ok_text="Open copy").result
+            if not sid:
+                return None
+        if self.dirty and not messagebox.askyesno("Open symbol", "Discard the unsaved changes to this symbol?",
+                                                  parent=self):
+            return None
+        folder = self.folder_var.get().strip() or None
+        ed = SymbolEditor(self.app, copy_of=sid, params=params,
+                          folder=None if sid in self.app.userlib.entries else folder)
+        self.destroy()
+        return ed
+
     # ---------------------------------------------------------------- save
     def build_doc(self, new_id=False) -> dict:
         m = copy.deepcopy(self.meta)
@@ -1034,11 +1091,22 @@ class SymbolEditor(tk.Toplevel):
         m["prims"] = [shape_to_symbol_prim(s) for s in self.doc.shapes.values()]
         m["pins"] = [dict(p) for p in self.pins]
         if new_id:
+            if not self.is_new:        # deriving from a saved symbol: remember which one
+                m["derived_from"] = {"id": self.meta["id"], "name": self.meta["name"],
+                                     "revision": str(self.meta.get("revision", 0))}
             m["id"] = new_symbol_id()
             m["revision"] = 0
         return normalise(m)
 
     def save(self, as_new=False):
+        if as_new:
+            from tkinter import simpledialog
+            cur = self.meta_vars["name"].get().strip() or "New symbol"
+            name = simpledialog.askstring("Save as new symbol", "Name of the new symbol:", parent=self,
+                                          initialvalue=cur if cur.endswith("(copy)") else f"{cur} (copy)")
+            if name is None or not name.strip():
+                return False
+            self.meta_vars["name"].set(name.strip())
         try:
             doc = self.build_doc(new_id=as_new or False)
         except SymbolFormatError as e:
@@ -1062,8 +1130,11 @@ class SymbolEditor(tk.Toplevel):
             return False
         self.meta = copy.deepcopy(entry.doc)
         self.folder = folder
+        self.is_new = False
         self.dirty = False
         self._update_title()
+        self._update_save_button()
+        self._update_id_label()
         self.app.library.populate()
         self.set_status(f"Saved “{entry.name}” (revision {entry.doc['revision']}) in {folder}.")
         if entry.id in self.app.project.used_custom_symbols():

@@ -64,8 +64,8 @@ class LibraryPanel(ttk.Frame):
         self.fav_btn = IconButton(row, "star", self.toggle_favorite, "Add to / remove from favourites", size=16,
                                   bg_key="surface")
         self.fav_btn.pack(side="left", padx=(6, 0))
-        self.edit_btn = IconButton(row, "symbol_edit", self.edit_selected, "Edit custom symbol (built-in symbols "
-                                   "open as a copy)", size=16, bg_key="surface")
+        self.edit_btn = IconButton(row, "symbol_edit", self.edit_selected, "Edit the symbol (built-in and project "
+                                   "symbols open as an editable copy)", size=16, bg_key="surface")
         self.edit_btn.pack(side="left")
         self.bind("<Configure>", self._wrap)
         th.subscribe(lambda t: self.show_preview())
@@ -259,10 +259,11 @@ class LibraryPanel(ttk.Frame):
         if s is None:
             return
         e = self.app.userlib.entries.get(s.id)
-        if s.is_custom:
-            self.app.open_symbol_editor(doc=s.custom, folder=e.folder if e else None)
+        if s.is_custom and e is not None:
+            self.app.open_symbol_editor(doc=s.custom, folder=e.folder)
         else:
-            self.app.open_symbol_editor(from_builtin=s.id)
+            # built-in or project-only symbols open as a copy: the original is never changed
+            self.app.edit_symbol_copy(s.id)
 
     def selected_folder(self):
         node = (self.tree.selection() or [None])[0]
@@ -342,6 +343,7 @@ class LibraryPanel(ttk.Frame):
             if s is not None and s.is_custom and sid in lib.entries:
                 e_ = lib.entries[sid]
                 m.add_command(label="Edit symbol…", command=self.edit_selected)
+                m.add_command(label="Edit a copy…", command=lambda: self.app.edit_symbol_copy(sid))
                 m.add_command(label="Rename…", command=lambda: self._rename_symbol(sid))
                 m.add_command(label="Tags and category…", command=lambda: self._tags(sid))
                 m.add_command(label="Duplicate", command=lambda: self._do(lambda: lib.copy_symbol(sid, e_.folder)))
@@ -351,8 +353,9 @@ class LibraryPanel(ttk.Frame):
                     m.add_command(label="Update drawings to this version", command=lambda: self.app.update_project_symbol(sid))
                 m.add_separator()
                 m.add_command(label="Delete symbol…", command=lambda: self._delete_symbol(sid))
-            else:
-                m.add_command(label="Copy to my library and edit…", command=self.edit_selected)
+            elif s is not None:
+                # built-in or project symbol: editing always starts from a copy
+                m.add_command(label="Edit a copy…", command=lambda: self.app.edit_symbol_copy(sid))
         elif node and (node.startswith("dir|") or node == "user"):
             folder = node[4:] if node.startswith("dir|") else ""
             m.add_command(label="New symbol here…", command=lambda: self.app.open_symbol_editor(folder=folder or None))

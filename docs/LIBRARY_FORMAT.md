@@ -40,6 +40,11 @@
   `pneu.work`, `pneu.exhaust`, `pneu.pilot`, `any`, or empty (derived from the category). The part before
   the dot is the domain used by Check Drawing.
 * Add the tag `terminal` to make a terminal-block symbol (numbered per strip, X1:1, X1:2 …).
+* Optional `derived_from` (`{"id": …, "name": …, "revision": …}`, strings) records the symbol a copy was made
+  from in the symbol editor (*Edit a copy…* / *Open existing symbol*, *Save as new symbol…*). It is informational
+  only; older versions ignore it. A copy keeps the source's connection-point ids (for built-in symbols, the
+  terminal names such as `1`, `A1`, `P`), so it connects the same way and can replace the original on a drawing
+  without losing wires.
 
 ## A library package: `.osymlib` (version 1)
 

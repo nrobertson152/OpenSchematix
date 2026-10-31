@@ -216,6 +216,8 @@ class Inspector(ttk.Frame):
                     self.button(sec, "Configure valve…", lambda: app.configure_valve(one.id))
                 if sd.is_custom:
                     self.button(sec, "Edit symbol…", lambda: app.edit_custom_symbol(one.symbol))
+                self.button(sec, "Edit a copy of the symbol…",
+                            lambda: app.edit_symbol_copy(one.symbol, dict(one.params) or None))
             from ..project import is_terminal_symbol
             if is_terminal_symbol(one.symbol):
                 self.entry(sec, "Terminal no.", one.props.get("terminal", ""),

@@ -1,6 +1,7 @@
 # OpenSchematix - Development Progress
 
-_Last updated: 2026-10-31 (session 4: multi-phase specification, Phase 1 complete on branch `phase1-symbol-editor-usability`). Read this first when resuming development._
+_Last updated: 2026-10-31 (session 5: Phase 1 merged into main; Phase 2 item 6 (import/explode symbols) complete on
+branch `phase2-symbol-import-explode`, not merged). Read this first when resuming development._
 
 ## Release / branding
 
@@ -9,7 +10,9 @@ Current public release is **v1.0.1** (earlier internal versions 2.0/3.0 are not 
 ## Multi-phase development specification (current objective)
 
 The master specification (symbol editor, drafting, usability, i18n) is implemented one phase at a time; stop after
-each phase for authorisation. Order: **Phase 1 ✅** → Phase 2 (line-end arrows; import/explode symbols) → Phase 3
+each phase for authorisation. Order: **Phase 1 ✅ (merged)** → Phase 2 (item 5 line-end arrows: **being done
+separately by another developer — do not touch arrowhead code here**; item 6 import/explode symbols **✅ on branch
+`phase2-symbol-import-explode`**) → Phase 3
 (i18n: EN/DE/FR/ES) → Phase 4 (sketch-import feasibility report only) → Phase 5 (scripting architecture proposal
 only) → revision-history verification (verify, do not rewrite).
 
@@ -52,6 +55,39 @@ Phase 1 test results (session 4): `pytest` **246 passed, 0 skipped** (with ezdxf
 Xvfb **105/105 ok** (83 previous + 22 new). New tests were confirmed to fail on the pre-fix code (9 unit tests;
 GUI: page size, hidden/duplicate numbers, tooltip, command line). ANSI A PDF with title block inspected.
 Next action: Phase 2, item 5 (line-end arrows) — only after authorisation.
+
+### Phase 2, item 6 — open existing symbols as editable copies (done, session 5)
+
+- **Already present before:** built-ins opened as a copy (`SymbolEditor._from_builtin`), custom symbols in place,
+  "Save as new symbol". Gaps fixed: built-in arcs arrived as sampled polylines (not editable arcs); configured
+  valves opened as the default variant; copied built-in pins had `show=False` (inconsistent with Phase 1);
+  project-only custom symbols were edited under their original id; no way to open a symbol from inside the
+  editor; no record of where a copy came from; Save-as kept the old name.
+- **Core (GUI independent):** new `symbols/explode.py`. `symbol_to_doc(sd, params=None, as_copy=True)` returns a
+  normalised custom-symbol document: copies get a new id, revision 0 and `derived_from`; pins keep ids (built-in
+  terminal names), positions, directions, port types (`sd.port_type`), names; built-ins get `show=True`.
+  `recognise_arc()` turns a polyline of ≥5 points lying evenly on a circle (least-squares fit, radial tolerance
+  max(0.02, r·1e-3), uniform steps ≤ 15°, must bulge from its chord) back into a native arc, or a circle at 360°.
+  Over the 78 built-ins: 29 arcs recovered in 11 symbols; zigzags, springs and the AC sine wave stay polylines;
+  primitive count and order unchanged.
+- **Format:** `custom.normalise` keeps an optional `derived_from` {id, name, revision} (strings); documents without
+  it normalise exactly as before; symbol format version stays 1; project files unchanged.
+- **GUI:** `App.open_symbol_editor(copy_of=, params=)` (+ `from_builtin` kept), `App.edit_symbol_copy(sid, params)`;
+  "Edit a copy…" in the library context menu (all symbols), drawing context menu and inspector (passes the
+  component's params); library edit button opens built-in and project-only symbols as copies; editor toolbar
+  button / `OPEN` command (`SymbolEditor.open_existing`, picker centred on the editor via new `Dialog(parent=)`);
+  save button reads "Save to library" for new/copies and "Save changes" when editing a library symbol in place;
+  "Save as new symbol…" prompts for a name and records `derived_from`; Symbol tab shows "Based on …".
+- **Not changed:** arrowhead code (item 5), file formats other than the optional key, built-in symbol definitions.
+- **Files:** `symbols/explode.py` (new), `symbols/custom.py`, `gui/symbol_editor.py`, `gui/app.py`,
+  `gui/library.py`, `gui/inspector.py`, `gui/dialogs.py`, `tests/test_symbol_import.py` (new, 98 tests incl. one
+  per built-in symbol), `tests/gui_smoke.py` (+20 checks; also renamed a Phase 1 loop variable that shadowed the
+  `key()` helper), `docs/LIBRARY_FORMAT.md`, `README.md`, `CHANGELOG.md`, this file.
+- **Tests (session 5):** `pytest` **344 passed, 0 skipped**; `tests/gui_smoke.py` under Xvfb **125/125 ok**.
+- **Limitations:** an arc drawn as part of a longer polyline (arc + straight segments in one primitive) stays a
+  polyline; only the two parametric valves take `params`; copying does not replace placed components
+  automatically (use *Replace symbol*; wires on matching terminal ids stay connected).
+- **Next action:** wait for authorisation (Phase 3 localisation, or merging item 5 from the other branch).
 
 ## Status summary
 

@@ -15,7 +15,8 @@ A custom symbol is stored as a small JSON document (``.osym``):
                  {"k": "arc", "c": [x, y], "r": r, "start": deg, "extent": deg},
                  {"k": "text", "p": [x, y], "s": "M", "size": 8, "anchor": "c"} ],
       "pins": [ {"id": "p1", "name": "1", "x": -20, "y": 0, "dir": "l",
-                 "type": "elec.passive", "show": true} ]
+                 "type": "elec.passive", "show": true} ],
+      "derived_from": {"id": "el.relay.coil", "name": "...", "revision": "2"}   # optional
     }
 
 Coordinates are symbol-local drawing units (0.25 mm) relative to the
@@ -91,6 +92,13 @@ def normalise(data) -> dict:
            "convention": str(data.get("convention") or "Custom")[:60],
            "properties": {str(k): str(v) for k, v in (data.get("properties") or {}).items()},
            "prims": [], "pins": []}
+    # Optional provenance of a symbol derived from another one (symbol editor
+    # "open a copy"). Informational only; older versions ignore it.
+    src = data.get("derived_from")
+    if isinstance(src, dict):
+        src = {k: str(src[k])[:120] for k in ("id", "name", "revision") if src.get(k) not in (None, "")}
+        if src.get("id"):
+            out["derived_from"] = src
     for i, p in enumerate(data.get("prims") or []):
         if not isinstance(p, dict) or p.get("k") not in PRIM_KINDS:
             raise SymbolFormatError(f"primitive {i}: unknown kind")
