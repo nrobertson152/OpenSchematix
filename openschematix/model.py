@@ -184,6 +184,9 @@ class Wire:
     layer: str = DEFAULT_LAYER_WIRES
     locked: bool = False
     group: str = ""
+    arrow_start: bool = False
+    arrow_end: bool = False
+    arrow_size: float = 10.0
 
     def bbox(self):
         return bbox_of(self.points)
@@ -275,6 +278,13 @@ class Shape:
             d.update(p=[clean(self.pts[0][0]), clean(self.pts[0][1])], s=self.s, size=self.size, anchor=self.anchor)
             if self.angle:
                 d["angle"] = self.angle
+        if self.kind in ("line", "polyline"):
+            if self.arrow_start:
+                d["arrow_start"] = True
+            if self.arrow_end:
+                d["arrow_end"] = True
+            if self.arrow_start or self.arrow_end:
+                d["arrow_size"] = clean(self.arrow_size)
         if self.width != "normal":
             d["width"] = self.width
         if self.dash:
@@ -316,6 +326,13 @@ class Shape:
         s.layer = str(d.get("layer") or DEFAULT_LAYER_SHAPES)
         s.locked = bool(d.get("locked", False))
         s.group = str(d.get("group", "") or "")
+        if kind in ("line", "polyline"):
+            s.arrow_start = bool(d.get("arrow_start", False))
+            s.arrow_end = bool(d.get("arrow_end", False))
+            arrow_size = float(d.get("arrow_size", 10.0))
+            if not 0 < arrow_size <= 10000:
+                raise ValueError("arrow_size must be positive and at most 10000")
+            s.arrow_size = arrow_size
         return s
 
 
