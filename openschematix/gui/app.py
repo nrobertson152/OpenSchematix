@@ -1878,6 +1878,20 @@ class App:
         place), or on an editable copy of any symbol `copy_of` (built-in,
         library or project; `params` = variant of a parametric symbol)."""
         from .symbol_editor import SymbolEditor
+        src = copy_of or from_builtin
+        if src is not None:
+            # Convert first so a symbol that cannot be copied faithfully gives a
+            # clear message instead of an empty editor window.
+            from ..symbols.custom import SymbolFormatError
+            from ..symbols.explode import symbol_to_doc
+            sd = symbols.get(src)
+            try:
+                if sd is None:
+                    raise SymbolFormatError(f"The symbol {src} is not available.")
+                symbol_to_doc(sd, params)
+            except SymbolFormatError as e:
+                messagebox.showerror("Cannot edit a copy", str(e), parent=self.root)
+                return None
         if not self.userlib.folders():
             try:
                 self.userlib.create_folder("", "My symbols")
@@ -1890,6 +1904,24 @@ class App:
         if symbols.get(sid) is None:
             return None
         return self.open_symbol_editor(copy_of=sid, params=params)
+
+    def edit_symbol_file_copy(self, path=None, folder=None):
+        """Open the symbol in an ``.osym`` file as an editable copy (new id,
+        based on the file's symbol). The file itself is only read; saving
+        adds a new symbol to the library. Returns the editor or None."""
+        if path is None:
+            path = filedialog.askopenfilename(parent=self.root, title="Edit a copy of a symbol file",
+                                              filetypes=[("OpenSchematix symbol", "*.osym"), ("All files", "*")])
+            if not path:
+                return None
+        from ..symbols.custom import SymbolFormatError
+        from ..symbols.explode import doc_from_file
+        try:
+            doc = doc_from_file(path)
+        except (OSError, SymbolFormatError) as e:
+            messagebox.showerror("Cannot open symbol file", f"{os.path.basename(path)}:\n{e}", parent=self.root)
+            return None
+        return self.open_symbol_editor(doc=doc, folder=folder)
 
     def edit_custom_symbol(self, sid):
         sd = symbols.get(sid)

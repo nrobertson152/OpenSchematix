@@ -1190,12 +1190,23 @@ class SymbolEditor(tk.Toplevel):
                                      ok_text="Open copy").result
             if not sid:
                 return None
+        from ..symbols.custom import SymbolFormatError
+        from ..symbols.explode import symbol_to_doc
+        sd = symbols.get(sid)
+        try:
+            if sd is None:
+                raise SymbolFormatError(f"The symbol {sid} is not available.")
+            doc = symbol_to_doc(sd, params, as_copy=True)
+        except SymbolFormatError as e:
+            messagebox.showerror("Cannot edit a copy", str(e), parent=self)
+            return None
         if self.dirty and not messagebox.askyesno("Open symbol", "Discard the unsaved changes to this symbol?",
                                                   parent=self):
             return None
         folder = self.folder_var.get().strip() or None
-        ed = SymbolEditor(self.app, copy_of=sid, params=params,
+        ed = SymbolEditor(self.app, doc=doc,
                           folder=None if sid in self.app.userlib.entries else folder)
+        ed.source = (sd.id, sd.name)
         self.destroy()
         return ed
 
