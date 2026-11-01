@@ -8,7 +8,8 @@ if not exist .build-venv (
     py -3 -m venv .build-venv || goto :fail
 )
 call .build-venv\Scripts\activate.bat || goto :fail
-python -m pip install --upgrade pip pyinstaller pytest || goto :fail
+python -m pip install -r packaging\requirements-release.txt || goto :fail
+python packaging\check_release_version.py || goto :fail
 
 echo Running tests...
 python -m pytest -q tests || goto :fail
@@ -20,7 +21,8 @@ where iscc >nul 2>&1
 if errorlevel 1 (
     echo Inno Setup 6 not found on PATH: skipping installer. The portable app is in dist\OpenSchematix.
 ) else (
-    iscc packaging\installer.iss || goto :fail
+    for /f %%v in ('python -c "import openschematix; print(openschematix.VERSION)"') do set "APP_VERSION=%%v"
+    call iscc /DMyAppVersion=%%APP_VERSION%% packaging\installer.iss || goto :fail
     echo Installer written to installer_output\
 )
 echo Build complete.
