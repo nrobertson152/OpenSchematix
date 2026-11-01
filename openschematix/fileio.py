@@ -6,7 +6,7 @@ import os
 import tempfile
 from dataclasses import dataclass, field
 
-from . import FILE_FORMAT, FILE_SCHEMA, symbols
+from . import FILE_FORMAT, FILE_SCHEMA, safejson, symbols
 from .editing import route
 from .geometry import norm_rotation, snap
 from .model import Component, Document, Wire
@@ -27,7 +27,11 @@ class LoadResult:
 
 def save(doc: Document, path: str):
     """Write atomically: a crash or full disk never leaves a half-written file."""
-    data = json.dumps(doc.to_dict(), indent=1, ensure_ascii=False)
+    d = doc.to_dict()
+    where = safejson.find_non_finite(d)
+    if where is not None:
+        raise FileFormatError(f"Cannot save: the drawing contains a value that is not a finite number ({where}).")
+    data = json.dumps(d, indent=1, ensure_ascii=False, allow_nan=False)
     directory = os.path.dirname(os.path.abspath(path)) or "."
     fd, tmp = tempfile.mkstemp(prefix=".osch-", suffix=".tmp", dir=directory)
     try:
@@ -44,14 +48,18 @@ def save(doc: Document, path: str):
         raise
 
 
+MAX_FILE_BYTES = 200 * 1024 * 1024
+
+
 def load(path: str) -> LoadResult:
+    with open(path, "rb") as f:
+        raw = f.read(MAX_FILE_BYTES + 1)
+    if len(raw) > MAX_FILE_BYTES:
+        raise FileFormatError("The file is unreasonably large for a schematic drawing.")
     try:
-        with open(path, encoding="utf-8") as f:
-            data = json.load(f)
-    except UnicodeDecodeError as e:
-        raise FileFormatError("The file is not a text (JSON) schematic file.") from e
-    except json.JSONDecodeError as e:
-        raise FileFormatError(f"The file is not valid JSON: {e}") from e
+        data = safejson.loads(raw)
+    except safejson.JSONFormatError as e:
+        raise FileFormatError(f"The file {e}.") from None
     return load_data(data)
 
 
@@ -61,12 +69,13 @@ def load_data(data) -> LoadResult:
     fmt = data.get("format")
     if fmt == FILE_FORMAT:
         schema = data.get("schema", 1)
-        if not isinstance(schema, int) or schema > FILE_SCHEMA:
-            raise FileFormatError(f"This file was written by a newer version of OpenSchematix (schema {schema}).")
+        if isinstance(schema, bool) or not isinstance(schema, int) or schema > FILE_SCHEMA:
+            raise FileFormatError("This file was written by a newer version of OpenSchematix "
+                                  f"(schema {schema if isinstance(schema, int) else '?'}).")
         try:
             doc = Document.from_dict(data)
-        except (KeyError, TypeError, ValueError) as e:
-            raise FileFormatError(f"The file is damaged or incomplete: {e}") from e
+        except ValueError as e:
+            raise FileFormatError(f"The file is damaged or incomplete: {e}") from None
         res = LoadResult(doc)
         unknown = sorted({c.symbol for c in doc.components.values() if symbols.get(c.symbol) is None})
         if unknown:

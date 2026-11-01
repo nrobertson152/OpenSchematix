@@ -391,3 +391,29 @@ system Tk: `uv python install 3.12` (includes Tkinter); PyPI may be blocked — 
 GitHub or copy pure-Python packages; PyInstaller/altgraph/pyinstaller-hooks-contrib can be cloned from GitHub
 and used via PYTHONPATH (bootloaders are in the repo). Standalone-Python builds need
 `LD_LIBRARY_PATH=<python>/lib` for Tk.
+
+## Project-file reliability (`fix/project-file-reliability`, audit F2, F4, F5, F9)
+
+- **Classification rule:** model `from_dict` readers raise only `ValueError` (with location, never file
+  content) for malformed data, via the reading helpers in `model.py`. `projectio.read_zip` and
+  `fileio.load` catch only `ValueError`, so any other exception is a programming defect and reaches
+  `gui/errors.py` instead of being reported as a damaged file.
+- **`safejson.py`:** strict JSON for everything read from disk: no NaN/Infinity/overflowing floats,
+  integers ≤ 18 digits, depth ≤ 64, RecursionError classified.
+- **Revisions:** `RevisionStore.from_file` validates each index entry and verifies every object it uses
+  (size, zlib, SHA-256, strict JSON, sheet/header structure). Damaged entries are left out individually;
+  `OpenResult.recovered` makes the GUI require Save As, like `migrated`. Unknown entry keys are kept.
+- **Embedded symbols:** a document whose `to_symdef` raises anything but `SymbolFormatError` is left out
+  in `projectio._read_symbols` (per symbol, with a warning). Root cause is `symbols.custom.normalise` not
+  validating value types; not changed here because PR #34 rewrites it. Narrow that catch once #34 lands.
+- **Not touched (Claude B, audit F1):** symbol activation order in `open_any` and the dangling-reference
+  drop in `Document.from_dict`.
+- **Writing:** `projectio.check_savable` runs before the revision snapshot; members are written with
+  `allow_nan=False`; `fileio.save` checks too.
+- **GUI (`gui/errors.py`):** `report_callback_exception` and `sys.excepthook` log to
+  `<config>/logs/openschematix-errors.log` (rotated at 1 MB) and show a dialog naming only the error type
+  and the log; one dialog at a time, same error at most every 30 s. Start-up failures exit with status 1.
+- **Fuzz:** `tools/fuzz_project_loader.py` (node and container mutations, then Check/netlist/BOM/exports/
+  revision restore/save). main @ 6a9c543: 337 leaked and 94 latent crashes in 4,148 files; this branch: 0
+  in 4,148, and 0 in 4 × 12,148 other seeds.
+- Tests: `tests/test_project_file_reliability.py` (98), `tests/test_gui_error_reporting.py` (11, Tk).
