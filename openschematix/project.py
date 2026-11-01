@@ -13,7 +13,8 @@ import re
 from dataclasses import dataclass
 
 from . import symbols
-from .model import (DEFAULT_LAYER_COMPONENTS, DEFAULT_LAYER_SHAPES, DEFAULT_LAYER_WIRES, Document, new_uid)
+from .model import (DEFAULT_LAYER_COMPONENTS, DEFAULT_LAYER_SHAPES, DEFAULT_LAYER_WIRES, Document, _obj, _seq, _text,
+                    new_uid)
 
 META_FIELDS = (
     ("title", "Project title"), ("number", "Project number"), ("client", "Client"),
@@ -119,6 +120,7 @@ class Project:
             n += 1
         return f"{base} {n}"
 
+    @symbols.project_scoped
     def duplicate_sheet(self, uid: str) -> Document:
         src = self.sheet(uid)
         doc = src.copy()
@@ -223,28 +225,56 @@ class Project:
         """Store the definition of every custom symbol used in the project,
         so the project opens identically on another computer. Definitions
         already embedded are kept (the drawing keeps the version it was made
-        with) unless the registry holds a newer project-level version."""
+        with) unless the registry holds a newer project-level version.
+
+        The registry is process-wide, so it is trusted only while it holds
+        this project's symbols (symbols.project_owner()). Otherwise another
+        project's definition of the same id would replace this project's
+        own on save. Then embedded definitions are kept, and a missing one
+        comes from the user library (or, for registrations made without an
+        owner, from the registry as before)."""
         used = self.used_custom_symbols()
+        owner = symbols.project_owner()
         for sid in used:
-            sd = symbols.get(sid)
+            cur = self.symbols.get(sid)
+            if owner is self:
+                sd = symbols.get(sid)
+            elif cur is not None:
+                continue
+            elif owner is None:
+                sd = symbols.get(sid)
+            else:
+                sd = symbols.user_symbols().get(sid)
             if sd is not None and sd.custom is not None:
-                cur = self.symbols.get(sid)
                 if cur is None or sd.custom.get("revision", 0) >= cur.get("revision", 0):
                     self.symbols[sid] = copy.deepcopy(sd.custom)
         for sid in list(self.symbols):
             if sid not in used:
                 del self.symbols[sid]
 
-    def activate_symbols(self) -> list:
-        """Register the embedded symbols for this project. Returns warnings."""
-        from .symbols.custom import SymbolFormatError, to_symdef
-        defs, warnings = [], []
+    def embedded_symdefs(self) -> tuple[dict, list]:
+        """Definitions of the embedded custom symbols ({id: SymbolDef}) and load warnings. Pure: the
+        global symbol registry is neither read nor changed."""
+        from .symbols.custom import to_symdef
+        defs, warnings = {}, []
         for sid, doc in self.symbols.items():
             try:
-                defs.append(to_symdef(doc))
-            except SymbolFormatError as e:
+                defs[sid] = to_symdef(doc)
+            except Exception as e:  # noqa: BLE001 - one damaged embedded symbol must not block the project
                 warnings.append(f"Embedded symbol {sid} could not be loaded: {e}")
-        symbols.set_project_symbols(defs)
+        return defs, warnings
+
+    def symbol_resolver(self):
+        """Function symbol_id -> SymbolDef | None for reading this project's drawings without depending
+        on which project is active: built-in symbols, then this project's embedded symbols, then the user
+        libraries (symbols.lookup)."""
+        defs, _warnings = self.embedded_symdefs()
+        return lambda sid: symbols.lookup(sid, defs)
+
+    def activate_symbols(self) -> list:
+        """Register the embedded symbols for this project. Returns warnings."""
+        defs, warnings = self.embedded_symdefs()
+        symbols.set_project_symbols(list(defs.values()), owner=self)
         return warnings
 
     # ---------------------------------------------------------------- serialisation
@@ -262,30 +292,39 @@ class Project:
 
     @classmethod
     def from_dict(cls, d: dict) -> "Project":
+        """Build a project from its serialised form. Malformed input raises
+        ValueError naming the problem (see the reading helpers in model)."""
+        d = _obj(d, "the project")
         p = cls()
-        p.uid = str(d.get("uid") or new_uid())
-        p.created = str(d.get("created") or p.created)
-        meta = d.get("meta") or {}
+        p.uid = _text(d.get("uid") or None, "project uid") or new_uid()
+        p.created = _text(d.get("created") or None, "project creation date") or p.created
+        meta = _obj(d.get("meta") or {}, "the project metadata")
         for k, _ in META_FIELDS:
-            p.meta[k] = str(meta.get(k, "") or "")
+            p.meta[k] = _text(meta.get(k) or None, f"metadata field '{k}'")
         for k, v in meta.items():
             if k not in p.meta:
-                p.meta[str(k)] = str(v)
+                p.meta[str(k)] = _text(v, f"metadata field '{k}'")
         st = copy.deepcopy(DEFAULT_SETTINGS)
-        for k, v in (d.get("settings") or {}).items():
+        for k, v in _obj(d.get("settings") or {}, "the project settings").items():
             if k == "wire_numbering" and isinstance(v, dict):
-                st[k].update({kk: vv for kk, vv in v.items() if kk in st[k]})
-            elif k in st and isinstance(v, type(st[k])):
+                # keep only values of the default's type, as for the other settings
+                st[k].update({kk: vv for kk, vv in v.items() if kk in st[k] and type(vv) is type(st[k][kk])})
+            elif k in st and type(v) is type(st[k]):
                 st[k] = v
         p.settings = st
         if d.get("layers"):
-            p.layers = [Layer.from_dict(x) for x in d["layers"] if isinstance(x, dict)]
+            p.layers = [Layer.from_dict(x) for x in _seq(d["layers"], "the layer list") if isinstance(x, dict)]
             for name in (DEFAULT_LAYER_COMPONENTS, DEFAULT_LAYER_WIRES, DEFAULT_LAYER_SHAPES):
                 p.ensure_layer(name)
-        p.symbols = {str(k): v for k, v in (d.get("symbols") or {}).items() if isinstance(v, dict)}
+        p.symbols = {str(k): v for k, v in _obj(d.get("symbols") or {}, "the embedded symbols").items()
+                     if isinstance(v, dict)}
+        # Sheets are validated against this project's own symbols, not the registry: the embedded symbols
+        # are only registered (activate_symbols) after loading, and the registry may hold another
+        # project's versions (undo/redo, revisions, import, a second open file).
+        resolve = p.symbol_resolver()
         p.sheets = []
-        for sd in d.get("sheets") or []:
-            doc = Document.from_dict(sd)
+        for sd in _seq(d.get("sheets"), "the sheet list", []):
+            doc = Document.from_dict(sd, resolve=resolve)
             p._adopt(doc)
             p.sheets.append(doc)
         if not p.sheets:

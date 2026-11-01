@@ -103,11 +103,21 @@ xvfb-run -a -s "-screen 0 1920x1200x24" <py3.13> tools/bench_phase4.py --sizes s
 - **`point_on_segment` overshoot** on very short diagonals: pre-existing; preserved.
 - **`crossings()` and diagonals:** a diagonal is treated as vertical at its first x. Pre-existing; preserved.
 - **Dead state:** `SchematicCanvas._scene_cache` is never read.
-- **Windows test harness:** in the hover tests, a withdrawn Tk window on Windows can be re-laid out transiently
-  without a `<Configure>` redraw, so the background grid may not match a fresh redraw. The tests therefore:
-  - use a fixed window size;
-  - settle events (`root.update`) after setup;
-  - draw the reference without processing events;
-  - take a settled baseline after a deletion.
+- **Windows test harness (root cause found 2026-11-01, PR #37):** the hover tests used a *withdrawn* window.
+  Its canvas is never mapped, so Tk sends it no `<Configure>`. On Windows, Tk also laid out the panes of the
+  withdrawn window lazily, 1.3–2.6 s after start-up, inside whichever test was running: the canvas went
+  1×1 → 468 px, then `App._restore_layout`'s retry timer applied the saved sash → 597 px, with no redraw.
+  When that landed between an edit's redraw and the snapshot,
+  `test_edit_undo_tool_and_theme_changes_rebuild_hover_state` failed (canvas drawn at 468, measured at 597).
+  That happened in about 1 of 16 full-suite runs, on Python 3.10 and 3.13; never when the module ran alone.
+  The fix:
+  - The window is mapped, but off-screen (`+-6000+-6000`), so no real pointer can be over it. A visible
+    window gets Tk's `current` tag and pointer events.
+  - The `env` fixture waits until the canvas is mapped and `App.layout_restored` is True. That new flag is set
+    when `_restore_layout` has applied the saved pane sizes.
+  - Verified on Windows CI: 20 full-suite and 20 module runs, 0 failures, one canvas size throughout.
+    Windows clamps the mapped window to the runner's desktop (1028×729, canvas 446×426).
+  - The tests still draw the reference without processing events. The settled baselines after the deletion
+    and the undo were workarounds for this cause and are now redundant; they are left in place.
 
   This is a test-environment artifact; a mapped window redraws on `<Configure>`.

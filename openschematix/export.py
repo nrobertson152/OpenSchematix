@@ -9,6 +9,7 @@ import tempfile
 import zlib
 from xml.sax.saxutils import escape
 
+from . import symbols
 from .geometry import UNIT_MM, bbox_union
 from .model import Document
 from .render import scene, scene_bbox
@@ -50,6 +51,7 @@ def text_origin(item):
     return x, y
 
 
+@symbols.project_scoped
 def paper_items(doc: Document, use_sheet: bool = True, project=None):
     """Scene items converted to paper units (presentation scale applied) and
     the page extent. Line widths are pen widths and are not scaled."""
@@ -166,6 +168,7 @@ def pdf_region_ops(rings) -> list:
 
 
 # ================================================================ SVG
+@symbols.project_scoped
 def to_svg(doc: Document, use_sheet: bool = True, project=None) -> str:
     items, (x0, y0, x1, y1) = paper_items(doc, use_sheet, project)
     w, h = x1 - x0, y1 - y0
@@ -351,6 +354,7 @@ def build_pdf(pages, title: str = "Schematic", author: str = "") -> bytes:
     return bytes(buf)
 
 
+@symbols.project_scoped
 def to_pdf(doc: Document, use_sheet: bool = True, project=None) -> bytes:
     items, extent = paper_items(doc, use_sheet, project)
     proj = project if project is not None else getattr(doc, "project", None)
@@ -358,6 +362,7 @@ def to_pdf(doc: Document, use_sheet: bool = True, project=None) -> bytes:
     return build_pdf([(doc.name or title, items, extent)], title=title)
 
 
+@symbols.project_scoped
 def project_pdf(project, sheet_uids=None) -> bytes:
     """All (or the selected) sheets of a project in one PDF, in project
     order, each page at its own sheet size and orientation."""

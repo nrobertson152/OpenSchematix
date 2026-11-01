@@ -131,6 +131,7 @@ def link_label(c) -> str:
     return (c.label or c.designator or "").strip()
 
 
+@symbols.project_scoped
 def compute_nets(project) -> list[Net]:
     uf = _UF()
     for doc in project.sheets:
@@ -244,6 +245,7 @@ def numberable(project, n: Net) -> bool:
     return not doms or doms == {"elec"}
 
 
+@symbols.project_scoped
 def assign_wire_numbers(project, renumber: bool = False) -> int:
     """Give every electrical net a wire number. Existing numbers are kept
     (stable when wires or components move); manual numbers are never

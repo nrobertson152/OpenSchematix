@@ -16,6 +16,7 @@ holds an ordered list of sheets plus project-wide metadata.
 from __future__ import annotations
 
 import copy
+import json
 import math
 import uuid
 from dataclasses import dataclass, field
@@ -60,6 +61,114 @@ def _str_dict(d) -> dict:
     if not isinstance(d, dict):
         return {}
     return {str(k): str(v) for k, v in d.items() if v is not None}
+
+
+# ---------------------------------------------------------------- reading helpers
+# The from_dict readers below take data from files. For malformed input they
+# raise ValueError with the location of the problem (never TypeError,
+# AttributeError, IndexError or OverflowError), so file loaders can report
+# every damaged file as such, and any other exception is a programming defect.
+# Values the engine has always normalised (rotation, styles, page setup) are
+# still normalised; wrong container types, missing required fields and
+# non-finite numbers are errors.
+def _obj(v, what: str) -> dict:
+    if not isinstance(v, dict):
+        raise ValueError(f"{what} must be an object, not {_kind(v)}")
+    return v
+
+
+def _seq(v, what: str, default=None) -> list:
+    if v is None and default is not None:
+        return default
+    if not isinstance(v, list):
+        raise ValueError(f"{what} must be a list, not {_kind(v)}")
+    return v
+
+
+def _req(d: dict, key: str, what: str):
+    if key not in d:
+        raise ValueError(f"{what} has no '{key}'")
+    return d[key]
+
+
+def _kind(v) -> str:
+    """Type of a JSON value in words (never the value: it may be private)."""
+    return {dict: "an object", list: "a list", str: "text", bool: "true/false", type(None): "null"}.get(
+        type(v), "a number" if isinstance(v, (int, float)) else type(v).__name__)
+
+
+def _num(v, what: str) -> float:
+    """Finite float from a number (or numeric text, as earlier versions accepted)."""
+    if isinstance(v, bool) or not isinstance(v, (int, float, str)):
+        raise ValueError(f"{what} must be a number, not {_kind(v)}")
+    try:
+        f = float(v)
+    except (ValueError, OverflowError):
+        raise ValueError(f"{what} must be a number") from None
+    if not math.isfinite(f):
+        raise ValueError(f"{what} must be a finite number")
+    return f
+
+
+def _int(v, what: str) -> int:
+    f = _num(v, what)
+    if f != int(f) or abs(f) > 2 ** 53:
+        raise ValueError(f"{what} must be a whole number")
+    return int(f)
+
+
+def _point(v, what: str) -> Point:
+    if not isinstance(v, (list, tuple)) or len(v) < 2:
+        raise ValueError(f"{what} must be an [x, y] pair")
+    return (_num(v[0], f"{what} x"), _num(v[1], f"{what} y"))
+
+
+def _text(v, what: str, default: str = "") -> str:
+    """Text field. Scalars are converted as before; containers are errors."""
+    if v is None:
+        return default
+    if isinstance(v, (dict, list)):
+        raise ValueError(f"{what} must be text, not {_kind(v)}")
+    return str(v)
+
+
+def _rotation(v, what: str) -> int:
+    """Any rotation snaps to a quarter turn; non-numbers mean 0 (as always).
+    Non-finite values are damage and raise."""
+    if isinstance(v, (int, float, str)) and not isinstance(v, bool):
+        try:
+            f = float(v)
+        except (ValueError, OverflowError):
+            return 0
+        if not math.isfinite(f):
+            raise ValueError(f"{what} must be a finite number")
+        return norm_rotation(f)
+    return 0
+
+
+def _params(symbol_id: str, v, what: str) -> dict:
+    """Parameters of a placed symbol. For built-in parametric symbols every
+    known parameter must have the type of its default (text, or a list of
+    text), because the symbol builders rely on it; unknown keys are kept and
+    ignored, as before. Other symbols' parameters are kept as they are."""
+    if v is None:
+        return {}
+    params = copy.deepcopy(_obj(v, f"{what} params"))
+    sd = symbols.get(symbol_id) if symbols.is_builtin(symbol_id) else None
+    for k, default in ((sd.default_params or {}) if sd is not None else {}).items():
+        if k not in params:
+            continue
+        val = params[k]
+        if isinstance(default, list):
+            elem = type(default[0]) if default else str      # every list parameter is a list of text
+            ok = isinstance(val, list) and all(type(x) is elem for x in val)
+            expected = f"a list of {_kind(elem())}"
+        else:
+            ok = type(val) is type(default)
+            expected = _kind(default)
+        if not ok:
+            raise ValueError(f"{what} parameter '{k}' must be {expected}, not {_kind(val)}")
+    return params
 
 
 # ================================================================ component
@@ -153,14 +262,21 @@ class Component:
 
     @classmethod
     def from_dict(cls, d):
-        return cls(id=int(d["id"]), symbol=str(d["symbol"]), x=float(d["x"]), y=float(d["y"]),
-                   rotation=norm_rotation(d.get("rotation", 0)), mirror=bool(d.get("mirror", False)),
-                   designator=str(d.get("designator", "")), label=str(d.get("label", "")),
-                   params=copy.deepcopy(d.get("params") or {}),
+        d = _obj(d, "a component")
+        cid = _int(_req(d, "id", "a component"), "component id")
+        what = f"component {cid}"
+        symbol = _text(_req(d, "symbol", what), f"{what} symbol")
+        return cls(id=cid, symbol=symbol, x=_num(_req(d, "x", what), f"{what} x"),
+                   y=_num(_req(d, "y", what), f"{what} y"),
+                   rotation=_rotation(d.get("rotation", 0), f"{what} rotation"), mirror=bool(d.get("mirror", False)),
+                   designator=_text(d.get("designator"), f"{what} designator"),
+                   label=_text(d.get("label"), f"{what} label"),
+                   params=_params(symbol, d.get("params") or None, what),
                    text_side=d.get("text_side", "auto") if d.get("text_side") in TEXT_SIDES else "auto",
                    props=_str_dict(d.get("props")), terminal_labels=_str_dict(d.get("terminal_labels")),
-                   layer=str(d.get("layer") or DEFAULT_LAYER_COMPONENTS), locked=bool(d.get("locked", False)),
-                   group=str(d.get("group", "") or ""), in_bom=bool(d.get("in_bom", True)))
+                   layer=_text(d.get("layer"), f"{what} layer") or DEFAULT_LAYER_COMPONENTS,
+                   locked=bool(d.get("locked", False)),
+                   group=_text(d.get("group"), f"{what} group"), in_bom=bool(d.get("in_bom", True)))
 
 
 # ================================================================ wire
@@ -210,20 +326,27 @@ class Wire:
 
     @classmethod
     def from_dict(cls, d):
-        pts = [(float(p[0]), float(p[1])) for p in d["points"]]
+        d = _obj(d, "a wire")
+        wid = _int(_req(d, "id", "a wire"), "wire id")
+        what = f"wire {wid}"
+        pts = [_point(p, f"{what} point {i}") for i, p in enumerate(_seq(_req(d, "points", what), f"{what} points"))]
         if len(pts) < 2:
-            raise ValueError(f"wire {d.get('id')} has fewer than two points")
+            raise ValueError(f"{what} has fewer than two points")
 
-        def ref(r):
+        def ref(r, end):
             if r is None:
                 return None
-            return [int(r[0]), str(r[1])]
+            if not isinstance(r, list) or len(r) != 2:
+                raise ValueError(f"{what} {end} must be [component id, terminal name]")
+            return [_int(r[0], f"{what} {end} component"), _text(r[1], f"{what} {end} terminal")]
         style = d.get("style", "solid")
-        return cls(id=int(d["id"]), points=simplify_orthogonal(pts), start=ref(d.get("start")), end=ref(d.get("end")),
+        return cls(id=wid, points=simplify_orthogonal(pts), start=ref(d.get("start"), "start"),
+                   end=ref(d.get("end"), "end"),
                    style=style if style in WIRE_STYLES else "solid", auto=bool(d.get("auto", False)),
-                   number=str(d.get("number", "") or ""), number_manual=bool(d.get("number_manual", False)),
-                   props=_str_dict(d.get("props")), layer=str(d.get("layer") or DEFAULT_LAYER_WIRES),
-                   locked=bool(d.get("locked", False)), group=str(d.get("group", "") or ""))
+                   number=_text(d.get("number") or None, f"{what} number"),
+                   number_manual=bool(d.get("number_manual", False)),
+                   props=_str_dict(d.get("props")), layer=_text(d.get("layer"), f"{what} layer") or DEFAULT_LAYER_WIRES,
+                   locked=bool(d.get("locked", False)), group=_text(d.get("group") or None, f"{what} group"))
 
 
 # ================================================================ shape
@@ -314,34 +437,45 @@ class Shape:
 
     @classmethod
     def from_dict(cls, d):
+        d = _obj(d, "a drafting shape")
         kind = d.get("kind")
-        if kind not in SHAPE_KINDS:
-            raise ValueError(f"unknown shape kind {kind!r}")
-        s = cls(id=int(d["id"]), kind=kind)
+        if not isinstance(kind, str) or kind not in SHAPE_KINDS:
+            raise ValueError(f"unknown drafting shape kind ({_kind(kind)})")
+        sid = _int(_req(d, "id", f"a {kind} shape"), "shape id")
+        what = f"{kind} shape {sid}"
+        s = cls(id=sid, kind=kind)
         if kind in ("line", "polyline", "polygon", "rect"):
-            s.pts = [(float(p[0]), float(p[1])) for p in d["pts"]]
+            s.pts = [_point(p, f"{what} point {i}") for i, p in enumerate(_seq(_req(d, "pts", what), f"{what} pts"))]
             if len(s.pts) < 2:
-                raise ValueError(f"shape {s.id} has fewer than two points")
+                raise ValueError(f"{what} has fewer than two points")
         elif kind == "hatch":
             from .regions import clean_rings
-            s.rings = clean_rings(d.get("rings"))
+            try:
+                s.rings = clean_rings(d.get("rings"))
+            except ValueError as e:
+                raise ValueError(f"{what}: {e}") from None
         elif kind in ("circle", "arc"):
-            s.c = (float(d["c"][0]), float(d["c"][1]))
-            s.r = float(d["r"])
+            s.c = _point(_req(d, "c", what), f"{what} centre")
+            s.r = _num(_req(d, "r", what), f"{what} radius")
+            if s.r < 0:
+                raise ValueError(f"{what} radius must not be negative")
             if kind == "arc":
-                s.start, s.extent = float(d.get("start", 0)), float(d.get("extent", 90))
+                s.start = _num(d.get("start", 0), f"{what} start")
+                s.extent = _num(d.get("extent", 90), f"{what} extent")
         else:
-            s.pts = [(float(d["p"][0]), float(d["p"][1]))]
-            s.s = str(d.get("s", ""))
-            s.size = float(d.get("size", 10))
-            s.anchor = str(d.get("anchor", "w"))
-            s.angle = float(d.get("angle", 0))
+            s.pts = [_point(_req(d, "p", what), f"{what} position")]
+            s.s = _text(d.get("s"), f"{what} text")
+            s.size = _num(d.get("size", 10), f"{what} size")
+            if s.size <= 0:
+                raise ValueError(f"{what} size must be positive")
+            s.anchor = _text(d.get("anchor"), f"{what} anchor", "w")
+            s.angle = _num(d.get("angle", 0), f"{what} angle")
         w = d.get("width", "normal")
         s.width = w if w in SHAPE_WIDTHS else "normal"
         s.dash, s.fill = bool(d.get("dash", False)), bool(d.get("fill", False))
-        s.layer = str(d.get("layer") or DEFAULT_LAYER_SHAPES)
+        s.layer = _text(d.get("layer"), f"{what} layer") or DEFAULT_LAYER_SHAPES
         s.locked = bool(d.get("locked", False))
-        s.group = str(d.get("group", "") or "")
+        s.group = _text(d.get("group") or None, f"{what} group")
         if kind in ("line", "polyline"):
             s.arrow_start = d.get("arrow_start") is True
             s.arrow_end = d.get("arrow_end") is True
@@ -413,15 +547,23 @@ class Sheet:
     @classmethod
     def from_dict(cls, d):
         s = cls()
+        if d is not None and not isinstance(d, dict):
+            raise ValueError(f"the page setup must be an object, not {_kind(d)}")
+        # Page setup is lenient, as always: a value that cannot be used keeps
+        # the default. Containers and non-finite numbers are never used.
         for k, v in (d or {}).items():
-            if hasattr(s, k):
+            if hasattr(s, k) and not isinstance(v, (dict, list)):
                 cur = getattr(s, k)
                 try:
                     if isinstance(cur, bool):
                         setattr(s, k, bool(v))
+                    elif isinstance(cur, float):
+                        f = float(v)
+                        if math.isfinite(f) and not isinstance(v, bool):
+                            setattr(s, k, f)
                     else:
                         setattr(s, k, type(cur)(v))
-                except (TypeError, ValueError):
+                except (TypeError, ValueError, OverflowError):
                     pass
         if s.size not in SHEET_SIZES_MM and s.size != CUSTOM_SIZE:
             s.size = "A3"
@@ -579,36 +721,69 @@ class Document:
         return d
 
     @classmethod
-    def from_dict(cls, d) -> "Document":
-        doc = cls(name=str(d.get("name") or "Sheet 1"), uid=str(d.get("uid") or new_uid()))
-        doc.sheet = Sheet.from_dict(d.get("sheet"))
-        for cd in d.get("components", []):
-            c = Component.from_dict(cd)
-            if doc._taken(c.id):
-                raise ValueError(f"duplicate object id {c.id}")
-            doc.components[c.id] = c
-        for wd in d.get("wires", []):
-            w = Wire.from_dict(wd)
-            if doc._taken(w.id):
-                raise ValueError(f"duplicate object id {w.id}")
-            doc.wires[w.id] = w
-        for sd in d.get("shapes", []) or []:
-            s = Shape.from_dict(sd)
-            if doc._taken(s.id):
-                raise ValueError(f"duplicate object id {s.id}")
-            doc.shapes[s.id] = s
-        ids = doc.all_ids()
-        doc.next_id = max(max(ids, default=0) + 1, int(d.get("next_id", 1) or 1))
-        # Drop dangling terminal references instead of failing.
+    def from_dict(cls, d, resolve=None) -> "Document":
+        """Build a sheet from its dict.
+
+        `resolve(symbol_id) -> SymbolDef | None` supplies the symbol definitions used to validate wire
+        terminal references; Project.from_dict passes one that sees the project's own embedded symbols.
+        The default (symbols.lookup) uses built-in and user-library symbols only, never the active
+        project's, so a sheet is never validated against another project's symbols."""
+        d = _obj(d, "a sheet")
+        doc = cls(name=_text(d.get("name") or None, "sheet name", "Sheet 1"),
+                  uid=_text(d.get("uid") or None, "sheet uid") or new_uid())
+        where = f"sheet '{doc.name}'"
+        try:
+            doc.sheet = Sheet.from_dict(d.get("sheet"))
+            for cd in _seq(d.get("components"), "components", []):
+                c = Component.from_dict(cd)
+                if doc._taken(c.id):
+                    raise ValueError(f"duplicate object id {c.id}")
+                doc.components[c.id] = c
+            for wd in _seq(d.get("wires"), "wires", []):
+                w = Wire.from_dict(wd)
+                if doc._taken(w.id):
+                    raise ValueError(f"duplicate object id {w.id}")
+                doc.wires[w.id] = w
+            for sd in _seq(d.get("shapes"), "shapes", []):
+                s = Shape.from_dict(sd)
+                if doc._taken(s.id):
+                    raise ValueError(f"duplicate object id {s.id}")
+                doc.shapes[s.id] = s
+            ids = doc.all_ids()
+            doc.next_id = max(max(ids, default=0) + 1, _int(d.get("next_id") or 1, "next_id"))
+        except ValueError as e:
+            raise ValueError(f"{where}: {e}") from None
+        # Drop terminal references that are certainly dangling (no such component, or a symbol that is
+        # known and has no such terminal) instead of failing. A reference to a component whose symbol is
+        # not available is kept: its pins are unknown here, and the reference becomes valid again as soon
+        # as the symbol is (dropping it would lose the connection for good on the next save).
+        resolve = resolve or symbols.lookup
+        names_cache: dict = {}
+
+        def terminal_names(c):
+            key = (c.symbol, json.dumps(c.params, sort_keys=True) if c.params else "")
+            if key not in names_cache:
+                sd = resolve(c.symbol)
+                try:
+                    names_cache[key] = None if sd is None else {t.name for t in sd.build(c.params or None).terminals}
+                except Exception:  # noqa: BLE001 - a symbol that cannot be built cannot validate anything
+                    names_cache[key] = None
+            return names_cache[key]
+
         for w in doc.wires.values():
             for attr in ("start", "end"):
                 ref = getattr(w, attr)
-                if ref and doc.terminal_pos(ref) is None:
+                if not ref:
+                    continue
+                c = doc.components.get(ref[0])
+                names = terminal_names(c) if c is not None else set()
+                if names is not None and ref[1] not in names:
                     setattr(w, attr, None)
         return doc
 
     def copy(self) -> "Document":
-        return Document.from_dict(self.to_dict())
+        resolve = self.project.symbol_resolver() if self.project is not None else None
+        return Document.from_dict(self.to_dict(), resolve=resolve)
 
 
 # Schema of one sheet's JSON (the .osch "schema" number). 1 = OpenSchematix

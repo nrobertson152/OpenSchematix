@@ -216,6 +216,9 @@ class App:
         lay = self.settings["layout"]
         self.panel_visible = {"left": lay.get("left", True), "right": lay.get("right", True),
                               "bottom": lay.get("bottom", True)}
+        # True once _restore_layout has applied the saved pane sizes. Until then the panes (and the
+        # drawing canvas) can still be resized by it, up to about 2 s after start-up.
+        self.layout_restored = False
         self.root.after(60, self._restore_layout)
 
     def _restore_layout(self, attempts=0):
@@ -254,6 +257,7 @@ class App:
             if not self.panel_visible[side]:
                 self.panel_visible[side] = True
                 self.toggle_panel(side)
+        self.layout_restored = True
 
     def _save_layout(self):
         lay = self.settings["layout"]
@@ -1767,7 +1771,7 @@ class App:
             p.sheets[0].sheet.title_block = tb
         else:
             try:
-                p = projectio.open_any(os.path.join(d, choice + PROJECT_EXTENSION)).project
+                p = projectio.open_any(os.path.join(d, choice + PROJECT_EXTENSION), activate=False).project
             except (OSError, projectio.ProjectFormatError) as e:
                 messagebox.showerror("Template", str(e), parent=self.root)
                 return
@@ -2269,15 +2273,21 @@ class App:
             messagebox.showerror("Could not open", f"{path}\n\n{e}", parent=self.root)
             return
         self.settings["last_dir"] = os.path.dirname(os.path.abspath(path))
-        if res.migrated:
+        if res.needs_new_name:
+            # converted, or opened with damaged parts left out: never save over the original
             self._reset(res.project, None)
             self._suggested_path = projectio.suggested_project_path(path)
             self.dirty = True
             self.update_title()
             for w in res.warnings:
                 self.log(w, "warning")
-            self.toast(f"Converted {os.path.basename(path)} to a project. The original file is unchanged; "
-                       f"Save asks for a new name (suggested: {os.path.basename(self._suggested_path)}).", "info")
+            if res.migrated:
+                self.toast(f"Converted {os.path.basename(path)} to a project. The original file is unchanged; "
+                           f"Save asks for a new name (suggested: {os.path.basename(self._suggested_path)}).",
+                           "info")
+            else:
+                self.toast(f"Parts of {os.path.basename(path)} are damaged and were left out (see the Output "
+                           f"panel). The file is unchanged; Save asks for a new name.", "warning")
         else:
             self._reset(res.project, path)
             self.settings.add_recent(path)
@@ -2295,7 +2305,7 @@ class App:
             return self.save_as()
         try:
             projectio.save_project(self.project, self.filename)
-        except OSError as e:
+        except (OSError, projectio.ProjectFormatError) as e:
             messagebox.showerror("Save failed", f"{self.filename}\n\n{e}\n\nYour previous file is unchanged.",
                                  parent=self.root)
             return False
@@ -2332,27 +2342,58 @@ class App:
                                          defaultextension=PROJECT_EXTENSION,
                                          filetypes=[("OpenSchematix project", "*" + PROJECT_EXTENSION)])
         if p:
-            projectio.atomic_write_bytes(p, projectio.project_bytes(self.project))
+            try:
+                projectio.atomic_write_bytes(p, projectio.project_bytes(self.project))
+            except (OSError, projectio.ProjectFormatError) as e:
+                messagebox.showerror("Export failed", f"{p}\n\n{e}", parent=self.root)
+                return
             self.toast(f"Exported {os.path.basename(p)}", "success")
 
     def import_project_sheets(self):
         path = filedialog.askopenfilename(parent=self.root, title="Import sheets from", filetypes=FILETYPES_OPEN)
-        if not path:
-            return
+        if path:
+            self.import_sheets_from(path)
+
+    def import_sheets_from(self, path) -> int:
+        """Append every sheet of another project or drawing to this project. Returns the number of
+        sheets imported. The other file is read without registering its symbols, so the open
+        project's symbols are never replaced by another project's."""
         try:
-            other = projectio.open_any(path).project
+            other = projectio.open_any(path, activate=False).project
         except (OSError, projectio.ProjectFormatError) as e:
             messagebox.showerror("Import", str(e), parent=self.root)
-            return
+            return 0
         s = self.begin_change()
+        # The imported drawings' custom symbols are added and registered BEFORE the drawings are copied:
+        # copying re-validates every wire's terminal reference, and a symbol that is not registered yet
+        # would detach them. A symbol id this project already has keeps this project's version.
+        differing = []
+        for sid, sdoc in other.symbols.items():
+            mine = self.project.symbols.get(sid)
+            if mine is None:
+                self.project.symbols[sid] = json.loads(json.dumps(sdoc))
+            elif mine != sdoc:
+                differing.append(str(sdoc.get("name") or sid))
+        self.project.activate_symbols()
+        lost = 0
         for d in other.sheets:
             new = self.project.add_sheet(d.name)
-            editing.paste(new, editing.copy_items(d, d.all_ids()), 0, 0)
+            clip = editing.copy_items(d, d.all_ids())
+            refs = sum(bool(wd.get("start")) + bool(wd.get("end")) for wd in clip["wires"])
+            ids = editing.paste(new, clip, 0, 0)
+            kept = sum(bool(new.wires[i].start) + bool(new.wires[i].end) for i in ids if i in new.wires)
+            lost += refs - kept
             new.sheet = Sheet_copy(d.sheet)
-        for sid, sdoc in other.symbols.items():
-            self.project.symbols.setdefault(sid, sdoc)
-        self.project.activate_symbols()
-        self.commit_change(s, f"Imported {len(other.sheets)} sheet(s) from {os.path.basename(path)}.")
+        msg = f"Imported {len(other.sheets)} sheet(s) from {os.path.basename(path)}."
+        if lost:
+            msg += f" {lost} wire end(s) were detached from connection points that do not exist in this project."
+        self.commit_change(s, msg)
+        if differing:
+            self.log("Imported sheets use this project's version of: " + ", ".join(sorted(differing)) +
+                     " (the imported file has a different version).", "warning")
+        if lost:
+            self.log(f"{lost} imported wire end(s) lost their connection point.", "warning")
+        return len(other.sheets)
 
     def _rebuild_recent(self):
         m = self.recent_menu
@@ -2578,10 +2619,18 @@ def main(argv=None):
                 pass
     root = tk.Tk(className="OpenSchematix")
     root.withdraw()
+    from . import errors
+    errors.install(root)       # the windowed build has no console: never let an error vanish
     splash = _startup_splash(root)
     started_at = time.monotonic()
     try:
         app = App(root, argv[0] if argv else None)
+    except Exception:
+        info = sys.exc_info()
+        splash.destroy()
+        root.destroy()
+        errors.report_startup_failure(*info)
+        return 1
     except BaseException:
         splash.destroy()
         root.destroy()

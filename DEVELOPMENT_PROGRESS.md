@@ -1,6 +1,6 @@
 # OpenSchematix - Development Progress
 
-_Last updated: 2026-10-31 (session 7: boundary-fill stabilisation — schema/revision compatibility, Tk 8.6
+_Last updated: 2026-11-01 (audit F1 fix: custom-symbol wire attachments, branch `fix/custom-symbol-pin-refs`). Earlier: 2026-10-31 (session 7: boundary-fill stabilisation — schema/revision compatibility, Tk 8.6
 verification, performance — on `feature/boundary-fill`, draft PR #4, not merged. Session 6: boundary fill (FILL/HATCH)
 implemented. Session 5: Phase 2 item 6 (import/explode symbols)). Read this
 first when resuming development._
@@ -270,6 +270,39 @@ rejected intersections and holes, fills stored as plain polygons, a failing test
 - Tests: `tests/test_symbol_aliases.py` (16), `tests/test_symbol_editor_pins.py` (11, Tk). Full pytest 661 passed /
   3 skipped (ezdxf), GUI smoke 168/168.
 
+### Audit F1 — custom-symbol wire attachments (branch `fix/custom-symbol-pin-refs`)
+
+- **Defect:** `Document.from_dict` validated wire `start`/`end` references against the process-wide symbol
+  registry, but `Project.from_dict` builds sheets *before* `activate_symbols()` registers the project's embedded
+  symbols (`projectio.open_any`, `App._restore` for undo/redo, `RevisionStore.load`). A custom symbol not yet
+  registered resolved to the `gen.unknown` placeholder (pins `1`, `2`), so every reference to its real pin ids
+  was set to `None`, silently. Triggers: opening without the symbol in a local library, opening while another
+  project with a different version is active, redo after *Import sheets*, undo of *Update to library version*,
+  revision restore. Connectivity is geometric, so nothing looked wrong until the component was moved.
+- **Fix (no format change):**
+  - `symbols.lookup(id, project_defs)`: built-in → given project definitions → user library; never the active
+    project's symbols.
+  - `Project.embedded_symdefs()` (pure) and `Project.symbol_resolver()`; `activate_symbols()` uses the same builder.
+  - `Project.from_dict` passes its resolver to `Document.from_dict(d, resolve=…)`; `Document.copy()` uses its
+    project's resolver; standalone sheets use `symbols.lookup`.
+  - References are dropped only when certainly dangling (no component, or a known symbol without that pin).
+    References to a component whose symbol is unavailable are kept; `editing.pin_unverifiable()` stops
+    `sync_wire_ends` from detaching them, so they work again once the symbol is installed.
+  - `projectio.open_any(path, activate=False)` reads a file without touching the registry (Import sheets,
+    templates). `App.import_sheets_from(path)` (testable; the menu command calls it) registers the merged
+    symbols before copying the drawings, keeps the open project's version of a shared id, logs differing
+    versions and counts detached ends.
+- **PR #33 (scripting API):** `api.open_project` calls `projectio.open_any`, so it had the defect and gets the
+  fix without changes; verified with a throwaway merge (full suite 828 passed; its 129 API tests pass) and an
+  API scenario with two projects embedding different versions of one symbol id.
+- **Tests:** `tests/test_custom_symbol_refs.py` (15: nets and component movement after reopen, cross-project
+  leak, snapshot/redo, older symbol version, revision restore, duplicate sheet, missing symbol, dangling refs,
+  damaged embedded symbol, example round-trips, files written by and read by v1.0.0),
+  `tests/test_custom_symbol_refs_gui.py` (3, Tk: Import sheets undo/redo, version conflict, Update symbol
+  undo/redo). `tests/conftest.py` now restores the project/user symbol registries after every test.
+- **Remaining limitation:** comparing two revisions that embed different versions of one symbol still draws
+  and nets both with the active version (`compare.py` uses the registry); loading no longer loses references.
+
 ## Status summary
 
 **Version 1.0.1 (originally developed internally as "3.0") is implemented and tested on Linux** (engine + GUI). All 25 sections of the brief are
@@ -391,3 +424,60 @@ system Tk: `uv python install 3.12` (includes Tkinter); PyPI may be blocked — 
 GitHub or copy pure-Python packages; PyInstaller/altgraph/pyinstaller-hooks-contrib can be cloned from GitHub
 and used via PYTHONPATH (bootloaders are in the repo). Standalone-Python builds need
 `LD_LIBRARY_PATH=<python>/lib` for Tk.
+
+## Project-scoped symbol resolution (`fix/project-scoped-symbols`)
+
+- **Root causes:**
+  - `Project.embed_symbols` (every save and revision snapshot) replaced an embedded definition with the
+    process-wide registry's whenever the revision was >=, even when the registry held *another*
+    project's symbols. The other project's definition was then written into the file.
+  - Engine operations on a project resolved symbols through `symbols.get()` → `_PROJECT`, i.e. the
+    project activated last.
+- **Fix:**
+  - `symbols.set_project_symbols(defs, owner=)` records the registered project
+    (`Project.activate_symbols` passes it); `symbols.project_owner()` returns it (weak reference).
+  - `embed_symbols` trusts the registry only for its owner. Otherwise it keeps embedded definitions and
+    takes a missing one from the user library, or, for registrations without an owner, the registry as
+    before.
+  - `symbols.project_scope(project)` and the `@symbols.project_scoped` decorator resolve as the project and
+    then restore the previous registration (no-op for the registered project). Applied to
+    `netlist.compute_nets`, `netlist.assign_wire_numbers`, `check.check`, `bom.generate`,
+    `connectivity.analyse`, `export.paper_items` / `to_svg` / `to_pdf` / `project_pdf`, and
+    `Project.duplicate_sheet`.
+- **Boundary:** direct model calls (`Component.terminals()`, rendering) still use the registered project,
+  i.e. the open one in the GUI. A per-component project resolver is the larger refactor (audit item 11).
+  Load-time validation is PR #37.
+- **Tests:** `tests/test_project_symbol_scope.py` (16); 8 behavioural tests fail on main.
+
+
+## Project-file reliability (`fix/project-file-reliability`, audit F2, F4, F5, F9)
+
+- **Classification rule:** model `from_dict` readers raise only `ValueError` (with location, never file
+  content) for malformed data, via the reading helpers in `model.py`. `projectio.read_zip` and
+  `fileio.load` catch only `ValueError`, so any other exception is a programming defect and reaches
+  `gui/errors.py` instead of being reported as a damaged file.
+- **`safejson.py`:** strict JSON for everything read from disk: no NaN/Infinity/overflowing floats,
+  integers ≤ 18 digits, depth ≤ 64, RecursionError classified.
+- **Revisions:** `RevisionStore.from_file` validates each index entry and verifies every object it uses
+  (size, zlib, SHA-256, strict JSON, sheet/header structure). Damaged entries are left out individually;
+  `OpenResult.recovered` makes the GUI require Save As, like `migrated`. Unknown entry keys are kept.
+- **Embedded symbols:** a document whose `to_symdef` raises anything but `SymbolFormatError` is left out
+  in `projectio._read_symbols` (per symbol, with a warning). Root cause is `symbols.custom.normalise` not
+  validating value types; not changed here because PR #34 rewrites it. Narrow that catch once #34 lands.
+- **Not touched (Claude B, audit F1):** symbol activation order in `open_any` and the dangling-reference
+  drop in `Document.from_dict`.
+- **Writing:** `projectio.check_savable` runs before the revision snapshot; members are written with
+  `allow_nan=False`; `fileio.save` checks too.
+- **Failed saves change nothing (PR #47 review, Issue #50):** serialising re-embeds custom symbols
+  (`Project.to_dict` → `embed_symbols`: newer registered definitions replace embedded ones, unused ones
+  are dropped). `save_project` now restores `project.symbols` with the revision store on any failure
+  (preflight, snapshot, verification, write), and `check_savable` restores it too. A committed save keeps
+  the re-embedded symbols. `export_project_copy` and recovery autosaves still re-embed in memory, as the
+  GUI's undo-state key (`App.snapshot` → `to_dict`) does on every edit; they are not save transactions.
+- **GUI (`gui/errors.py`):** `report_callback_exception` and `sys.excepthook` log to
+  `<config>/logs/openschematix-errors.log` (rotated at 1 MB) and show a dialog naming only the error type
+  and the log; one dialog at a time, same error at most every 30 s. Start-up failures exit with status 1.
+- **Fuzz:** `tools/fuzz_project_loader.py` (node and container mutations, then Check/netlist/BOM/exports/
+  revision restore/save). main @ 6a9c543: 337 leaked and 94 latent crashes in 4,148 files; this branch: 0
+  in 4,148, and 0 in 4 × 12,148 other seeds.
+- Tests: `tests/test_project_file_reliability.py` (107), `tests/test_gui_error_reporting.py` (11, Tk).

@@ -59,6 +59,7 @@ def _ports(c):
     return [(t, sd.port_type(t)) for t in c.geometry().terminals]
 
 
+@symbols.project_scoped
 def check(project, rules=None, require_part_numbers: bool = False) -> list[Issue]:
     rules = set(rules or RULES)
     out: list[Issue] = []

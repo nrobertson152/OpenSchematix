@@ -47,6 +47,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass, field
 
+from . import symbols
 from .geometry import point_on_segment, same
 from .model import Document
 
@@ -140,6 +141,7 @@ def _add_distinct_direction(dirs: list[tuple[float, float]], d: tuple[float, flo
     dirs.append(d)
 
 
+@symbols.project_scoped
 def analyse(doc: Document) -> Connectivity:
     res = Connectivity()
     wires = list(doc.wires.values())
