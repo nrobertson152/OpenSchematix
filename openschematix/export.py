@@ -76,7 +76,22 @@ def paper_items(doc: Document, use_sheet: bool = True, project=None):
         return items, (0.0, 0.0, W, H)
     b = scene_bbox(items) or (0, 0, 100, 100)
     pad = 20
-    return items, (b[0] - pad, b[1] - pad, b[2] + pad, b[3] + pad)
+    extent = (b[0] - pad, b[1] - pad, b[2] + pad, b[3] + pad)
+    # A frameless export is still a preliminary drawing. Place its designation
+    # within the content-based export extent rather than the omitted sheet frame.
+    if doc.sheet.drawing_status == "Preliminary":
+        x0, y0, x1, y1 = extent
+        w, h = x1 - x0, y1 - y0
+        cx = (x0 + x1) / 2
+        items = list(items) + [
+            {"k": "text", "p": (cx, y0 + h * 0.46), "s": "PRELIMINARY",
+             "size": min(w / 12, h / 5), "anchor": "c", "angle": 25,
+             "bold": True, "role": "watermark", "item": None, "color": "#b8b8b8"},
+            {"k": "text", "p": (cx, y0 + h * 0.59), "s": "NOT FOR PRODUCTION",
+             "size": min(w / 36, h / 15), "anchor": "c", "angle": 25,
+             "role": "watermark", "item": None, "color": "#b8b8b8"},
+        ]
+    return items, extent
 
 
 def _fmt(v):
@@ -186,8 +201,9 @@ def to_svg(doc: Document, use_sheet: bool = True, project=None) -> str:
             if it.get("angle"):
                 ax, ay = it["p"]
                 rot = f' transform="rotate({_fmt(-it["angle"])} {_fmt(ax)} {_fmt(ay)})"'
+            color = it.get("color", "#000000")
             out.append(f'<text x="{_fmt(x)}" y="{_fmt(y)}" font-family="Helvetica, Arial, sans-serif" '
-                       f'font-size="{_fmt(it.get("size", 10))}"{weight}{rot} fill="#000000" stroke="none">'
+                       f'font-size="{_fmt(it.get("size", 10))}"{weight}{rot} fill="{escape(color)}" stroke="none">'
                        f'{escape(it["s"])}</text>')
     out.append("</g>")
     out.append("</svg>")
@@ -253,6 +269,10 @@ def _page_content(items, extent) -> tuple[bytes, float, float]:
         if it["k"] != "text":
             continue
         font = "/F2" if it.get("bold") else "/F1"
+        if it.get("role") == "watermark":
+            ops.append("0.72 0.72 0.72 rg")
+        else:
+            ops.append("0 0 0 rg")
         ang = it.get("angle", 0) or 0
         if ang:
             # rotate about the anchor point: compute origin in the rotated frame

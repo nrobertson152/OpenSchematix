@@ -279,6 +279,18 @@ def scene(doc: Document, screen: bool = True, conn: Connectivity | None = None, 
         lay = layers.get(it.get("layer"))
         if lay is not None and lay.color and it.get("role") not in ("frame", "junction"):
             it["color"] = lay.color
+    # Non-interactive drawing designation. Drawn after schematic geometry, before
+    # screen-only connectivity markers; intentionally has no document item ID.
+    if doc.sheet.drawing_status == "Preliminary" and frame:
+        w, h = doc.sheet.size_units()
+        items.extend([
+            {"k": "text", "p": (w / 2, h * 0.46), "s": "PRELIMINARY",
+             "size": min(w / 12, h / 5), "anchor": "c", "angle": 25,
+             "bold": True, "role": "watermark", "item": None, "color": "#b8b8b8"},
+            {"k": "text", "p": (w / 2, h * 0.59), "s": "NOT FOR PRODUCTION",
+             "size": min(w / 36, h / 15), "anchor": "c", "angle": 25,
+             "role": "watermark", "item": None, "color": "#b8b8b8"},
+        ])
     if screen:
         for wid, p in conn.open_wire_ends:
             items.append({"k": "poly", "pts": [(p[0] - 2.5, p[1] - 2.5), (p[0] + 2.5, p[1] - 2.5),

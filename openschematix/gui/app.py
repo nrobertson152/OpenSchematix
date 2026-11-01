@@ -463,6 +463,11 @@ class App:
         s.add_separator()
         s.add_command(label="Drawing scale and fit…", command=lambda: ScaleDialog(self))
         s.add_command(label="Fit drawing to sheet", command=self.fit_to_sheet)
+        status = tk.Menu(s, tearoff=0)
+        status.add_command(label="Preliminary — not for production",
+                           command=lambda: self.set_drawing_status("Preliminary"))
+        status.add_command(label="Released", command=lambda: self.set_drawing_status("Released"))
+        s.add_cascade(label="Drawing status", menu=status)
         s.add_separator()
         s.add_command(label="Project properties…", command=self.project_properties)
         m.add_cascade(label="Sheet", menu=s)
@@ -1596,6 +1601,13 @@ class App:
             self.edit_objects([sh], s=d.result)
 
     # ---------------------------------------------------------------- sheet / project
+    def set_drawing_status(self, status: str):
+        """Update the active sheet designation with normal undo/save tracking."""
+        if status not in ("Preliminary", "Released"):
+            raise ValueError("Unknown drawing status")
+        self.set_sheet(drawing_status=status)
+        self.set_status(f"Drawing status: {status}.")
+
     def set_sheet(self, **kw):
         s = self.begin_change()
         for k, v in kw.items():
