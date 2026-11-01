@@ -4,6 +4,13 @@ All notable changes to this project are documented here. Versions follow [Semant
 
 ## [Unreleased]
 
+### Fixed
+
+- Netlist generation no longer creates phantom terminals from invalid wire pin
+  references (e.g. `R1:ghost`). Endpoint refs are joined only when the component
+  exists and the pin is defined on a resolved symbol; temporarily unresolved
+  custom symbols still keep named attachments. ERC reports `invalid-wire-ref`.
+
 ### Added
 
 - Symbol aliases: a custom symbol can have extra identifiers (symbol editor, *Symbol* tab, "Aliases"). The library
