@@ -434,3 +434,78 @@ def test_error_messages_do_not_quote_file_content(tmp_path, files):
         rejected(write(tmp_path, edited(files, sheet_member(files), change)))
     raw = files["project.json"].decode().replace("{", '{"x": "' + SECRET + '" ', 1)
     rejected(write(tmp_path, dict(files, **{"project.json": raw.encode()})), "not valid JSON")
+
+
+# ---------------------------------------------------------------- independent PR #40 review regressions
+def test_embedded_symbol_preflight_does_not_record_failed_snapshot(tmp_path):
+    p = rich_project()
+    symbols.set_project_symbols([])
+    path = str(tmp_path / "unchanged.schematix")
+    projectio.save_project(p, path)
+    original = open(path, "rb").read()
+    store = p.revisions
+    before_entries = list(store.entries)
+    before_objects = dict(store.objects)
+    sid = next(iter(p.symbols))
+    p.symbols[sid]["prims"][0]["r"] = float("nan")
+
+    with pytest.raises(projectio.ProjectFormatError, match="embedded symbol"):
+        projectio.save_project(p, path)
+    assert open(path, "rb").read() == original
+    assert p.revisions is store
+    assert store.entries == before_entries and store.objects == before_objects
+
+
+def test_failed_verification_rolls_back_new_snapshot(tmp_path, monkeypatch):
+    p = new_project("Rollback")
+    path = str(tmp_path / "unchanged.schematix")
+    projectio.save_project(p, path)
+    original = open(path, "rb").read()
+    store = p.revisions
+    before_entries = list(store.entries)
+    before_objects = dict(store.objects)
+    editing.place(p.sheets[0], "el.resistor.iec", 100, 100)
+
+    def fail_verify(_data):
+        raise OSError("verification failed")
+
+    monkeypatch.setattr(projectio, "_verify", fail_verify)
+    with pytest.raises(OSError, match="verification failed"):
+        projectio.save_project(p, path)
+    assert open(path, "rb").read() == original
+    assert p.revisions is store
+    assert store.entries == before_entries and store.objects == before_objects
+
+
+def test_damaged_revision_warning_does_not_disclose_label(tmp_path, files):
+    def damage(index):
+        entry = index["entries"][1]
+        entry["label"] = SECRET
+        entry["head"] = "invalid"
+
+    res = projectio.open_any(write(
+        tmp_path, edited(files, "revisions/index.json", damage)))
+    assert res.recovered
+    assert any("revision #2" in w for w in res.warnings)
+    assert SECRET not in " ".join(res.warnings)
+
+
+def test_symbol_format_error_is_retained_and_round_trips(tmp_path, files):
+    member = next(n for n in files if n.startswith("symbols/"))
+
+    def damage(doc):
+        doc["pins"][0]["x"] = 5  # off-grid: SymbolFormatError, not an unsafe parser crash
+
+    changed = edited(files, member, damage)
+    source_doc = json.loads(changed[member])
+    res = projectio.open_any(write(tmp_path, changed))
+    sid = source_doc["id"]
+    assert sid in res.project.symbols
+    assert res.project.symbols[sid] == source_doc
+    assert any("could not be loaded" in w for w in res.warnings)
+
+    output = str(tmp_path / "retained.schematix")
+    projectio.save_project(res.project, output, snapshot=False)
+    with zipfile.ZipFile(output) as z:
+        saved_doc = json.loads(z.read(member))
+    assert saved_doc == source_doc
