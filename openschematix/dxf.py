@@ -324,6 +324,11 @@ class DxfError(ValueError):
     pass
 
 
+MAX_DXF_BYTES = 64 * 1024 * 1024
+MAX_DXF_PAIRS = 1_000_000
+
+
+
 @dataclass
 class ImportReport:
     shapes: list = field(default_factory=list)
@@ -347,7 +352,11 @@ class ImportReport:
 
 
 def _pairs(text: str):
+    if len(text) > MAX_DXF_BYTES:
+        raise DxfError("the DXF input exceeds the maximum supported size")
     lines = text.splitlines()
+    if len(lines) // 2 > MAX_DXF_PAIRS:
+        raise DxfError("the DXF input has too many group-code pairs")
     if len(lines) % 2:
         lines = lines[:-1]
     for i in range(0, len(lines), 2):
@@ -374,17 +383,26 @@ class _Ent:
 
     def f(self, code, default=0.0):
         v = self.get(code)
-        try:
-            return float(v) if v is not None else default
-        except ValueError:
-            return default
+        return _finite_float(v, code) if v is not None else default
 
     def i(self, code, default=0):
         v = self.get(code)
-        try:
-            return int(float(v)) if v is not None else default
-        except ValueError:
+        if v is None:
             return default
+        number = _finite_float(v, code)
+        if not number.is_integer():
+            raise DxfError(f"invalid integer group {code}")
+        return int(number)
+
+
+def _finite_float(value, code):
+    try:
+        number = float(value)
+    except (ValueError, OverflowError):
+        raise DxfError(f"invalid numeric group {code}") from None
+    if not math.isfinite(number):
+        raise DxfError(f"non-finite numeric group {code}")
+    return number
 
 
 def _parse(text: str):
@@ -445,9 +463,9 @@ def _parse(text: str):
                     if code == 2:
                         block["name"] = v
                     elif code == 10:
-                        block["base"] = (float(v), block["base"][1])
+                        block["base"] = (_finite_float(v, code), block["base"][1])
                     elif code == 20:
-                        block["base"] = (block["base"][0], float(v))
+                        block["base"] = (block["base"][0], _finite_float(v, code))
         elif section == "ENTITIES":
             if code == 0:
                 if cur is not None:
@@ -542,6 +560,8 @@ def import_dxf(raw: bytes, units: str | None = None, scale: float = 1.0, origin=
     default $INSUNITS is used, or millimetres if the file does not say.
     `origin` is the model point where the DXF origin (0, 0) is placed.
     `scale` is an extra factor applied after unit conversion."""
+    if len(raw) > MAX_DXF_BYTES:
+        raise DxfError("the DXF input exceeds the maximum supported size")
     text = read_dxf_text(raw)
     header, layer_tab, blocks, entities = _parse(text)
     rep = ImportReport()
@@ -639,8 +659,8 @@ def import_dxf(raw: bytes, units: str | None = None, scale: float = 1.0, origin=
                     skip("POLYLINE (3D mesh)")
                     continue
                 if t == "LWPOLYLINE":
-                    xs = [float(v) for v in e.all(10)]
-                    ys = [float(v) for v in e.all(20)]
+                    xs = [_finite_float(v, 10) for v in e.all(10)]
+                    ys = [_finite_float(v, 20) for v in e.all(20)]
                     # bulges belong to the preceding vertex; rebuild per vertex
                     bul, vi = [], -1
                     for c, v in e.tags:
@@ -648,7 +668,7 @@ def import_dxf(raw: bytes, units: str | None = None, scale: float = 1.0, origin=
                             vi += 1
                             bul.append(0.0)
                         elif c == 42 and vi >= 0:
-                            bul[vi] = float(v)
+                            bul[vi] = _finite_float(v, 42)
                     verts = list(zip(xs, ys))
                 else:
                     verts = [(v.f(10), v.f(20)) for v in getattr(e, "vertices", [])]
@@ -702,7 +722,7 @@ def import_dxf(raw: bytes, units: str | None = None, scale: float = 1.0, origin=
                 add(t, Shape(nid(), "polygon" if full else "polyline", pts=pts[:-1] if full else pts, dash=dash), ly)
                 approx(t)
             elif t == "SPLINE":
-                fx, fy = [float(v) for v in e.all(11)], [float(v) for v in e.all(21)]
+                fx, fy = [_finite_float(v, 11) for v in e.all(11)], [_finite_float(v, 21) for v in e.all(21)]
                 cx_, cy_ = [float(v) for v in e.all(10)], [float(v) for v in e.all(20)]
                 src = list(zip(fx, fy)) if len(fx) >= 2 else list(zip(cx_, cy_))
                 if len(src) < 2:
