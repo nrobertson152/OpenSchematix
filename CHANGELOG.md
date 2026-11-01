@@ -4,6 +4,16 @@ All notable changes to this project are documented here. Versions follow [Semant
 
 ## [Unreleased]
 
+### Fixed
+
+- Netlist generation no longer creates phantom terminals from invalid wire terminal
+  references (a missing component, a blank terminal name, or a pin the symbol does
+  not define, e.g. `R1:ghost`). Such ends no longer join nets, connection and wire
+  lists, terminal reports or CSV exports, and Check reports them as
+  `invalid-wire-ref`. Pins are validated against the definition of the project
+  that owns the sheet, never another open project's symbol with the same id.
+  References to a temporarily unavailable custom symbol keep their attachment.
+
 ### Added
 
 - Symbol aliases: a custom symbol can have extra identifiers (symbol editor, *Symbol* tab, "Aliases"). The library
