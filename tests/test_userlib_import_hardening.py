@@ -344,3 +344,39 @@ def test_exported_package_is_readable_and_imports_with_same_pin_geometry(tmp_pat
     assert doc["id"] in dest.entries
     assert [(p["id"], p["x"], p["y"]) for p in dest.entries[doc["id"]].doc["pins"]] == [
         (p["id"], p["x"], p["y"]) for p in doc["pins"]]
+
+
+
+@pytest.mark.parametrize("field,value", [
+    ("tags", True), ("properties", 5), ("pins", "invalid"), ("prims", {}),
+])
+def test_malformed_embedded_symbol_is_recovered_and_not_reembedded(tmp_path, field, value):
+    """Untrusted malformed field containers must not survive recovery into a saved project."""
+    import io
+    from openschematix import projectio
+    from openschematix.project import new_project
+    from openschematix import editing
+
+    doc = symbol_doc("Malformed embedded")
+    from openschematix.symbols.custom import to_symdef
+    symbols.set_user_symbols([to_symdef(doc)])
+    p = new_project("Recovery")
+    editing.place(p.sheets[0], doc["id"], 100, 100)
+    raw = projectio.project_bytes(p)
+    members = {}
+    with zipfile.ZipFile(io.BytesIO(raw)) as z:
+        members = {n: z.read(n) for n in z.namelist()}
+    embedded = next(n for n in members if n.startswith("symbols/"))
+    damaged = json.loads(members[embedded])
+    damaged[field] = value
+    members[embedded] = json.dumps(damaged).encode("utf-8")
+    path = tmp_path / "damaged.schematix"
+    with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_DEFLATED) as z:
+        for name, payload in members.items():
+            z.writestr(name, payload)
+    symbols.set_user_symbols([])
+    loaded = projectio.open_any(str(path))
+    assert loaded.recovered
+    assert loaded.project.symbols == {}
+    assert any("placeholders" in w for w in loaded.warnings)
+    assert not loaded.project.symbols
