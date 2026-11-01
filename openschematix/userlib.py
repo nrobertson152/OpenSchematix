@@ -35,7 +35,7 @@ from dataclasses import dataclass, field
 
 from . import VERSION, symbols
 from .settings import config_dir
-from .symbols.custom import SYMBOL_FORMAT, SymbolFormatError, new_symbol_id, normalise, to_symdef
+from .symbols.custom import SYMBOL_FORMAT, SymbolFormatError, alias_problems, new_symbol_id, normalise, to_symdef
 
 LIB_FORMAT = "OpenSchematix Symbol Library"
 LIB_VERSION = 1
@@ -201,6 +201,7 @@ class UserLibrary:
                             doc = json.load(f)
                         doc["id"] = new_symbol_id()
                         doc["revision"] = 0
+                        doc.pop("aliases", None)      # aliases stay with the original
                         _atomic_json(p, doc)
                     except (OSError, ValueError):
                         pass
@@ -218,6 +219,9 @@ class UserLibrary:
         """Create or update a symbol. Updating increments its revision; the
         id never changes, so drawings using it stay connected."""
         doc = normalise(copy.deepcopy(doc))
+        problems = alias_problems(doc.get("aliases", []), doc["id"], self.alias_pairs())
+        if problems:
+            raise ValueError("Symbol aliases: " + "; ".join(problems) + ".")
         old = self.entries.get(doc["id"])
         doc["revision"] = (old.doc.get("revision", 0) + 1) if old else max(1, doc.get("revision", 0))
         doc["modified"] = _dt.datetime.now().isoformat(timespec="seconds")
@@ -238,6 +242,11 @@ class UserLibrary:
                 pass
         self.scan()
         return self.entries[doc["id"]]
+
+    def alias_pairs(self) -> list[tuple[str, tuple]]:
+        """(id, aliases) of the built-in symbols and of every library symbol (see alias_problems)."""
+        return [(s.id, s.aliases) for s in symbols.builtin_symbols()] + \
+            [(sid, tuple(e.doc.get("aliases", ()))) for sid, e in self.entries.items()]
 
     def _free_path(self, d: str, name: str) -> str:
         base = safe_name(name)
@@ -261,6 +270,7 @@ class UserLibrary:
         doc = copy.deepcopy(e.doc)
         doc["id"] = new_symbol_id()
         doc["revision"] = 0
+        doc.pop("aliases", None)              # aliases stay with the original
         if os.path.abspath(self.abs(folder)) == os.path.dirname(os.path.abspath(e.path)):
             doc["name"] = doc["name"] + " (copy)"
         return self.save_symbol(doc, folder)
@@ -303,7 +313,7 @@ class UserLibrary:
             if tag and tag.lower() not in (t.lower() for t in d.get("tags", [])):
                 continue
             blob = " ".join([d.get("name", ""), d.get("description", ""), d.get("category", ""), d.get("group", ""),
-                             d.get("prefix", ""), e.folder, *d.get("tags", [])]).lower()
+                             d.get("prefix", ""), e.folder, *d.get("tags", []), *d.get("aliases", [])]).lower()
             if all(w in blob for w in words):
                 out.append(e)
         return sorted(out, key=lambda e: e.name.lower())
@@ -330,11 +340,20 @@ class UserLibrary:
             if on_conflict == "duplicate":
                 doc["id"] = new_symbol_id()
                 doc["revision"] = 0
+                doc.pop("aliases", None)      # aliases stay with the original
             elif on_conflict == "replace":
                 old = self.entries[doc["id"]]
                 doc["revision"] = max(doc.get("revision", 0), old.doc.get("revision", 0))
                 # save_symbol writes the replacement atomically and only then
                 # removes the previous file, preserving it on write failure.
+        # an imported symbol must not take identifiers already in use: keep only its unambiguous aliases
+        if doc.get("aliases"):
+            pairs = self.alias_pairs()
+            keep = [a for a in doc["aliases"] if not alias_problems([a], doc["id"], pairs)]
+            if keep:
+                doc["aliases"] = keep
+            else:
+                doc.pop("aliases")
         return self.save_symbol(doc, folder)
 
     # ---------------------------------------------------------------- packages

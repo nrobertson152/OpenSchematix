@@ -1024,6 +1024,10 @@ class App:
             self.insert_symbol_dialog()
             return
         import re
+        sd = symbols.resolve(q)               # canonical id or alias
+        if sd is not None and sd.group != "Internal":
+            self.start_place(sd.id)
+            return
         hits = [s for s in symbols.search(q) if s.group != "Internal"]
         exact = [s for s in hits if s.name.lower() == q.lower() or s.id == q]
         if exact or hits:

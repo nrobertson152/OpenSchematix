@@ -133,6 +133,7 @@ def symbol_to_doc(sd: SymbolDef, params: dict | None = None, as_copy: bool = Tru
         if as_copy:
             src = {"id": doc["id"], "name": doc["name"], "revision": str(doc["revision"])}
             doc.update(id=new_symbol_id(), revision=0, name=f"{doc['name']} (copy)"[:120], derived_from=src)
+            doc.pop("aliases", None)          # aliases stay with the original
         return normalise(doc)
     g = sd.build(params)
     m = blank_symbol(f"{sd.name} (custom)", sd.category if sd.category in CATEGORIES else "General")

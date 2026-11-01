@@ -185,6 +185,7 @@ class SymbolDef:
     keywords: tuple = ()
     notes: str = ""        # limitations / simplifications, shown to the user
     custom: Optional[dict] = None   # source document of a user-defined symbol
+    aliases: tuple = ()             # extra identifiers that resolve to this symbol (custom symbols)
 
     @property
     def is_custom(self) -> bool:
@@ -207,7 +208,8 @@ class SymbolDef:
         return self.geometry
 
     def search_text(self) -> str:
-        return " ".join([self.name, self.category, self.group, self.convention, self.description, self.prefix, *self.keywords]).lower()
+        return " ".join([self.name, self.category, self.group, self.convention, self.description, self.prefix,
+                         *self.keywords, *self.aliases]).lower()
 
 
 def validate_geometry(g: Geometry) -> list[str]:
