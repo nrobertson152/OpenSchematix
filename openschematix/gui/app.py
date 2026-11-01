@@ -2300,6 +2300,29 @@ class App:
             m.add_command(label="Zoom to drawing", command=self.canvas_fit_drawing)
             m.add_command(label="Zoom to sheet", command=lambda: self.canvas.fit())
             m.add_command(label="Sheet properties", command=self.focus_properties)
+        # Context menus must be dismissible without choosing a command.
+        # Keep the handlers scoped to this popup so normal canvas bindings survive.
+        def dismiss(_event=None):
+            try:
+                m.unpost()
+            except tk.TclError:
+                pass
+
+        def outside_click(event):
+            if event.widget is not m:
+                dismiss()
+
+        click_binding = self.root.bind("<ButtonPress>", outside_click, add="+")
+        escape_binding = self.root.bind("<Escape>", dismiss, add="+")
+
+        def cleanup(_event=None):
+            if click_binding:
+                self.root.unbind("<ButtonPress>", click_binding)
+            if escape_binding:
+                self.root.unbind("<Escape>", escape_binding)
+
+        m.bind("<Escape>", dismiss, add="+")
+        m.bind("<Unmap>", cleanup, add="+")
         try:
             m.tk_popup(x, y)
         finally:
