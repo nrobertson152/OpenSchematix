@@ -54,3 +54,37 @@ def test_dxf_preserves_valid_line_geometry():
 def test_dxf_rejects_invalid_scale(scale):
     with pytest.raises(dxf.DxfError, match="scale"):
         dxf.import_dxf(_entity("LINE", [(10, 0), (20, 0), (11, 10), (21, 0)]), scale=scale)
+
+
+@pytest.mark.parametrize("raw_value", ["abc", "NaN", "Infinity", "1e999"])
+def test_dxf_rejects_invalid_spline_control_coordinates(raw_value):
+    data = _entity("SPLINE", [(10, raw_value), (20, 0), (10, 1), (20, 1)])
+    with pytest.raises(dxf.DxfError, match="numeric group 10"):
+        dxf.import_dxf(data)
+
+
+@pytest.mark.parametrize("origin", [("abc", 0), (float("nan"), 0), (float("inf"), 0), (0,), None])
+def test_dxf_rejects_invalid_origin_with_dxf_error(origin):
+    data = _entity("LINE", [(10, 0), (20, 0), (11, 10), (21, 0)])
+    with pytest.raises(dxf.DxfError, match="origin|numeric"):
+        dxf.import_dxf(data, origin=origin)
+
+
+def test_dxf_coerces_numeric_string_origin_and_scale():
+    data = _entity("LINE", [(10, 0), (20, 0), (11, 10), (21, 0)])
+    report = dxf.import_dxf(data, scale="1", origin=("5", "7"))
+    assert len(report.shapes) == 1
+    assert all(math.isfinite(v) for pt in report.shapes[0].pts for v in pt)
+
+
+def test_dxf_rejects_extreme_ellipse_sweep_before_allocating_points():
+    data = _entity("ELLIPSE", [(10, 0), (20, 0), (11, 10), (21, 0),
+                                   (40, 0.5), (41, 0), (42, "1e300")])
+    with pytest.raises(dxf.DxfError, match="ELLIPSE parameter sweep"):
+        dxf.import_dxf(data)
+
+
+def test_dxf_rejects_transformed_coordinate_overflow():
+    data = _entity("LINE", [(10, "1e300"), (20, 0), (11, 0), (21, 0)])
+    with pytest.raises(dxf.DxfError, match="finite coordinate range"):
+        dxf.import_dxf(data, scale="1e300")
