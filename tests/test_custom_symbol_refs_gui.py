@@ -103,7 +103,9 @@ def test_import_sheets_does_not_replace_the_open_projects_symbols(app, fresh, tm
     assert any(k == "warning" and "Their version" in m for k, m in logged), logged
 
 
-def test_update_symbol_from_library_undo_redo(app, fresh):
+def test_update_symbol_from_library_undo_redo(app, fresh, monkeypatch):
+    asked = []                       # the update disconnects pB: the user is asked first and confirms
+    monkeypatch.setattr(app, "confirm_symbol_update", lambda impact, drawn, lib: asked.append(impact) or True)
     sid = "user:00000000000000dd"
     old = sensor(sid=sid, revision=0, name="Valve coil")
     p, cid, uid_comp, wid = wired_project(old)
@@ -114,7 +116,8 @@ def test_update_symbol_from_library_undo_redo(app, fresh):
         pass
     app.userlib.save_symbol(sensor(("pA",), sid=sid, name="Valve coil"), "My symbols")   # library drops pB
     try:
-        app.update_project_symbol(sid)
+        assert app.update_project_symbol(sid) is True
+        assert len(asked) == 1 and [e.pin for e in asked[0].detached] == ["pB"]
         assert app.project.sheets[0].wires[wid].start is None, "the update detaches pB (and reports it)"
         app.undo()
         assert app.project.symbols[sid]["revision"] == 0

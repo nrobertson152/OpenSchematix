@@ -255,7 +255,12 @@ def library_newer_than_project(app, tmp_path, quiet):
     projectio.save_project(p, path)
     app.open_path(path, confirm=False)
     assert app.project.symbols[LIB_SID]["pins"][1]["x"] == 20             # the drawing keeps revision 1
+    # The project draws a different definition than the library's: "Edit symbol" asks first (Issue #61
+    # D3). These tests choose "Edit the library symbol" and check that the dialog was shown.
+    app.collision_answers = []
+    app.ask_symbol_collision = lambda sid, drawn, lib, diffs: app.collision_answers.append(sid) or "library"
     yield app, v2, c.id
+    del app.ask_symbol_collision
     for w in list(app.windows):
         if w.winfo_exists() and w.__class__.__name__ == "SymbolEditor":
             w.dirty = False
@@ -277,6 +282,7 @@ def _assert_library_edit(app, ed, v2):
 def test_edit_symbol_on_a_placed_component_edits_the_library_revision(library_newer_than_project):
     app, v2, _cid = library_newer_than_project
     app.edit_custom_symbol(LIB_SID)
+    assert app.collision_answers == [LIB_SID]
     _assert_library_edit(app, editors(app)[-1], v2)
 
 
@@ -498,6 +504,8 @@ def test_updating_drawings_from_a_library_edit_never_downgrades(library_newer_th
     app, v2, cid = library_newer_than_project
     from openschematix.gui import symbol_editor
     monkeypatch.setattr(symbol_editor.messagebox, "askyesno", lambda *a, **k: True)
+    confirmed = []                   # revision 2 moves pins A and B: the update is confirmed explicitly
+    monkeypatch.setattr(app, "confirm_symbol_update", lambda impact, d, lib: confirmed.append(impact) or True)
     other = dict(definition(40, "Q", "Foreign"), id=LIB_SID, revision=9)
     q = new_project("Foreign")
     q.symbols[LIB_SID] = other
@@ -507,6 +515,7 @@ def test_updating_drawings_from_a_library_edit_never_downgrades(library_newer_th
     ed = editors(app)[-1]
     assert ed.meta["revision"] == 2 and ed.save() is True
     assert app.project.symbols[LIB_SID]["revision"] == 3 and pins(app.project.symbols[LIB_SID]) == pins(v2)
+    assert len(confirmed) == 1 and confirmed[0].diff.pins_moved == ["A", "B"]
     projectio.open_any(q_path)                                     # foreign revision 9 registered at save
     path = str(tmp_path / "updated.schematix")
     projectio.save_project(app.project, path)
