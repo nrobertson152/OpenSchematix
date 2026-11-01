@@ -1947,11 +1947,35 @@ class App:
         return self.open_symbol_editor(doc=doc, folder=folder)
 
     def edit_custom_symbol(self, sid):
+        """Edit a custom symbol in place ("Edit symbol"). Saving stores the
+        editor's content as the user library's next revision of `sid`, so a
+        symbol that is in the library is edited from the library's own
+        definition: starting from the project's embedded copy (possibly an
+        older revision) would silently replace the newer library geometry.
+        The drawings keep their version until updated (save offers it). A
+        symbol that exists only in the open project is edited from its
+        embedded definition and saving adds it to the library."""
+        e = self.userlib.entries.get(sid)
+        if e is not None:
+            self.edit_library_symbol(sid)
+            return
         sd = self.project_symbol(sid)
         if sd is None or not sd.is_custom:
             return
+        self.open_symbol_editor(doc=sd.custom, folder=None)
+
+    def edit_library_symbol(self, sid):
+        """Edit the user-library symbol `sid` in place, from the library's
+        definition (never the registry or an embedded copy). Returns the
+        editor, or None if `sid` is not in the library."""
         e = self.userlib.entries.get(sid)
-        self.open_symbol_editor(doc=sd.custom, folder=e.folder if e else None)
+        if e is None:
+            return None
+        drawn = self.project.symbols.get(sid)
+        if drawn is not None and drawn.get("revision", 0) != e.doc.get("revision", 0):
+            self.log(f"Editing “{e.name}” revision {e.doc.get('revision', 0)} from the library; this project "
+                     f"draws revision {drawn.get('revision', 0)} until its drawings are updated.", "info")
+        return self.open_symbol_editor(doc=e.doc, folder=e.folder)
 
     def update_project_symbol(self, sid):
         """Switch the project's embedded copy of a custom symbol to the library version."""

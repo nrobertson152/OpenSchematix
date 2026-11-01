@@ -225,3 +225,119 @@ def test_saving_while_another_project_is_registered_keeps_the_definitions(open_a
     path = str(tmp_path / "round-trip.schematix")
     projectio.save_project(app.project, path)
     assert_reopened(app, path, a_def, new, [(cid, wid), (c2, w2)])
+
+
+# ---------------------------------------------------------------- in-place edits never write an older embedded copy into the library
+# Review finding on #39 (Issue #56): "Edit symbol" edits a library symbol in place, and UserLibrary.save_symbol()
+# stores whatever the editor holds as the library's next revision. Starting from the open project's embedded
+# copy (an older revision than the library's) would silently replace the newer library geometry.
+LIB_SID = "user:editor-scope-library-vs-embedded"
+
+
+@pytest.fixture
+def library_newer_than_project(app, tmp_path, quiet):
+    """The library holds revision 2 of LIB_SID (pin B at x=30); the open
+    project embeds revision 1 (pin B at x=20) and draws it."""
+    v1 = dict(definition(20, "B", "Older"), id=LIB_SID)
+    v2 = dict(definition(30, "B", "Newer"), id=LIB_SID)
+    folder = "Scope tests"
+    os.makedirs(app.userlib.abs(folder), exist_ok=True)
+    app.userlib.save_symbol(copy.deepcopy(v1), folder)                  # library revision 1
+    entry = app.userlib.save_symbol(copy.deepcopy(v2), folder)          # library revision 2
+    assert entry.doc["revision"] == 2
+    embedded = copy.deepcopy(v1)
+    embedded["revision"] = 1
+    p = new_project("Draws revision 1")
+    p.symbols[LIB_SID] = embedded
+    p.activate_symbols()
+    c = editing.place(p.sheets[0], LIB_SID, 200, 200)
+    path = str(tmp_path / "older.schematix")
+    projectio.save_project(p, path)
+    app.open_path(path, confirm=False)
+    assert app.project.symbols[LIB_SID]["pins"][1]["x"] == 20             # the drawing keeps revision 1
+    yield app, v2, c.id
+    for w in list(app.windows):
+        if w.winfo_exists() and w.__class__.__name__ == "SymbolEditor":
+            w.dirty = False
+            w.destroy()
+    if LIB_SID in app.userlib.entries:
+        app.userlib.delete_symbol(LIB_SID)
+
+
+def _assert_library_edit(app, ed, v2):
+    """The editor holds the library's revision 2; saving keeps its geometry."""
+    assert ed.meta["id"] == LIB_SID and ed.meta["revision"] == 2
+    assert pins(ed.meta) == pins(v2) and ed.meta["prims"] == v2["prims"]
+    assert ed.save() is True
+    lib = app.userlib.entries[LIB_SID].doc
+    assert lib["revision"] == 3 and pins(lib) == pins(v2) and lib["prims"] == v2["prims"]
+    assert app.project.symbols[LIB_SID]["pins"][1]["x"] == 20             # the drawing still keeps revision 1
+
+
+def test_edit_symbol_on_a_placed_component_edits_the_library_revision(library_newer_than_project):
+    app, v2, _cid = library_newer_than_project
+    app.edit_custom_symbol(LIB_SID)
+    _assert_library_edit(app, editors(app)[-1], v2)
+
+
+def test_library_panel_edit_edits_the_library_revision(library_newer_than_project, monkeypatch):
+    app, v2, _cid = library_newer_than_project
+    # the panel's own selection (registry-backed: it returns the open project's embedded revision 1)
+    monkeypatch.setattr(app.library, "selected_symbol_id", lambda: LIB_SID)
+    assert app.library.selected_symbol().custom["revision"] == 1
+    app.library.edit_selected()
+    _assert_library_edit(app, editors(app)[-1], v2)
+
+
+def test_edit_a_copy_of_a_placed_component_uses_the_embedded_revision(library_newer_than_project):
+    """'Edit a copy' copies what the drawing shows; the library is untouched."""
+    app, v2, _cid = library_newer_than_project
+    ed = app.edit_symbol_copy(LIB_SID)
+    assert ed.meta["id"] != LIB_SID and ed.meta["pins"][1]["x"] == 20
+    assert ed.save() is True
+    lib = app.userlib.entries[LIB_SID].doc
+    assert lib["revision"] == 2 and pins(lib) == pins(v2)
+
+
+def test_edit_symbol_of_a_project_only_symbol_adds_it_to_the_library(app, tmp_path, quiet):
+    """No library version exists to overwrite: the embedded definition is
+    edited and saving adds it to the library under the same id."""
+    sid = "user:editor-scope-project-only"
+    sdoc = dict(definition(20, "B", "Project only"), id=sid)
+    p = new_project("Project only")
+    p.symbols[sid] = copy.deepcopy(sdoc)
+    p.activate_symbols()
+    editing.place(p.sheets[0], sid, 200, 200)
+    path = str(tmp_path / "project-only.schematix")
+    projectio.save_project(p, path)
+    app.open_path(path, confirm=False)
+    assert sid not in app.userlib.entries
+    app.edit_custom_symbol(sid)
+    ed = editors(app)[-1]
+    assert ed.meta["id"] == sid and pins(ed.meta) == pins(sdoc) and ed.is_new
+    assert ed.save() is True
+    assert pins(app.userlib.entries[sid].doc) == pins(sdoc)
+    ed.dirty = False
+    ed.destroy()
+
+
+def test_in_place_and_copy_edits_ignore_another_registered_project(library_newer_than_project, tmp_path):
+    """A third definition of the same id, registered by another project, is
+    used by neither edit: in place edits the library's revision, a copy uses
+    the open project's embedded revision."""
+    app, v2, _cid = library_newer_than_project
+    other = dict(definition(40, "Q", "Foreign"), id=LIB_SID, revision=7)
+    q = new_project("Foreign")
+    q.symbols[LIB_SID] = other
+    q.activate_symbols()
+    editing.place(q.sheets[0], LIB_SID, 100, 100)
+    path = str(tmp_path / "foreign.schematix")
+    projectio.save_project(q, path)
+    projectio.open_any(path)                                   # registers the foreign definition
+    assert symbols.get(LIB_SID).custom["description"] == "Foreign description"
+    copy_ed = app.edit_symbol_copy(LIB_SID)
+    assert copy_ed.meta["pins"][1]["x"] == 20                   # the open project's revision 1
+    copy_ed.dirty = False
+    copy_ed.destroy()
+    app.edit_custom_symbol(LIB_SID)
+    _assert_library_edit(app, editors(app)[-1], v2)            # the library's revision 2

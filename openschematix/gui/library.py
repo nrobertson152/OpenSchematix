@@ -262,7 +262,9 @@ class LibraryPanel(ttk.Frame):
             return
         e = self.app.userlib.entries.get(s.id)
         if s.is_custom and e is not None:
-            self.app.open_symbol_editor(doc=s.custom, folder=e.folder)
+            # in place, from the library's own definition: the registry may hold the open
+            # project's (older) embedded revision of this id, which saving would write back
+            self.app.edit_library_symbol(s.id)
         else:
             # built-in or project-only symbols open as a copy: the original is never changed
             self.app.edit_symbol_copy(s.id)
