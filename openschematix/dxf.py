@@ -590,6 +590,10 @@ def import_dxf(raw: bytes, units: str | None = None, scale: float = 1.0, origin=
             rep.units_mm = 25.4 if meas == "0" else 1.0
             rep.units_source = ("inches ($MEASUREMENT=imperial)" if meas == "0"
                                 else "millimetres (not specified in the file; assumed)")
+    if not math.isfinite(scale) or scale <= 0:
+        raise DxfError("DXF import scale must be finite and positive")
+    if any(not math.isfinite(float(v)) for v in origin):
+        raise DxfError("DXF import origin must be finite")
     k = rep.units_mm * scale / UNIT_MM      # DXF unit -> model units
     ox, oy = origin
     ident = [0]
