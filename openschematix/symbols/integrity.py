@@ -11,132 +11,85 @@ Strict validation vs normalisation
 ----------------------------------
 ``validate_document`` is a **strict structural audit** of a raw symbol
 document (as stored on disk or embedded). It reports problems without
-repairing them: missing pin ids, invalid directions, unknown port types,
-malformed numbers, and unsupported primitives are all findings.
-
-``normalise`` (in ``custom``) is the **load-time path**. It may repair a
-limited set of issues so existing and legacy documents keep loading:
-
-* missing pin ``id`` → generated ``p{n}``
-* invalid pin ``dir`` → ``\"r\"``
-* unknown line width → ``\"normal\"``
-* unknown port type → empty string
-* text size clamped; strings truncated
-
-A document that ``normalise`` accepts may still produce findings under
-``validate_document`` when the raw form is incomplete or non-canonical.
-That is intentional: the validator is for integrity reports; ``normalise``
-is for compatibility. Neither mutates the caller's original object when
-used as documented (``validate_document`` deep-copies by default;
-``normalise`` returns a new dict).
+repairing them. ``normalise`` (in ``custom``) is the **load-time path** and
+may repair limited legacy issues (missing pin id, invalid direction, etc.).
 
 CLI (``python -m openschematix.symbols.integrity``)
 -------------------------------------------------
 * Without paths (or with ``--builtins``): audits the built-in library.
-* With paths: audits each ``.osym`` / JSON file (does **not** call
-  ``normalise``; a document that loads after repair may still report findings).
+* With paths: audits each ``.osym`` / JSON file (does **not** call ``normalise``).
 * Exit code **0** if there are no error-severity findings; **1** otherwise
   (warnings alone still exit 0).
 * ``--json`` prints structured findings including ``source`` and ``location``.
 """
 from __future__ import annotations
 
-import copy
 import json
-import math
 import sys
-from dataclasses import dataclass
-from typing import Iterable, Optional, Sequence
+from typing import Optional, Sequence
 
-from ..geometry import GRID
-from .base import PORT_TYPES, Geometry, SymbolDef, Terminal, validate_geometry
-from .custom import PRIM_KINDS, SYMBOL_FORMAT, SYMBOL_VERSION, USER_PREFIX
+from ._integrity_base import SEVERITY_ERROR, SEVERITY_INFO, SEVERITY_WARNING, Finding
+from ._integrity_doc import validate_document
+from ._integrity_symbol import (
+    findings_by_severity,
+    validate_builtin_library,
+    validate_library,
+    validate_symbol_def,
+)
 
-SEVERITY_ERROR = "error"
-SEVERITY_WARNING = "warning"
-SEVERITY_INFO = "info"
+__all__ = [
+    "SEVERITY_ERROR", "SEVERITY_WARNING", "SEVERITY_INFO", "Finding",
+    "validate_symbol_def", "validate_document", "validate_library",
+    "validate_builtin_library", "findings_by_severity", "main",
+]
 
 
-@dataclass(frozen=True)
-class Finding:
-    """One integrity problem (or informational note).
+def main(argv: Optional[Sequence[str]] = None) -> int:
+    """CLI: validate built-ins and/or .osym paths.
 
-    ``location`` identifies the field or primitive (e.g. ``pin[0]``,
-    ``prim[2]``). ``source`` is the originating file path when known
-    (CLI multi-file mode); it is included in ``as_dict`` for machine-readable
-    output.
+    Exit code 0 when there are no error-severity findings; 1 otherwise.
+    ``--json`` emits a JSON array of findings (with source and location).
     """
-
-    symbol_id: str
-    problem: str
-    severity: str = SEVERITY_ERROR
-    location: str = ""
-    source: str = ""
-
-    def as_dict(self) -> dict:
-        d = {"symbol_id": self.symbol_id, "problem": self.problem, "severity": self.severity}
-        if self.location:
-            d["location"] = self.location
-        if self.source:
-            d["source"] = self.source
-        return d
-
-
-def _safe_in(value, container) -> bool:
-    """Membership test that never raises on unhashable ``value``."""
-    try:
-        return value in container
-    except TypeError:
-        return False
-
-
-def _finite_number(v) -> bool:
-    """True if *v* converts to a finite float. Never raises."""
-    try:
-        f = float(v)
-    except (TypeError, ValueError, OverflowError):
-        return False
-    try:
-        return math.isfinite(f)
-    except (TypeError, ValueError, OverflowError):
-        return False
-
-
-def _as_float(v):
-    """Return float(v) or None on any conversion failure / non-finite."""
-    try:
-        f = float(v)
-    except (TypeError, ValueError, OverflowError):
-        return None
-    try:
-        if not math.isfinite(f):
-            return None
-    except (TypeError, ValueError, OverflowError):
-        return None
-    return f
-
-
-def _check_coordinates(label: str, x, y, sid: str, findings: list, require_grid: bool = False,
-                       source: str = ""):
-    fx, fy = _as_float(x), _as_float(y)
-    if fx is None or fy is None:
-        findings.append(Finding(sid, f"{label}: invalid numeric coordinates ({x!r}, {y!r})",
-                                SEVERITY_ERROR, label, source))
-        return
-    try:
-        out_of_range = abs(fx) > 1e6 or abs(fy) > 1e6
-    except (TypeError, OverflowError):
-        out_of_range = True
-    if out_of_range:
-        findings.append(Finding(sid, f"{label}: coordinates out of range ({fx}, {fy})",
-                                SEVERITY_ERROR, label, source))
-        return
-    if require_grid:
+    argv = list(sys.argv[1:] if argv is None else argv)
+    as_json = "--json" in argv
+    argv = [a for a in argv if a != "--json"]
+    builtins_only = "--builtins" in argv
+    argv = [a for a in argv if a != "--builtins"]
+    paths = [a for a in argv if not a.startswith("-")]
+    findings = []
+    if builtins_only or not paths:
+        findings.extend(validate_builtin_library())
+    for path in paths:
         try:
-            off = (abs(fx / GRID - round(fx / GRID)) > 1e-6 or
-                   abs(fy / GRID - round(fy / GRID)) > 1e-6)
-        except (TypeError, OverflowError, ZeroDivisionError):
-            off = True
-        if off:
-            findings.append(Finding(sid, f"{label}: not on the {GRID}-unit grid at ({fx}, {fy})",
-                                    SEVERITY_ERROR, label, source))
+            with open(path, encoding="utf-8") as f:
+                text = f.read()
+        except OSError as e:
+            findings.append(Finding("<file>", f"could not read {path}: {e}", SEVERITY_ERROR, source=path))
+            continue
+        if not text.strip():
+            findings.append(Finding("<file>", "symbol file is empty or truncated", SEVERITY_ERROR, source=path))
+            continue
+        try:
+            data = json.loads(text)
+        except json.JSONDecodeError as e:
+            findings.append(Finding("<file>", f"invalid JSON: {e.msg} (line {e.lineno}, column {e.colno})",
+                                    SEVERITY_ERROR, source=path))
+            continue
+        findings.extend(validate_document(data, source=path))
+    errors = [f for f in findings if f.severity == SEVERITY_ERROR]
+    if as_json:
+        print(json.dumps([f.as_dict() for f in findings], indent=2))
+    else:
+        if not findings:
+            print("No integrity problems found.")
+        for f in findings:
+            loc = f" [{f.location}]" if f.location else ""
+            src = f" ({f.source})" if f.source else ""
+            print(f"{f.severity.upper()}: {f.symbol_id}{loc}{src}: {f.problem}")
+        if findings:
+            print(f"\n{len(errors)} error(s), {len(findings) - len(errors)} warning/info.")
+    return 1 if errors else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
