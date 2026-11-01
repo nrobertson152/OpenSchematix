@@ -296,6 +296,39 @@ def test_G_moved_pins_are_announced_and_connections_survive(app, bravo):
     assert w.start == [ans.cid, "Q"] and w.points[0] == p.sheets[0].components[ans.cid].terminals()["Q"]
 
 
+@pytest.mark.parametrize("change", ["retyped", "turned"])
+def test_G_type_or_direction_changes_with_stable_pins_are_confirmed_first(app, bravo, change):
+    app, ans = bravo
+    other = copy.deepcopy(BRAVO)
+    if change == "retyped":
+        other["pins"][1]["type"] = "elec.output"
+    else:
+        other["pins"][1]["dir"] = "u"
+    app.userlib.save_symbol(other, "Collision tests")
+    before = state(app)
+    assert app.update_project_symbol(SID) is False                       # asked, answered No
+    dif = ans.confirms[0][0].diff
+    assert (dif.pins_retyped if change == "retyped" else dif.pins_turned) == ["Q"]
+    assert state(app)[:3] == before[:3]
+
+
+def test_A_drawing_only_change_updates_without_a_second_prompt(app, bravo):
+    app, ans = bravo
+    nicer = copy.deepcopy(BRAVO)
+    nicer["prims"][0]["r"] = 12                                           # pins unchanged
+    app.userlib.save_symbol(nicer, "Collision tests")
+    n0 = nets(app.project)
+    assert app.update_project_symbol(SID) is True
+    assert ans.confirms == [] and app.project.symbols[SID]["prims"][0]["r"] == 12 and nets(app.project) == n0
+
+
+def test_I_an_unanswered_safety_prompt_fails_fast_instead_of_hanging(app, bravo, monkeypatch):
+    app, _ans = bravo
+    monkeypatch.delattr(app, "confirm_symbol_update")                    # back to the conftest guard
+    with pytest.raises(AssertionError, match="did not answer"):
+        app.update_project_symbol(SID)
+
+
 # ---------------------------------------------------------------- H: alternating projects stay separate
 def test_H_alternating_open_edit_save_never_mixes_definitions(app, bravo, tmp_path):
     app, ans = bravo

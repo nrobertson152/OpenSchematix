@@ -75,7 +75,8 @@ class SymbolDiff:
         if self.pins_turned:
             out.append("connection points facing another way: " + ", ".join(self.pins_turned))
         if self.pins_retyped:
-            out.append("connection points of another type: " + ", ".join(self.pins_retyped))
+            out.append("connection points of another type (Check drawing results may change): "
+                       + ", ".join(self.pins_retyped))
         if self.drawing_changed:
             out.append("different drawing")
         if self.other_changed and not out:
@@ -129,8 +130,11 @@ class UpdateImpact:
 
     @property
     def harmless(self) -> bool:
-        """Replacing changes no wire and keeps the symbol's identity."""
-        return not self.detached and not self.moved and not self.diff.renamed
+        """Replacing changes no wire, no connection point's type or direction
+        (Check drawing results and wire routing) and keeps the symbol's name.
+        A change to the drawing alone is harmless."""
+        d = self.diff
+        return not (self.detached or self.moved or d.renamed or d.pins_retyped or d.pins_turned)
 
 
 def update_impact(project, sid: str, new_doc) -> UpdateImpact:
