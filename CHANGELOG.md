@@ -35,6 +35,16 @@ All notable changes to this project are documented here. Versions follow [Semant
 
 
 ### Fixed
+
+- Bill of materials: a device drawn with several symbols that share one identifier (relay coil K1 and its
+  contacts) is counted once instead of once per symbol. Symbols without purchasing data are absorbed into
+  the device's line; a device without any part data is listed once with its symbols named ("Coil … +
+  Contact, make (NO)"). Terminal-block terminals and components without an identifier are still counted
+  individually. Symbols are only merged when they can be parts of one device: if two of them have the same
+  symbol, label and terminal designations (an identifier clash, reported by *Duplicate identifiers*), every
+  symbol of that identifier is counted as before. A new drawing check ("Identifiers shared by several
+  symbols") reports devices whose symbols carry different part numbers (listed once per part number) and
+  clashes the duplicate-identifier check misses.
 - Custom symbols: terminal numbers were drawn on every placed custom symbol even with *Show terminal designations*
   off, and twice with it on. Pin designations are no longer baked into the symbol artwork; they are drawn once by
   the renderer and follow the project setting like built-in symbols. A pin can opt out ("Number this point on
