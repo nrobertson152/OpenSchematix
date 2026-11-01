@@ -14,6 +14,8 @@ from openschematix.project import new_project
 
 from test_custom_symbol_refs import assert_connected_and_follows, sensor, wired_project
 
+pytestmark = pytest.mark.gui      # creates a real Tk root (see tests/conftest.py)
+
 
 @pytest.fixture(scope="module")
 def app():
