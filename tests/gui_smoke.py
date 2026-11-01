@@ -229,7 +229,7 @@ click(mid)
 cmd("")
 pieces = [s for s in app.doc.shapes.values() if s.kind == "line" and abs(s.pts[0][1] - (H - 200)) < 1e-6
           and abs(s.pts[-1][1] - (H - 200)) < 1e-6]
-check(len(pieces) == 2 and long_line.id not in [p.id for p in pieces] or len(pieces) == 2,
+check(len(pieces) == 2 and long_line.id not in [p.id for p in pieces],
       "TRIM removed the middle of the line (two pieces left)")
 # MOVE with typed relative displacement
 app.set_selection({c.id})
@@ -250,7 +250,7 @@ check(app.doc.terminal_pos(w.start) == tuple(app.doc.wires[w.id].points[0]), "wi
 cmd("ROTATE")
 cmd(f"{r1.x * 0.25},{(H - r1.y) * 0.25}")
 cmd("45")
-check(app.doc.components[r1.id].rotation == 270 or True, "ROTATE by 45 on a symbol is rejected or snapped")
+check(app.doc.components[r1.id].rotation == 270, "ROTATE by unsupported 45 degrees leaves symbol unchanged")
 app.runner.cancel()
 
 # ================================================================ 4. wire crossings and junctions
