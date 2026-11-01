@@ -60,8 +60,42 @@ class Net:
         return sorted({w[0] for w in self.wires} | {t[0] for t in self.terminals})
 
 
+def pin_ref_connects(doc, ref) -> bool:
+    """True if *ref* is a wire end that should join the electrical netlist.
+
+    A reference is accepted only when the component exists and the pin name is
+    a real terminal of that component's symbol. If the symbol definition is
+    temporarily unavailable (``symbols.get`` returns ``None``), a non-empty pin
+    name is still accepted so legitimate custom-symbol attachments are not
+    dropped merely because the library entry is not registered in this process.
+    Nonexistent components, blank pin names, and pin names that the resolved
+    symbol does not define never create netlist terminals.
+    """
+    if not ref or not isinstance(ref, (list, tuple)) or len(ref) < 2:
+        return False
+    cid, pin = ref[0], ref[1]
+    c = doc.components.get(cid)
+    if c is None:
+        return False
+    if pin is None or (isinstance(pin, str) and not pin.strip()):
+        return False
+    pin = str(pin)
+    sd = symbols.get(c.symbol)
+    if sd is None:
+        # Unresolved definition: keep the named attachment (PR #37 territory).
+        return True
+    # Resolved symbol: pin must exist on the geometry.
+    return pin in c.terminals()
+
+
 def _sheet_nodes(doc, uf: _UF):
-    """Union the nodes of one sheet. Node ids: ('w', uid, wid), ('t', uid, cid, name)."""
+    """Union the nodes of one sheet. Node ids: ('w', uid, wid), ('t', uid, cid, name).
+
+    Wire endpoints join terminals by *validated* pin references and by
+    geometry (end point coincides with a terminal). Invalid pin names never
+    create fictitious terminals. Geometric wire-to-wire joins are unchanged
+    and remain compatible with a spatial candidate index on the wire loop.
+    """
     uid = doc.uid
     wires = list(doc.wires.values())
     for w in wires:
@@ -77,8 +111,8 @@ def _sheet_nodes(doc, uf: _UF):
             uf.union(nodes[0], n)
     for w in wires:
         for ref in (w.start, w.end):
-            if ref and ref[0] in doc.components:
-                uf.union(("w", uid, w.id), ("t", uid, ref[0], ref[1]))
+            if pin_ref_connects(doc, ref):
+                uf.union(("w", uid, w.id), ("t", uid, ref[0], str(ref[1])))
         for idx in (0, -1):
             p = w.points[idx]
             for n in term_at.get(_key(p), []):
