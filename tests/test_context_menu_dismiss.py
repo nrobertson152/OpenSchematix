@@ -42,6 +42,12 @@ def capture_menus(app, monkeypatch):
 
     def tracked(parent, *args, **kwargs):
         menu = original(parent, *args, **kwargs)
+        if sys.platform == "win32":
+            # Win32 tk_popup can enter an OS-owned tracking loop and block
+            # pytest until a physical click. On Windows verify menu assembly,
+            # commands and root bindings without actually posting a popup;
+            # physical dismissal remains a manual acceptance requirement.
+            monkeypatch.setattr(menu, "tk_popup", lambda *_a: None)
         menus.append(menu)
         return menu
 
