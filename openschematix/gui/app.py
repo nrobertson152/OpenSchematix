@@ -1767,7 +1767,7 @@ class App:
             p.sheets[0].sheet.title_block = tb
         else:
             try:
-                p = projectio.open_any(os.path.join(d, choice + PROJECT_EXTENSION)).project
+                p = projectio.open_any(os.path.join(d, choice + PROJECT_EXTENSION), activate=False).project
             except (OSError, projectio.ProjectFormatError) as e:
                 messagebox.showerror("Template", str(e), parent=self.root)
                 return
@@ -2337,22 +2337,49 @@ class App:
 
     def import_project_sheets(self):
         path = filedialog.askopenfilename(parent=self.root, title="Import sheets from", filetypes=FILETYPES_OPEN)
-        if not path:
-            return
+        if path:
+            self.import_sheets_from(path)
+
+    def import_sheets_from(self, path) -> int:
+        """Append every sheet of another project or drawing to this project. Returns the number of
+        sheets imported. The other file is read without registering its symbols, so the open
+        project's symbols are never replaced by another project's."""
         try:
-            other = projectio.open_any(path).project
+            other = projectio.open_any(path, activate=False).project
         except (OSError, projectio.ProjectFormatError) as e:
             messagebox.showerror("Import", str(e), parent=self.root)
-            return
+            return 0
         s = self.begin_change()
+        # The imported drawings' custom symbols are added and registered BEFORE the drawings are copied:
+        # copying re-validates every wire's terminal reference, and a symbol that is not registered yet
+        # would detach them. A symbol id this project already has keeps this project's version.
+        differing = []
+        for sid, sdoc in other.symbols.items():
+            mine = self.project.symbols.get(sid)
+            if mine is None:
+                self.project.symbols[sid] = json.loads(json.dumps(sdoc))
+            elif mine != sdoc:
+                differing.append(str(sdoc.get("name") or sid))
+        self.project.activate_symbols()
+        lost = 0
         for d in other.sheets:
             new = self.project.add_sheet(d.name)
-            editing.paste(new, editing.copy_items(d, d.all_ids()), 0, 0)
+            clip = editing.copy_items(d, d.all_ids())
+            refs = sum(bool(wd.get("start")) + bool(wd.get("end")) for wd in clip["wires"])
+            ids = editing.paste(new, clip, 0, 0)
+            kept = sum(bool(new.wires[i].start) + bool(new.wires[i].end) for i in ids if i in new.wires)
+            lost += refs - kept
             new.sheet = Sheet_copy(d.sheet)
-        for sid, sdoc in other.symbols.items():
-            self.project.symbols.setdefault(sid, sdoc)
-        self.project.activate_symbols()
-        self.commit_change(s, f"Imported {len(other.sheets)} sheet(s) from {os.path.basename(path)}.")
+        msg = f"Imported {len(other.sheets)} sheet(s) from {os.path.basename(path)}."
+        if lost:
+            msg += f" {lost} wire end(s) were detached from connection points that do not exist in this project."
+        self.commit_change(s, msg)
+        if differing:
+            self.log("Imported sheets use this project's version of: " + ", ".join(sorted(differing)) +
+                     " (the imported file has a different version).", "warning")
+        if lost:
+            self.log(f"{lost} imported wire end(s) lost their connection point.", "warning")
+        return len(other.sheets)
 
     def _rebuild_recent(self):
         m = self.recent_menu

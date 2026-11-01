@@ -44,6 +44,14 @@ All notable changes to this project are documented here. Versions follow [Semant
 
 ### Fixed
 
+- Wires attached to the connection points of custom symbols lost that attachment, without any message, when a
+  project was opened on a computer whose libraries do not contain the symbol (or while another project with a
+  different version of it was open), on redo after *Import sheets*, on undo of an update to the library version
+  of a symbol, and when restoring a revision. The drawing looked unchanged, but moving the component afterwards
+  left its wires behind. Drawings are now read against the project's own embedded symbols. Wires attached to a
+  component whose symbol is not available at all stay attached and work again once the symbol is installed.
+  File formats are unchanged. *Import sheets* no longer replaces the open project's symbols while reading the
+  other file, and reports imported symbols that differ from the project's version.
 - Symbol editor: clearing "Number this point on drawings" (and changing a connection point's port type or lead
   direction) took effect only after pressing Apply, and was lost if the symbol was saved first; it now applies
   immediately, and pending edits are applied when saving. A point that is not numbered no longer shows its number

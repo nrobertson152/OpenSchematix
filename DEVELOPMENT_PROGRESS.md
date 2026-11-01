@@ -1,6 +1,6 @@
 # OpenSchematix - Development Progress
 
-_Last updated: 2026-10-31 (session 7: boundary-fill stabilisation — schema/revision compatibility, Tk 8.6
+_Last updated: 2026-11-01 (audit F1 fix: custom-symbol wire attachments, branch `fix/custom-symbol-pin-refs`). Earlier: 2026-10-31 (session 7: boundary-fill stabilisation — schema/revision compatibility, Tk 8.6
 verification, performance — on `feature/boundary-fill`, draft PR #4, not merged. Session 6: boundary fill (FILL/HATCH)
 implemented. Session 5: Phase 2 item 6 (import/explode symbols)). Read this
 first when resuming development._
@@ -269,6 +269,39 @@ rejected intersections and holes, fills stored as plain polygons, a failing test
   projects with aliases. PR #30 overlap: on merge, `doc.pop("aliases", None)` belongs in its `_as_copy()`.
 - Tests: `tests/test_symbol_aliases.py` (16), `tests/test_symbol_editor_pins.py` (11, Tk). Full pytest 661 passed /
   3 skipped (ezdxf), GUI smoke 168/168.
+
+### Audit F1 — custom-symbol wire attachments (branch `fix/custom-symbol-pin-refs`)
+
+- **Defect:** `Document.from_dict` validated wire `start`/`end` references against the process-wide symbol
+  registry, but `Project.from_dict` builds sheets *before* `activate_symbols()` registers the project's embedded
+  symbols (`projectio.open_any`, `App._restore` for undo/redo, `RevisionStore.load`). A custom symbol not yet
+  registered resolved to the `gen.unknown` placeholder (pins `1`, `2`), so every reference to its real pin ids
+  was set to `None`, silently. Triggers: opening without the symbol in a local library, opening while another
+  project with a different version is active, redo after *Import sheets*, undo of *Update to library version*,
+  revision restore. Connectivity is geometric, so nothing looked wrong until the component was moved.
+- **Fix (no format change):**
+  - `symbols.lookup(id, project_defs)`: built-in → given project definitions → user library; never the active
+    project's symbols.
+  - `Project.embedded_symdefs()` (pure) and `Project.symbol_resolver()`; `activate_symbols()` uses the same builder.
+  - `Project.from_dict` passes its resolver to `Document.from_dict(d, resolve=…)`; `Document.copy()` uses its
+    project's resolver; standalone sheets use `symbols.lookup`.
+  - References are dropped only when certainly dangling (no component, or a known symbol without that pin).
+    References to a component whose symbol is unavailable are kept; `editing.pin_unverifiable()` stops
+    `sync_wire_ends` from detaching them, so they work again once the symbol is installed.
+  - `projectio.open_any(path, activate=False)` reads a file without touching the registry (Import sheets,
+    templates). `App.import_sheets_from(path)` (testable; the menu command calls it) registers the merged
+    symbols before copying the drawings, keeps the open project's version of a shared id, logs differing
+    versions and counts detached ends.
+- **PR #33 (scripting API):** `api.open_project` calls `projectio.open_any`, so it had the defect and gets the
+  fix without changes; verified with a throwaway merge (full suite 828 passed; its 129 API tests pass) and an
+  API scenario with two projects embedding different versions of one symbol id.
+- **Tests:** `tests/test_custom_symbol_refs.py` (15: nets and component movement after reopen, cross-project
+  leak, snapshot/redo, older symbol version, revision restore, duplicate sheet, missing symbol, dangling refs,
+  damaged embedded symbol, example round-trips, files written by and read by v1.0.0),
+  `tests/test_custom_symbol_refs_gui.py` (3, Tk: Import sheets undo/redo, version conflict, Update symbol
+  undo/redo). `tests/conftest.py` now restores the project/user symbol registries after every test.
+- **Remaining limitation:** comparing two revisions that embed different versions of one symbol still draws
+  and nets both with the active version (`compare.py` uses the registry); loading no longer loses references.
 
 ## Status summary
 
