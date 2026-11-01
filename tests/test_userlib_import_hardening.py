@@ -275,3 +275,39 @@ def test_excessive_zip_directory_size_rejected_before_zipfile_parse(tmp_path):
     assert p.stat().st_size < userlib.MAX_PACKAGE_ARCHIVE_BYTES
     with pytest.raises(ValueError, match="ZIP directory"):
         userlib.read_package(str(p))
+
+
+
+def test_excessive_manifest_folder_count_is_rejected(tmp_path):
+    man = {"format": userlib.LIB_FORMAT, "version": 1,
+           "folders": [f"folder-{n}" for n in range(userlib.MAX_PACKAGE_FOLDERS + 1)],
+           "symbols": []}
+    p = package(tmp_path / "many-folders.osymlib", [], manifest=man)
+    with pytest.raises(ValueError, match="folders"):
+        userlib.read_package(str(p))
+
+
+@pytest.mark.parametrize("folder", [
+    "../escape", "bad\\path", "x" * 81,
+    "/absolute", "a/" * (userlib.MAX_PACKAGE_PATH_DEPTH + 1) + "leaf",
+])
+def test_unsafe_or_excessive_manifest_symbol_folder_is_skipped(tmp_path, folder):
+    doc = symbol_doc("Safe")
+    man = {"format": userlib.LIB_FORMAT, "version": 1, "folders": [],
+           "symbols": [{"id": doc["id"], "name": doc["name"],
+                        "folder": folder, "file": "symbols/0001.osym"}]}
+    p = package(tmp_path / "unsafe-folder.osymlib", [doc], manifest=man)
+    info = userlib.read_package(str(p))
+    assert not info.items
+    assert any("unsafe" in message for message in info.problems)
+
+
+def test_invalid_preview_folder_is_rejected_before_import(tmp_path):
+    doc = symbol_doc("Safe")
+    p = package(tmp_path / "safe.osymlib", [doc])
+    info = userlib.read_package(str(p))
+    lib = userlib.UserLibrary(str(tmp_path / "user-libs"))
+    info.items[0].folder = "../escape"
+    with pytest.raises(ValueError, match="invalid symbol folder"):
+        userlib.import_package(info, lib)
+    assert not Path(lib.root).exists()
