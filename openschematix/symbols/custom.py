@@ -138,6 +138,8 @@ def normalise(data) -> dict:
            "convention": str(data.get("convention") or "Custom")[:60],
            "properties": {str(k): str(v) for k, v in (data.get("properties") or {}).items()},
            "prims": [], "pins": []}
+    # Optional provenance of a symbol derived from another one (symbol editor
+    # "open a copy"). Informational only; older versions ignore it.
     src = data.get("derived_from")
     if isinstance(src, dict):
         src = {k: str(src[k])[:120] for k in ("id", "name", "revision") if src.get(k) not in (None, "")}
@@ -234,6 +236,10 @@ def build_geometry(doc: dict) -> Geometry:
                         arrows.append({"k": "poly", "pts": triangle, "fill": True, "w": p.get("w", "normal")})
                     break
     prims.extend(arrows)
+    # Pin designations are not part of the artwork: like built-in symbols they
+    # are drawn once by the renderer (render.terminal_label_prims) according to
+    # the project's "show terminal designations" setting. Baking them into the
+    # prims here drew them regardless of that setting and twice when it was on.
     terms = [Terminal(p["id"], p["x"], p["y"], p["dir"], label=p["name"], ptype=p.get("type", ""),
                       show=bool(p.get("show", True)))
              for p in doc["pins"]]
@@ -248,11 +254,13 @@ def to_symdef(doc: dict) -> SymbolDef:
         raise SymbolFormatError("; ".join(problems))
     sd = SymbolDef(doc["id"], doc["name"], doc["category"], doc["group"], doc["convention"] or GENERIC,
                    doc["description"], doc["prefix"], g, keywords=tuple(doc["tags"]))
-    sd.custom = doc
+    sd.custom = doc          # keep the source document (embedded in projects)
     return sd
 
 
 def default_ptype(category: str, terminal_name: str) -> str:
+    """Port type for built-in symbol terminals, derived from the category and
+    the conventional port letters/numbers (ISO 1219 / ISO 5599)."""
     dom = CATEGORY_DOMAIN.get(category)
     n = terminal_name.upper()
     if dom == "hyd":
