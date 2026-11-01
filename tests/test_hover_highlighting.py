@@ -18,6 +18,35 @@ from openschematix.project import Layer
 OPTS = ("fill", "outline", "width", "dash", "text", "font", "anchor", "angle", "capstyle", "joinstyle", "tags")
 
 
+# ---------------- DIAGNOSTIC INSTRUMENTATION (temporary diag branch only) ----------------
+DIAG = []
+
+
+def _diag_install(root, app):
+    from openschematix.gui import canvas_view
+    cv = app.canvas
+    real = canvas_view.SchematicCanvas._redraw_now
+
+    def redraw_now(self):
+        DIAG.append(("redraw", self.winfo_width(), self.winfo_height(), root.winfo_height(),
+                     root.winfo_reqheight(), root.wm_state(), root.winfo_ismapped()))
+        return real(self)
+    canvas_view.SchematicCanvas._redraw_now = redraw_now
+    cv.bind("<Configure>", lambda e: DIAG.append(("canvas<Configure>", e.width, e.height, cv.winfo_height())), add="+")
+    root.bind("<Configure>", lambda e: DIAG.append(("root<Configure>", e.width, e.height)) if e.widget is root
+              else None, add="+")
+
+
+def diag(tag, root, app):
+    cv = app.canvas
+    DIAG.append(("STEP " + tag, cv.winfo_width(), cv.winfo_height(), root.geometry(), root.winfo_reqwidth(),
+                 root.winfo_reqheight(), cv._redraw_pending))
+
+
+def diag_dump():
+    print("\n".join(repr(x) for x in DIAG))
+
+
 @pytest.fixture(scope="module")
 def env():
     os.environ.setdefault("OPENSCHEMATIX_CONFIG_DIR", tempfile.mkdtemp())
@@ -30,6 +59,7 @@ def env():
         pytest.skip(f"Tk GUI display not available: {e}")
     from openschematix.gui.app import App
     app = App(root, check_recovery=False)
+    _diag_install(root, app)
     yield root, app
     root.destroy()
 
@@ -256,17 +286,29 @@ def test_deleting_hovered_object_leaves_no_highlight(scene):
 def test_edit_undo_tool_and_theme_changes_rebuild_hover_state(scene):
     root, app, ids = scene
     cv = app.canvas
+    DIAG.clear()
+    diag("start", root, app)
     move_to(app, target_point(app, "r", ids))
     # editing: move the hovered component; the redraw rebuilds the item map
     s = app.begin_change()
     editing.move_items(app.doc, [ids["r"]], [], 0, 40)
+    diag("before commit", root, app)
     app.commit_change(s, "moved")
-    settle(root)
+    diag("after commit", root, app)
+    root.update_idletasks()
+    diag("after update_idletasks", root, app)
+    root.update()
+    diag("after update", root, app)
     move_to(app, (214, 238))
     assert cv.hover == ids["r"]
     inc = snapshot(cv)
+    diag("before reference", root, app)
     reference_redraw(app)
-    assert inc == snapshot(cv)
+    diag("after reference", root, app)
+    ok = inc == snapshot(cv)
+    print("DIAG first comparison ok =", ok)
+    diag_dump()
+    assert ok
     # undo
     app.undo()
     # Windows Tk can finish sizing a withdrawn test window after the undo redraw.
