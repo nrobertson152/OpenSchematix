@@ -17,6 +17,9 @@ Status
   convention   a line/drawing convention handled by the editor (wire styles, crossings), not a symbol
   decision     needs the project director's decision before implementation
   blocked      cannot be implemented faithfully (reason in notes)
+  excluded     left out by director decision (reason in notes)
+  equivalent   ANSI drawing found identical to the ISO symbol named in target (set while implementing)
+  implemented  added; target = the new id(s)      validated = implemented and covered by the batch tests
 Run:  python docs/symbol-library-expansion/build_inventory.py
 """
 import csv
@@ -692,6 +695,53 @@ for i, (name, t) in enumerate([("Vacuum diode, directly heated", "el.tube.diode.
                                ("Triode", "el.tube.triode"), ("Tetrode", "el.tube.tetrode")], 1):
     e(S, 1, i, name, EL, "Vacuum tubes", t, "pending", "E8",
       "4th form has two grids: tetrode (no suppressor grid shown)" if i == 4 else "")
+
+# =============================================================== director decisions (2026-11-01)
+# Q1 both styles: a Y32 row whose function already has an ISO symbol (existing, or a duplicate of an HO row) gets
+#    its own ANSI Y32.10-style symbol, id suffix ".ansi" - unless, when drawn, the ANSI figure turns out identical
+#    to the ISO symbol (then the row becomes "equivalent", naming that symbol).
+# Q2 minimal valve-dialog change allowed: third operator slot per side, proportional (infinite positioning) bars,
+#    transition position.
+# Q3 composite assemblies left out: "excluded" (build from parts inside an enclosure).
+# Q4 unlabelled / ambiguous ECL drawings left out: "blocked".
+Q2_CONFIG = {"HO-S18", "HO-S19", "HO-C34", "HO-C36", "HO-C37", "Y32-10.11.4", "Y32-10.14", "Y32-10.15",
+             "Y32-11.4.6s", "Y32-11.4.7s"}
+Q1_SKIP = {"Y32-3.9", "Y32-3.9.1", "Y32-11.1", "Y32-7.11a", "Y32-10.9.1n", "Y32-10.9.2c", "Y32-10.13.1n",
+           "Y32-10.13.1a", "Y32-4.1.2.1", "Y32-4.1.1b", "Y32-6.1.2.1", "Y32-8.3.1.2", "Y32-8.7.1"}
+for r in R:
+    k, st = r["key"], r["status"]
+    if st == "decision":
+        if k in Q2_CONFIG:
+            r["status"], r["batch"] = "configurator", "F1"
+            r["notes"] = (r["notes"] + "; " if r["notes"] else "") + "Director Q2: dialog change allowed"
+            if k == "Y32-11.4.7s":
+                r["notes"] += "; throttled exhausts are not a configurator feature (drawn without them, noted)"
+        elif r["source"] == "ECL":
+            r["status"] = "blocked"
+            r["notes"] = "Director Q4: unlabelled/ambiguous drawing left out until identified. " + r["notes"]
+        elif k.startswith("Y32-7.11"):
+            r["status"] = "blocked"
+            r["notes"] = ("Stacked (parallel) operator boxes are a further configurator layout feature not covered "
+                          "by the Q2 change; left out")
+        else:
+            r["status"], r["batch"] = "excluded", "-"
+            r["notes"] = "Director Q3: composite assembly left out; build it from parts inside an enclosure. " + r["notes"]
+    elif r["source"] == "Y32" and st in ("existing", "duplicate") and k not in Q1_SKIP \
+            and not r["target"].startswith(("dcv", "fl.*.dcv", "editor", "HO-B09", "HO-B10")) \
+            and "dcv operator" not in r["target"]:
+        base = r["target"].split(" ")[0]
+        if base.startswith("HO-"):
+            base = next(x["target"] for x in R if x["key"] == base)
+        r["notes"] = (f"Director Q1: ANSI-style variant of {base}; becomes 'equivalent' if the ANSI drawing is "
+                      f"identical. " + r["notes"]).strip()
+        r["target"] = base.split(" ")[0] + ".ansi"
+        r["status"] = "pending"
+        if r["batch"] == "-":
+            r["batch"] = {"Valves": "F8", "Pumps & motors": "F5", "Non-return & flow": "F8"}.get(r["group"], "F8")
+    elif r["source"] == "Y32" and st == "duplicate" and "dcv operator" in r["target"]:
+        r["status"] = "existing" if r["target"] in ("dcv operator 'pilot + spring'",) else "configurator"
+        r["notes"] = ("Director Q1: ANSI drawing of this operator is offered as an operator style where it differs. "
+                      + r["notes"]).strip()
 
 # =============================================================== write
 here = os.path.dirname(os.path.abspath(__file__))
