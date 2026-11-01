@@ -398,7 +398,7 @@ class _Ent:
 def _finite_float(value, code):
     try:
         number = float(value)
-    except (ValueError, OverflowError):
+    except (TypeError, ValueError, OverflowError):
         raise DxfError(f"invalid numeric group {code}") from None
     if not math.isfinite(number):
         raise DxfError(f"non-finite numeric group {code}")
@@ -590,12 +590,19 @@ def import_dxf(raw: bytes, units: str | None = None, scale: float = 1.0, origin=
             rep.units_mm = 25.4 if meas == "0" else 1.0
             rep.units_source = ("inches ($MEASUREMENT=imperial)" if meas == "0"
                                 else "millimetres (not specified in the file; assumed)")
+    try:
+        scale = float(scale)
+        ox, oy = origin
+        ox, oy = float(ox), float(oy)
+    except (TypeError, ValueError, OverflowError):
+        raise DxfError("DXF import scale and origin must be numeric") from None
     if not math.isfinite(scale) or scale <= 0:
         raise DxfError("DXF import scale must be finite and positive")
-    if any(not math.isfinite(float(v)) for v in origin):
+    if not math.isfinite(ox) or not math.isfinite(oy):
         raise DxfError("DXF import origin must be finite")
     k = rep.units_mm * scale / UNIT_MM      # DXF unit -> model units
-    ox, oy = origin
+    if not math.isfinite(k):
+        raise DxfError("DXF import unit conversion overflow")
     ident = [0]
 
     def nid():
@@ -606,7 +613,10 @@ def import_dxf(raw: bytes, units: str | None = None, scale: float = 1.0, origin=
         """Apply 2D affine m=(a,b,c,d,e,f) then DXF->model (y flip)."""
         X = m[0] * x + m[2] * y + m[4]
         Y = m[1] * x + m[3] * y + m[5]
-        return (ox + X * k, oy - Y * k)
+        px, py = ox + X * k, oy - Y * k
+        if not math.isfinite(px) or not math.isfinite(py):
+            raise DxfError("DXF geometry exceeds finite coordinate range")
+        return (px, py)
 
     def mscale(m):
         return math.sqrt(abs(m[0] * m[3] - m[1] * m[2]))
@@ -715,7 +725,10 @@ def import_dxf(raw: bytes, units: str | None = None, scale: float = 1.0, origin=
                 a0, a1 = e.f(41, 0.0), e.f(42, 2 * math.pi)
                 if a1 <= a0:
                     a1 += 2 * math.pi
-                n = max(16, int((a1 - a0) / (2 * math.pi) * 72))
+                sweep = a1 - a0
+                if not math.isfinite(sweep) or sweep > 2 * math.pi + 1e-6:
+                    raise DxfError("invalid ELLIPSE parameter sweep")
+                n = min(256, max(16, int(sweep / (2 * math.pi) * 72)))
                 pts = []
                 for i in range(n + 1):
                     a = a0 + (a1 - a0) * i / n
@@ -727,7 +740,7 @@ def import_dxf(raw: bytes, units: str | None = None, scale: float = 1.0, origin=
                 approx(t)
             elif t == "SPLINE":
                 fx, fy = [_finite_float(v, 11) for v in e.all(11)], [_finite_float(v, 21) for v in e.all(21)]
-                cx_, cy_ = [float(v) for v in e.all(10)], [float(v) for v in e.all(20)]
+                cx_, cy_ = [_finite_float(v, 10) for v in e.all(10)], [_finite_float(v, 20) for v in e.all(20)]
                 src = list(zip(fx, fy)) if len(fx) >= 2 else list(zip(cx_, cy_))
                 if len(src) < 2:
                     skip(t)
