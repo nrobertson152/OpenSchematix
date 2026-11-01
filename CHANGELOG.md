@@ -64,6 +64,12 @@ All notable changes to this project are documented here. Versions follow [Semant
 - Unexpected errors are no longer invisible in the Windows application (which has no console): they are
   written to `logs/openschematix-errors.log` in the settings folder and shown in an error dialog. A failure
   during start-up is reported the same way.
+- Custom symbols with the same id in two projects: saving (and every revision snapshot) of a project could
+  write the other, most recently opened project's definition into the file, permanently replacing the
+  project's own symbol. The netlist, Check, connectivity, wire numbering, BOM, exports and sheet duplication
+  of a project could likewise use the other project's pin geometry. A project now only takes a definition
+  from the shared symbol registry while it is the registered project, and those operations resolve symbols
+  as the project they work on.
 - Symbol editor: clearing "Number this point on drawings" (and changing a connection point's port type or lead
   direction) took effect only after pressing Apply, and was lost if the symbol was saved first; it now applies
   immediately, and pending edits are applied when saving. A point that is not numbered no longer shows its number
