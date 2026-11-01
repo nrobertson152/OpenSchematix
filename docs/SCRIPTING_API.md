@@ -107,7 +107,7 @@ and may change.
 | Function | Returns | Description |
 |---|---|---|
 | `new_project(title="", sheet_size="A3")` | `Project` | New project with one empty sheet. Sizes: `A0`–`A4`, `ANSI A`–`ANSI E`, `Letter`, `Legal`, `Tabloid`. |
-| `open_project(path)` | `Project` | Open a `.schematix` project, or convert a legacy `.osch` drawing. A converted drawing has `path` None, so `save()` needs a new path. The file is never modified by opening it. |
+| `open_project(path)` | `Project` | Open a `.schematix` project, or convert a legacy `.osch` drawing. A converted drawing, or a project opened from a damaged file with the damaged parts left out, has `needs_new_name` True and `path` None, so `save()` needs a new path (see Saving). The file is never modified by opening it. |
 | `list_symbols(query="", category=None)` | `list[SymbolInfo]` | Placeable symbols, optionally filtered by search words and/or category. |
 | `get_symbol(symbol_id)` | `SymbolInfo` | One symbol's description and terminals. |
 | `load_user_library(path=None)` | `list[str]` | Register a custom-symbol library folder (default: the application's library). Returns load problems. |
@@ -117,8 +117,10 @@ and may change.
 | Member | Description |
 |---|---|
 | `title` | Project title (read/write). |
-| `path` | Last opened/saved file, or `None`. |
-| `warnings` | Tuple of messages from opening (format conversion, unknown symbols). |
+| `path` | File `save()` writes to without a path: the last opened/saved file. `None` for a new project and while `needs_new_name`. |
+| `source_path` | File the project was opened from, or `None`. |
+| `needs_new_name` | `True` if the project was converted, or opened with damaged parts left out: it must be saved under a new name first. |
+| `warnings` | Tuple of messages from opening (format conversion, unknown symbols, damaged parts left out). |
 | `sheets` | List of `Sheet` in order. |
 | `sheet(key)` | Sheet by uid, name, or 1-based number. |
 | `add_sheet(name=None)` | Append a sheet; returns it. |
@@ -130,7 +132,7 @@ and may change.
 | `bom(include_excluded=False)` | `list[BomItem]`, exactly as the BOM report. |
 | `bom_csv(include_excluded=False)` | The BOM as CSV text, starting with a UTF-8 byte-order mark (write it with `encoding="utf-8"`). |
 | `check(rules=None, require_part_numbers=False)` | `list[Issue]` from Check Drawing; `rules` is a subset of `openschematix.check.RULES`. |
-| `save(path=None, snapshot=True)` | Save as `.schematix`: atomic, and verified before the old file is replaced. `snapshot` records an automatic revision snapshot, like saving in the application. Returns the path. |
+| `save(path=None, snapshot=True, *, overwrite_original=False)` | Save as `.schematix`: atomic, and verified before the old file is replaced. `snapshot` records an automatic revision snapshot, like saving in the application. A new `path` is "Save As": later `save()` calls go there. Returns the path. |
 
 ### `Sheet`
 
@@ -169,6 +171,19 @@ How `place` fills in details:
 
 Returned dicts (`params`, `properties`, `terminals`) are copies. Change the component through the
 setters and methods.
+
+**Transformations keep the circuit.** Moving, rotating, mirroring and `set_params` keep every
+attached wire end exactly on its terminal (wires follow, as in the application), and they never change
+the circuit: the nets (which terminals are connected together) are the same afterwards. Re-routing a
+wire can lay it over another terminal or wire end, or move it off a T-junction; the application
+allows that silently, the API raises `InvalidOperationError` and changes nothing. A transformation
+that would land a terminal on another net's wire is refused the same way: connect with `connect` or
+`add_wire` instead. Every edit is all-or-nothing: if anything fails part-way, the sheet is restored.
+
+**Components whose symbol is not available.** A component whose symbol is unknown on this computer is
+shown as a placeholder (see `Project.warnings`). Its real connection points are unknown, so moving,
+rotating or mirroring it, and `connect` or `add_wire` to it, raise `InvalidOperationError`; it can still
+be inspected and removed. Make the symbol available first (`load_user_library()`, or embed it).
 
 **Locking.** Components and wires that are locked, or on a locked layer, cannot be changed: every
 change raises `InvalidOperationError`, matching the application, where they cannot be selected. The
@@ -215,6 +230,30 @@ The drawing engine falls back to defaults for unknown values. The API raises ins
 
 `set_params` also refuses a change that would remove a terminal with a wire attached (for example
 changing a wired 4/2 valve to 2/2), instead of silently disconnecting it. Remove those wires first.
+
+### Saving and damaged files
+
+`save()` writes atomically and verifies the new file before replacing the old one, so a failed save
+(disk full, permissions) changes nothing: not the file, not `path` or `needs_new_name`, and no revision
+snapshot is kept.
+
+A project converted from a legacy drawing, or opened from a damaged file with the damaged parts left
+out, has `needs_new_name` True. Then `save()` without a path raises, and saving over `source_path`
+raises too, so the original file stays byte-for-byte as it was. Save it under a new name; the first
+successful save to a new file clears `needs_new_name`:
+
+```python
+project = api.open_project("damaged.schematix")
+if project.needs_new_name:
+    print("\n".join(project.warnings))      # what was left out
+    project.save("recovered.schematix")      # Save As; later project.save() writes here
+```
+
+To replace the original deliberately, pass `overwrite_original=True`.
+
+Recognising damaged files with parts left out (rather than refusing to open them) needs the
+project-file reliability changes (PR #40); until they are merged, only converted drawings set
+`needs_new_name`.
 
 ### Errors
 

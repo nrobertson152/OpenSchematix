@@ -15,6 +15,11 @@ All notable changes to this project are documented here. Versions follow [Semant
   Edits that create objects are atomic, respect locked layers and never leave a partial wire; projects
   with identically named custom symbols stay independent; invalid numbers and arguments, and damaged
   project files, raise the documented API exceptions.
+  Moving, rotating, mirroring and changing parameters keep attached wires on their terminals and never
+  change the circuit (a re-route that would short or disconnect terminals is refused); components whose
+  symbol is unavailable cannot be moved or wired. Projects converted or opened with damaged parts left
+  out must be saved under a new name (`Project.needs_new_name`, `source_path`, `save(...,
+  overwrite_original=True)` to replace the original deliberately).
 - Symbol aliases: a custom symbol can have extra identifiers (symbol editor, *Symbol* tab, "Aliases"). The library
   search, the symbol pickers and `INSERT <alias>` find it by them; drawings always store the symbol itself.
   Aliases are unique among all symbols (collisions with symbol ids, other aliases or other symbols' names are

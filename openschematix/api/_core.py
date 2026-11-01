@@ -236,6 +236,61 @@ def _layer_locked(project: _Project, obj) -> bool:
     return bool(getattr(obj, "locked", False) or (lay is not None and lay.locked))
 
 
+def _symbol_available(c: _Component) -> bool:
+    """Whether the component's symbol is known (call after activating its
+    project). If not, it is drawn as a placeholder whose connection points
+    are not the real ones."""
+    return c.symbol != UNKNOWN_ID and _symbols.get(c.symbol) is not None
+
+
+def _require_symbol(c: _Component, action: str) -> None:
+    """Refuse an edit that depends on the real connection points of a
+    component whose symbol is not available. Moving it would leave wires
+    attached by reference but drawn elsewhere (the engine cannot place
+    their ends on pins it does not know), and wiring to it would attach to
+    placeholder pins that do not exist on the real symbol."""
+    if not _symbol_available(c):
+        raise InvalidOperationError(
+            f"cannot {action} {c.designator or c.id}: its symbol {c.symbol!r} is not available (it is shown as "
+            "a placeholder), so its connection points are unknown; make the symbol available first "
+            "(load_user_library(), or open the project that embeds it)")
+
+
+def _connections(doc: Document) -> frozenset:
+    """The sheet's electrical connections: for each net, the set of
+    (component id, terminal) it joins. Uses the netlist's own per-sheet
+    analysis (wire references, wire ends on terminals, T-junctions), so it
+    agrees with Project.nets(), Check and the exports."""
+    uf = netlist._UF()
+    netlist._sheet_nodes(doc, uf)
+    groups: dict = {}
+    for node in list(uf.p):
+        groups.setdefault(uf.find(node), []).append(node)
+    return frozenset(frozenset((n[2], n[3]) for n in nodes if n[0] == "t")
+                     for nodes in groups.values() if len(nodes) > 1 and any(n[0] == "t" for n in nodes))
+
+
+def _require_same_connections(doc: Document, before: frozenset, action: str, c: _Component) -> None:
+    """Scripted transformations must not change the circuit. The engine
+    keeps attached wire ends on their pins, but re-routing a wire can lay it
+    over another terminal or wire end (a new junction, e.g. a short across
+    the component) or move it off a T-junction. The application allows that
+    silently; the API refuses it (the caller's _Rollback restores the sheet)."""
+    after = _connections(doc)
+    if after == before:
+        return
+
+    def name(t):
+        comp = doc.components.get(t[0])
+        return f"{(comp.designator if comp else '') or t[0]}:{t[1]}"
+    joined = sorted(after - before, key=len, reverse=True)
+    detail = (f"it would connect {', '.join(sorted(map(name, joined[0])))}" if joined and len(joined[0]) > 1
+              else "it would disconnect terminals that are connected now")
+    raise InvalidOperationError(
+        f"cannot {action} {c.designator or c.id}: re-routing its wires would change the circuit ({detail}). "
+        "Nothing was changed; remove or redraw the affected wires first")
+
+
 def _require_unlocked_layer(project: _Project, layer: str, what: str) -> None:
     """New objects cannot be created on a locked layer: they would be locked
     the moment they exist. Uses the project's own layer definitions; the
@@ -248,18 +303,24 @@ def _require_unlocked_layer(project: _Project, layer: str, what: str) -> None:
 
 class _Rollback:
     """Restores a sheet if an edit fails part-way, so a failed API call
-    leaves no partial objects and no consumed object ids.
+    leaves no partial objects, no consumed object ids and no wire whose
+    geometry disagrees with its terminal references.
 
-    Covers everything the creating edits (place, add_wire, connect) can
-    change: objects added to the sheet, the next object id, the points and
-    terminal attachments of existing wires (attach_touching_wires), and the
-    project's embedded custom symbols. Exceptions always propagate; the
-    sheet is restored first."""
+    Covers everything the editing operations can change: the sheet's set of
+    components and wires (objects added or deleted), the next object id, the
+    placement and parameters of the component being edited, the points and
+    terminal attachments of every wire (sync_wire_ends, attach_touching_wires,
+    delete_items), and the project's embedded custom symbols. Exceptions
+    always propagate; the sheet is restored first."""
 
-    def __init__(self, project: _Project, doc: Document):
+    def __init__(self, project: _Project, doc: Document, comp: Optional[_Component] = None):
         self.project, self.doc = project, doc
         self.next_id = doc.next_id
-        self.components = set(doc.components)
+        self.components = dict(doc.components)
+        self.comp = comp
+        self.comp_state = None if comp is None else (comp.x, comp.y, comp.rotation, comp.mirror,
+                                                     copy.deepcopy(comp.params))
+        self.wire_objs = dict(doc.wires)
         self.wires = {i: (list(w.points), copy.deepcopy(w.start), copy.deepcopy(w.end), w.auto)
                       for i, w in doc.wires.items()}
         self.symbols = dict(project.symbols)
@@ -274,14 +335,16 @@ class _Rollback:
 
     def restore(self) -> None:
         doc = self.doc
-        for i in [i for i in doc.components if i not in self.components]:
-            del doc.components[i]
-        for i in [i for i in doc.wires if i not in self.wires]:
-            del doc.wires[i]
+        doc.components.clear()
+        doc.components.update(self.components)
+        if self.comp is not None:
+            c = self.comp
+            c.x, c.y, c.rotation, c.mirror, c.params = self.comp_state
+        doc.wires.clear()
+        doc.wires.update(self.wire_objs)
         for i, (points, start, end, auto) in self.wires.items():
-            w = doc.wires.get(i)
-            if w is not None:
-                w.points, w.start, w.end, w.auto = points, start, end, auto
+            w = doc.wires[i]
+            w.points, w.start, w.end, w.auto = points, start, end, auto
         doc.next_id = self.next_id
         if not _same_objects(self.symbols, self.project.symbols):
             self.project.symbols.clear()
@@ -353,12 +416,15 @@ class Project(_Handle):
     """An OpenSchematix project (a ``.schematix`` file): one or more sheets
     plus project metadata. Create with :func:`new_project` or
     :func:`open_project`."""
-    __slots__ = ("_p", "_path", "_warnings")
+    __slots__ = ("_p", "_path", "_warnings", "_source", "_needs_new_name")
 
-    def __init__(self, _internal: _Project, path: Optional[str] = None, warnings=()):
+    def __init__(self, _internal: _Project, path: Optional[str] = None, warnings=(), *,
+                 source: Optional[str] = None, new_name_reason: str = ""):
         self._p = _internal
         self._path = path
         self._warnings = tuple(warnings)
+        self._source = source
+        self._needs_new_name = new_name_reason      # why a new name is needed; "" = not needed
 
     def _key(self):
         return id(self._p)
@@ -382,9 +448,25 @@ class Project(_Handle):
 
     @property
     def path(self) -> Optional[str]:
-        """File the project was opened from or last saved to; None for a new
-        project or one converted from a legacy drawing."""
+        """File that :meth:`save` writes to without a path: the file the
+        project was opened from or last saved to. None for a new project and
+        for one that :attr:`needs_new_name`."""
         return self._path
+
+    @property
+    def source_path(self) -> Optional[str]:
+        """File the project was opened from (None for a new project)."""
+        return self._source
+
+    @property
+    def needs_new_name(self) -> bool:
+        """True if the project must be saved under a new name before it can
+        be saved without a path: it was converted from a legacy drawing, or
+        opened from a damaged file with the damaged parts left out (see
+        :attr:`warnings`). Saving over :attr:`source_path` is then refused,
+        so the original file stays exactly as it is. Cleared by the first
+        successful save to a new file."""
+        return bool(self._needs_new_name)
 
     @property
     def warnings(self) -> tuple[str, ...]:
@@ -504,25 +586,58 @@ class Project(_Handle):
         return [Issue(i.severity, i.code, i.message, i.sheet_uid, i.obj_id, i.suggestion) for i in issues]
 
     # ---------------------------------------------------------------- saving
-    def save(self, path: Optional[str] = None, snapshot: bool = True) -> str:
+    def save(self, path: Optional[str] = None, snapshot: bool = True, *, overwrite_original: bool = False) -> str:
         """Save in the native ``.schematix`` format, atomically and verified
         (the file is only replaced after the new content reads back). With
         `snapshot` an automatic revision snapshot is recorded, as when saving
-        in the application. Returns the path written."""
+        in the application. Returns the path written.
+
+        Without `path` the project is saved to :attr:`path`. Passing a new
+        path is "Save As": later saves without a path go there. If the
+        project :attr:`needs_new_name`, a path is required and saving over
+        :attr:`source_path` raises InvalidOperationError, unless
+        `overwrite_original` is True (a deliberate replacement of the damaged
+        or converted original). A failed save changes nothing: not the file,
+        not :attr:`path` or :attr:`needs_new_name`, and no revision snapshot
+        is kept."""
+        overwrite_original = _bool(overwrite_original, "overwrite_original")
         if path is None:
             if self._path is None:
+                if self._needs_new_name:
+                    raise InvalidOperationError(f"this project has no file yet: {self._why_new_name()}; save it "
+                                                f"under a new name with save(path) (ending in {PROJECT_EXTENSION})")
                 raise InvalidOperationError("this project has no file yet; pass a path ending in "
                                             f"{PROJECT_EXTENSION}")
             path = self._path
+        if isinstance(path, os.PathLike):
+            path = os.fspath(path)
         if not isinstance(path, str) or not path.lower().endswith(PROJECT_EXTENSION):
             raise InvalidOperationError(f"project files must end in {PROJECT_EXTENSION}, got {path!r}")
+        if self._needs_new_name and self._source and _same_file(path, self._source) and not overwrite_original:
+            raise InvalidOperationError(f"{self._why_new_name()}; saving to {path} would overwrite the original "
+                                        "file. Choose a new path, or pass overwrite_original=True to replace it "
+                                        "deliberately")
+        snapshot = _bool(snapshot, "snapshot")
         p = self._use()
+        st = p.revisions
+        saved_history = None if st is None else (list(st.entries), dict(st.objects))
         try:
-            projectio.save_project(p, path, snapshot=_bool(snapshot, "snapshot"))
-        except (OSError, projectio.ProjectFormatError) as e:
-            raise ProjectFileError(f"could not save {path}: {e}") from e
+            projectio.save_project(p, path, snapshot=snapshot)
+        except BaseException as e:
+            # save_project records the snapshot before writing: a failed save must not keep it
+            if saved_history is None:
+                p.revisions = None
+            else:
+                st.entries[:], st.objects = saved_history[0], saved_history[1]
+            if isinstance(e, (OSError, projectio.ProjectFormatError)):
+                raise ProjectFileError(f"could not save {path}: {e}") from e
+            raise
         self._path = path
+        self._needs_new_name = ""
         return path
+
+    def _why_new_name(self) -> str:
+        return f"it {self._needs_new_name} ({os.path.basename(self._source or '')})"
 
 
 class Sheet(_Handle):
@@ -672,6 +787,9 @@ class Sheet(_Handle):
             w = editing.add_wire(doc, pts, style=style)
             if w is None:
                 raise InvalidOperationError("a wire must have two distinct end points")
+            for ref in (w.start, w.end):
+                if ref:
+                    _require_symbol(doc.components[ref[0]], "connect a wire to")
         return Wire(self, w.id)
 
     @staticmethod
@@ -727,7 +845,9 @@ class Sheet(_Handle):
     def _terminal_on_sheet(self, comp: "Component", name: str) -> Point:
         if not isinstance(comp, Component) or comp._sheet != self:
             raise InvalidOperationError("both components must be on this sheet")
-        return comp.terminal(name).position
+        pos = comp.terminal(name).position          # activates the project, so availability is current
+        _require_symbol(comp._c(), "connect a wire to")
+        return pos
 
     def remove(self, obj: Union["Component", "Wire"]) -> None:
         """Remove a component or wire (same as obj.remove())."""
@@ -826,8 +946,12 @@ class Component(_Handle):
         if not isinstance(value, (tuple, list)) or len(value) != 2:
             raise InvalidOperationError(f"position must be an (x, y) pair, got {value!r}")
         x, y = _on_grid(value[0], value[1], "position")
+        _require_symbol(c, "move")
+        before = _connections(doc)
         # Same as dragging in the application: attached wires follow.
-        editing.move_items(doc, [c.id], [], x - c.x, y - c.y)
+        with _Rollback(self._sheet._project._p, doc, c):
+            editing.move_items(doc, [c.id], [], x - c.x, y - c.y)
+            _require_same_connections(doc, before, "move", c)
 
     def move_by(self, dx: float, dy: float) -> None:
         """Move by a grid-aligned offset; attached wires follow."""
@@ -843,8 +967,13 @@ class Component(_Handle):
     @rotation.setter
     def rotation(self, value: int) -> None:
         doc, c = self._editable()
-        c.rotation = _rotation(value)
-        self._resync(doc, c)
+        value = _rotation(value)
+        _require_symbol(c, "rotate")
+        before = _connections(doc)
+        with _Rollback(self._sheet._project._p, doc, c):
+            c.rotation = value
+            self._resync(doc, c)
+            _require_same_connections(doc, before, "rotate", c)
 
     @property
     def mirror(self) -> bool:
@@ -854,8 +983,13 @@ class Component(_Handle):
     @mirror.setter
     def mirror(self, value: bool) -> None:
         doc, c = self._editable()
-        c.mirror = _bool(value, "mirror")
-        self._resync(doc, c)
+        value = _bool(value, "mirror")
+        _require_symbol(c, "mirror")
+        before = _connections(doc)
+        with _Rollback(self._sheet._project._p, doc, c):
+            c.mirror = value
+            self._resync(doc, c)
+            _require_same_connections(doc, before, "mirror", c)
 
     @staticmethod
     def _resync(doc: Document, c: _Component) -> None:
@@ -883,8 +1017,11 @@ class Component(_Handle):
         if wired:
             raise InvalidOperationError(f"terminal(s) {', '.join(wired)} of {c.designator or c.id} have wires "
                                         "attached and would not exist with these parameters; remove the wires first")
-        c.params = new
-        self._resync(doc, c)
+        before = _connections(doc)
+        with _Rollback(self._sheet._project._p, doc, c):
+            c.params = new
+            self._resync(doc, c)
+            _require_same_connections(doc, before, "change the parameters of", c)
 
     @property
     def properties(self) -> dict[str, str]:
@@ -942,7 +1079,8 @@ class Component(_Handle):
     def remove(self) -> None:
         """Delete the component. Wires stay; their ends become unconnected."""
         doc, c = self._editable()
-        editing.delete_items(doc, [c.id])
+        with _Rollback(self._sheet._project._p, doc):
+            editing.delete_items(doc, [c.id])
 
 
 class Wire(_Handle):
@@ -1004,7 +1142,8 @@ class Wire(_Handle):
         w = self._w()
         if _layer_locked(self._sheet._project._p, w):
             raise InvalidOperationError(f"wire {w.id} is locked (or on a locked layer)")
-        editing.delete_items(doc, [w.id])
+        with _Rollback(self._sheet._project._p, doc):
+            editing.delete_items(doc, [w.id])
 
 
 # ================================================================ entry points
@@ -1037,5 +1176,23 @@ def open_project(path: str) -> Project:
         raise ProjectFileError(f"could not open {path}: the project is damaged ({type(e).__name__}: {e})") from e
     _invalidate()
     _activate(res.project)
-    return Project(res.project, None if res.migrated else path, res.warnings)
+    # OpenResult.needs_new_name (PR #40) also covers files opened with damaged
+    # parts left out; older loaders only report conversions (migrated).
+    if res.migrated:
+        reason = "was converted from an older drawing format"
+    elif getattr(res, "needs_new_name", False):
+        reason = "was opened from a damaged file with the damaged parts left out (see Project.warnings)"
+    else:
+        reason = ""
+    return Project(res.project, None if reason else path, res.warnings, source=path, new_name_reason=reason)
+
+
+def _same_file(a: str, b: str) -> bool:
+    """Whether paths `a` and `b` name the same file (also through links)."""
+    try:
+        if os.path.exists(a) and os.path.exists(b):
+            return os.path.samefile(a, b)
+    except OSError:
+        pass
+    return os.path.normcase(os.path.realpath(a)) == os.path.normcase(os.path.realpath(b))
 

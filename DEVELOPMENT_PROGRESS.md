@@ -447,3 +447,30 @@ and used via PYTHONPATH (bootloaders are in the repo). Standalone-Python builds 
   `TypeError`/`AttributeError` for some damaged files (the GUI is affected too) and accepts infinite
   coordinates from a file. Moving or rotating a component re-routes attached wires even when those
   wires are locked, in the GUI and the API alike.
+
+### PR #33: connectivity integrity and recovered-file protection (2026-11-01)
+- **Root causes:**
+  - `editing.sync_wire_ends` adjusts hand-drawn wires minimally (`set_endpoint`) and re-routes simple
+    ones, ignoring other pins and wire ends. A transform can therefore lay a wire over another terminal
+    (e.g. rotating a contact by 270° shorts its two pins through its own wire) or move it off a
+    T-junction. Ends stay on their pins, so the drawing and references agree, but the circuit changes
+    silently. The GUI has the same behaviour. A random audit (80 sequences) found 24 silent net changes.
+  - With PR #37, references to pins of unavailable symbols are kept but not synchronised, so moving a
+    placeholder would leave wires attached by reference but drawn elsewhere.
+  - `open_project` kept `path` for any non-migrated file, so `save()` could overwrite a damaged
+    original that the loader had recovered (PR #40), and a failed save kept its revision snapshot.
+- **Changes (`api/_core.py`):**
+  - `_connections` (the netlist's per-sheet analysis) is compared before and after each transform,
+    inside `_Rollback`; a change raises.
+  - `_Rollback` now also covers deleted objects and the edited component's placement and params, and
+    is used by every transform and removal.
+  - `_require_symbol` refuses move/rotate/mirror/connect/add_wire on placeholder components.
+  - `Project.needs_new_name`, `source_path`, `save(..., overwrite_original=False)`. `open_project` uses
+    `OpenResult.needs_new_name` when present (#40), else `migrated`. A failed save restores the
+    revision history.
+- **Dependencies:**
+  - Custom-symbol attachments after reopening need **PR #37** (audit F1, loader).
+  - Recognising recoverable damage needs **PR #40**.
+  - Tests needing them skip until present (`HAS_PR37`, `HAS_PR40`).
+  - PR #41 keeps `netlist._sheet_nodes`' signature, so `_connections` gets its speed-up.
+- **Tests:** `tests/test_scripting_api_integrity.py`.
