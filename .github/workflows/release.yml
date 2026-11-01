@@ -58,6 +58,9 @@ jobs:
           cp packaging/linux/install.sh packaging/linux/openschematix.desktop packaging/linux/openschematix-mime.xml dist/OpenSchematix/
           cp openschematix/resources/openschematix-256.png dist/OpenSchematix/openschematix.png
           chmod +x dist/OpenSchematix/install.sh
+          # Rebuild the demo with this checkout's writer version, not the
+          # historical metadata of the checked-in compatibility sample.
+          .build-venv/bin/python tools/make_demo_project.py
           mkdir -p dist/OpenSchematix/examples
           cp examples/*.schematix examples/*.osch dist/OpenSchematix/examples/
           tar -C dist -czf "dist/OpenSchematix-${VERSION}-linux-x86_64.tar.gz" OpenSchematix
@@ -130,6 +133,8 @@ jobs:
         shell: pwsh
         run: |
           $v = python -c "import openschematix; print(openschematix.VERSION)"
+          # Regenerate the shipped demo before copying release examples.
+          python tools/make_demo_project.py
           New-Item -ItemType Directory -Force dist\OpenSchematix\examples | Out-Null
           Copy-Item examples\* dist\OpenSchematix\examples\
           $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
