@@ -1,1 +1,1 @@
-LOAD_FROM_LOCAL
+file:///home/workdir/OpenSchematix/openschematix/netlist.py
