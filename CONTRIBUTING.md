@@ -24,7 +24,7 @@ python -m pytest
 python -m openschematix
 ```
 
-On Debian/Ubuntu, Tkinter may require `sudo apt install python3-tk`. Some GUI tests require a graphical display or Xvfb on Linux. Consult `README.md` and the test files for the current GUI smoke-test procedure.
+On Debian/Ubuntu, Tkinter may require `sudo apt install python3-tk`. Tests marked `requires_tk` need the Tk bindings (they may still run headlessly). Tests marked `gui` need a working display or Xvfb. Linux CI runs `xvfb-run -a python -m pytest` and a separate `tests/gui_smoke.py` job. See `tests/conftest.py` for detection helpers.
 
 The application has no required third-party runtime dependencies. Development and verification dependencies are different: optional packages such as `pypdf` and `ezdxf` support deeper export validation. When reporting test results, identify tests that were skipped because optional dependencies were absent.
 

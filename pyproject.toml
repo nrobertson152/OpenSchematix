@@ -38,3 +38,7 @@ openschematix = ["resources/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "requires_tk: needs importable tkinter bindings (display optional)",
+    "gui: needs a working Tk root / graphical display (real or Xvfb)",
+]
