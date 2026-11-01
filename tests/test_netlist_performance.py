@@ -1,13 +1,15 @@
 """Netlist performance and spatial-index equivalence.
 
-``compute_nets`` must agree with a naive O(W^2) reference on small sheets, and
-must scale near-linearly so large engineering drawings stay interactive.
+``compute_nets`` must agree with a naive O(W^2) reference on small and
+adversarial sheets (membership, terminal sets, deterministic net indices),
+and must scale near-linearly so large engineering drawings stay interactive.
 """
 from __future__ import annotations
 
 import time
 
 from openschematix import editing, netlist
+from openschematix.connectivity import _CELL, _PAD
 from openschematix.geometry import point_on_segment
 from openschematix.project import new_project
 from openschematix.symbols.general import OFFPAGE_IDS
@@ -47,51 +49,53 @@ def _naive_sheet_nodes(doc, uf: netlist._UF):
                     uf.union(("w", uid, w.id), ("w", uid, o.id))
 
 
-def _nets_from_uf(project, uf: netlist._UF):
-    by_label = {}
-    for doc in project.sheets:
-        for c in doc.components.values():
-            if c.symbol in OFFPAGE_IDS and netlist.link_label(c):
-                for name in c.terminals():
-                    by_label.setdefault(netlist.link_label(c), []).append(("t", doc.uid, c.id, name))
-    for nodes in by_label.values():
-        for n in nodes[1:]:
-            uf.union(nodes[0], n)
-    groups = {}
-    for node in list(uf.p):
-        groups.setdefault(uf.find(node), []).append(node)
-    nets = []
-    order = {d.uid: i for i, d in enumerate(project.sheets)}
-    for nodes in groups.values():
-        n = netlist.Net(0)
-        for node in nodes:
-            if node[0] == "w":
-                n.wires.append((node[1], node[2]))
-            else:
-                n.terminals.append((node[1], node[2], node[3]))
-        if len(n.wires) + len(n.terminals) < 2 and not n.wires:
-            continue
-        n.wires.sort(key=lambda w: (order.get(w[0], 0), w[1]))
-        n.terminals.sort(key=lambda t: (order.get(t[0], 0), t[1], t[2]))
-        nets.append(n)
-    nets.sort(key=lambda n: (n.wires, n.terminals))
-    for i, n in enumerate(nets, 1):
-        n.index = i
-    return nets
+def _compute_nets_naive(project):
+    """Full ``compute_nets`` path with the pre-index sheet-node scan.
+
+    Reuses the production grouping, sorting and index assignment so that
+    net membership *and* deterministic identifiers can be compared.
+    """
+    original = netlist._sheet_nodes
+    try:
+        netlist._sheet_nodes = _naive_sheet_nodes
+        return netlist.compute_nets(project)
+    finally:
+        netlist._sheet_nodes = original
 
 
-def _naive_compute_nets(project):
-    uf = netlist._UF()
-    for doc in project.sheets:
-        _naive_sheet_nodes(doc, uf)
-    return _nets_from_uf(project, uf)
+def _full_signature(nets):
+    """Membership + deterministic identifiers (index, number, links)."""
+    return tuple(
+        (
+            n.index,
+            n.number,
+            tuple(sorted(n.wires)),
+            tuple(sorted(n.terminals)),
+            tuple(sorted(n.links)),
+        )
+        for n in nets
+    )
 
 
-def _signature(nets):
+def _membership_signature(nets):
+    """Order-independent membership only (for debugging failures)."""
     return tuple(sorted(
         (tuple(sorted(n.wires)), tuple(sorted(n.terminals)), tuple(sorted(n.links)))
         for n in nets
     ))
+
+
+def _assert_identical(project, label=""):
+    fast = netlist.compute_nets(project)
+    slow = _compute_nets_naive(project)
+    assert _full_signature(fast) == _full_signature(slow), (
+        f"indexed vs naive netlist mismatch{(' (' + label + ')') if label else ''}:\n"
+        f"  membership fast={_membership_signature(fast)}\n"
+        f"  membership slow={_membership_signature(slow)}\n"
+        f"  full fast={_full_signature(fast)}\n"
+        f"  full slow={_full_signature(slow)}"
+    )
+    return fast
 
 
 def _grid_project(n_comp: int, extra_vertical: int = 0):
@@ -111,11 +115,12 @@ def _grid_project(n_comp: int, extra_vertical: int = 0):
     return p
 
 
+# ---------------------------------------------------------------- equivalence
 def test_spatial_index_matches_naive_reference_on_varied_sheets():
-    """Index only drops wires that cannot touch; net membership must match naive scan."""
+    """Index only drops wires that cannot touch; nets (ids + membership) match."""
     for n in (1, 5, 15, 40):
         p = _grid_project(n, extra_vertical=n // 2)
-        assert _signature(netlist.compute_nets(p)) == _signature(_naive_compute_nets(p))
+        _assert_identical(p, label=f"grid n={n}")
 
 
 def test_t_junction_and_shared_endpoint_nets():
@@ -126,30 +131,153 @@ def test_t_junction_and_shared_endpoint_nets():
     c = editing.place(d, "el.resistor.iec", 200, 320)
     pa = max(a.terminals().values(), key=lambda pt: pt[0])
     pb = min(b.terminals().values(), key=lambda pt: pt[0])
-    # horizontal spine
-    spine = editing.add_wire(d, [pa, ((pa[0] + pb[0]) / 2, pa[1]), pb])
     mid = ((pa[0] + pb[0]) / 2, pa[1])
+    editing.add_wire(d, [pa, mid, pb])
     pc = min(c.terminals().values(), key=lambda pt: pt[1])
-    # T-junction branch ends on spine midpoint
     editing.add_wire(d, [pc, (pc[0], mid[1]), mid])
-    fast = _signature(netlist.compute_nets(p))
-    slow = _signature(_naive_compute_nets(p))
-    assert fast == slow
-    # all three components share one net
-    nets = netlist.compute_nets(p)
+    nets = _assert_identical(p, label="t-junction")
     terms = [t for n in nets for t in n.terminals]
     assert len({(t[1], t[2]) for t in terms}) >= 3
 
 
+# ---------------------------------------------------------------- adversarial geometry
+def test_adversarial_negative_coordinates_equivalence():
+    """Wires entirely in the negative quadrant still index correctly."""
+    p = new_project("neg")
+    d = p.sheets[0]
+    # Chain of horizontal and vertical wires in negative space
+    editing.add_wire(d, [(-400, -200), (-200, -200)])
+    editing.add_wire(d, [(-200, -200), (-200, -50)])
+    editing.add_wire(d, [(-200, -50), (-50, -50)])
+    editing.add_wire(d, [(-50, -50), (-50, -200)])  # separate net
+    editing.add_wire(d, [(-500, -300), (-500, -100)])  # isolated
+    _assert_identical(p, label="negative-coords")
+
+
+def test_adversarial_cell_boundary_touching():
+    """Ends exactly on grid cell boundaries must not miss neighbours."""
+    p = new_project("cell")
+    d = p.sheets[0]
+    cell = float(_CELL)
+    # Horizontal spine spanning several cells; vertical stubs end on cell edges
+    editing.add_wire(d, [(0.0, 0.0), (3 * cell, 0.0)])
+    for i in range(4):
+        x = i * cell  # exact cell boundary
+        editing.add_wire(d, [(x, 0.0), (x, 40.0)])
+    # Near-boundary ends (just inside PAD of a foreign cell)
+    editing.add_wire(d, [(cell - _PAD + 0.001, 80.0), (cell - _PAD + 0.001, 0.0)])
+    editing.add_wire(d, [(cell + _PAD - 0.001, 80.0), (cell + _PAD - 0.001, 0.0)])
+    _assert_identical(p, label="cell-boundary")
+
+
+def test_adversarial_dense_intersections_and_t_stubs():
+    """Many wires meeting at shared points; crossings must not join nets."""
+    p = new_project("dense")
+    d = p.sheets[0]
+    # Hub at (200, 200): several ends meet → one net
+    hub = (200.0, 200.0)
+    for angle_pts in (
+        [(100.0, 200.0), hub],
+        [(300.0, 200.0), hub],
+        [(200.0, 100.0), hub],
+        [(200.0, 300.0), hub],
+        [(120.0, 120.0), (160.0, 160.0), hub],
+    ):
+        editing.add_wire(d, angle_pts)
+    # Pure crossings of the hub (mid-segment, no end on hub) → separate nets
+    editing.add_wire(d, [(50.0, 250.0), (350.0, 250.0)])   # crosses vertical arm
+    editing.add_wire(d, [(250.0, 50.0), (250.0, 350.0)])   # crosses horizontal arm
+    nets = _assert_identical(p, label="dense-hub")
+    # Hub wires share one net (5 wires); crossing wires stay separate
+    sizes = sorted(len(n.wires) for n in nets)
+    assert max(sizes) >= 5
+
+
+def test_adversarial_overlapping_and_collinear_segments():
+    """Collinear overlapping segments: ends on another wire join; pure overlap of middles does not."""
+    p = new_project("overlap")
+    d = p.sheets[0]
+    # Collinear horizontal chain joined by end-on-segment
+    editing.add_wire(d, [(0.0, 100.0), (100.0, 100.0)])
+    editing.add_wire(d, [(100.0, 100.0), (200.0, 100.0)])  # shared endpoint
+    editing.add_wire(d, [(150.0, 100.0), (250.0, 100.0)])  # end on first/second segment
+    # Fully overlapping middle (no shared end) of a parallel net
+    editing.add_wire(d, [(0.0, 200.0), (200.0, 200.0)])
+    editing.add_wire(d, [(50.0, 200.0), (150.0, 200.0)])  # ends lie on the long wire → join
+    # Zero-length-ish near-duplicate endpoints
+    editing.add_wire(d, [(300.0, 300.0), (400.0, 300.0)])
+    editing.add_wire(d, [(400.0, 300.0), (500.0, 300.0)])
+    _assert_identical(p, label="overlapping-collinear")
+
+
+def test_adversarial_mixed_positive_negative_and_far_away():
+    """Mixed quadrants plus a far-away cluster stress cell enumeration."""
+    p = new_project("mixed")
+    d = p.sheets[0]
+    editing.add_wire(d, [(-1000.0, 50.0), (0.0, 50.0)])
+    editing.add_wire(d, [(0.0, 50.0), (0.0, -50.0)])
+    editing.add_wire(d, [(0.0, -50.0), (1000.0, -50.0)])
+    # Far cluster
+    editing.add_wire(d, [(5000.0, 5000.0), (5100.0, 5000.0)])
+    editing.add_wire(d, [(5100.0, 5000.0), (5100.0, 5100.0)])
+    # Isolated point pair
+    editing.add_wire(d, [(-2000.0, -2000.0), (-1900.0, -2000.0)])
+    _assert_identical(p, label="mixed-quadrants")
+
+
+# ---------------------------------------------------------------- performance
 def test_compute_nets_scales_near_linearly_on_large_sheets():
     """Regression: a quadratic scan would make n=400 >> 4x slower than n=100."""
     times = {}
+    counts = {}
     for n in (100, 400):
         p = _grid_project(n, extra_vertical=n // 2)
+        # warmup
+        netlist.compute_nets(p)
         t0 = time.perf_counter()
-        for _ in range(2):
-            netlist.compute_nets(p)
-        times[n] = (time.perf_counter() - t0) / 2
-    # Near-linear: 4x wires should be well under 10x time (quadratic would be ~16x).
+        for _ in range(3):
+            nets = netlist.compute_nets(p)
+        times[n] = (time.perf_counter() - t0) / 3
+        counts[n] = (len(p.sheets[0].wires), len(nets))
     ratio = times[400] / max(times[100], 1e-6)
-    assert ratio < 10.0, f"compute_nets scaling looks quadratic: ratio={ratio:.1f} (t100={times[100]*1000:.1f}ms t400={times[400]*1000:.1f}ms)"
+    assert ratio < 10.0, (
+        f"compute_nets scaling looks quadratic: ratio={ratio:.1f} "
+        f"(t100={times[100]*1000:.1f}ms t400={times[400]*1000:.1f}ms "
+        f"wires={counts})"
+    )
+
+
+def test_large_workload_direct_benchmark_measured():
+    """Directly measured large-workload timings (recorded for PR evidence).
+
+    Not a hard ceiling on absolute ms (machines vary); asserts near-linear
+    growth and that the largest case finishes well under a second.
+    """
+    results = []
+    for n in (100, 200, 400, 800):
+        p = _grid_project(n, extra_vertical=n // 2)
+        nw = len(p.sheets[0].wires)
+        netlist.compute_nets(p)  # warmup
+        t0 = time.perf_counter()
+        for _ in range(3):
+            nets = netlist.compute_nets(p)
+        elapsed = (time.perf_counter() - t0) / 3
+        results.append((n, nw, len(nets), elapsed))
+    # Publish numbers into assertion message for CI logs
+    summary = ", ".join(
+        f"n={n} wires={nw} nets={nn} t={t*1000:.2f}ms" for n, nw, nn, t in results
+    )
+    # Largest case must stay interactive
+    assert results[-1][3] < 1.0, f"n=800 took {results[-1][3]*1000:.1f}ms; {summary}"
+    # 8× components should be well under ~20× time (quadratic would be ~64×)
+    ratio = results[-1][3] / max(results[0][3], 1e-6)
+    assert ratio < 20.0, f"scaling ratio n800/n100={ratio:.1f}; {summary}"
+    # Also record mid-size growth
+    ratio_mid = results[2][3] / max(results[0][3], 1e-6)
+    assert ratio_mid < 12.0, f"scaling ratio n400/n100={ratio_mid:.1f}; {summary}"
+
+
+def test_large_workload_matches_naive_on_moderate_size():
+    """At the largest size where naive is still practical, membership matches."""
+    p = _grid_project(80, extra_vertical=40)
+    _assert_identical(p, label="moderate-large-grid")
