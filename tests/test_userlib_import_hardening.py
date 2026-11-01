@@ -252,3 +252,26 @@ def test_scan_does_not_restore_another_librarys_backup(tmp_path):
     lib.scan()
     assert not root.exists()
     assert backup.exists()
+
+
+
+def test_repeated_member_references_are_not_decoded_multiple_times(tmp_path):
+    d = symbol_doc("One")
+    entry = {"id": d["id"], "name": d["name"], "folder": "",
+             "file": "symbols/0001.osym"}
+    manifest = {"format": userlib.LIB_FORMAT, "version": 1,
+                "folders": [], "symbols": [entry, dict(entry)]}
+    p = package(tmp_path / "repeat.osymlib", [d], manifest=manifest)
+    info = userlib.read_package(str(p))
+    assert len(info.items) == 1
+    assert any("duplicate symbol member" in issue for issue in info.problems)
+
+
+def test_excessive_zip_directory_size_rejected_before_zipfile_parse(tmp_path):
+    p = tmp_path / "large-directory.osymlib"
+    with zipfile.ZipFile(p, "w", compression=zipfile.ZIP_STORED) as z:
+        for n in range(1050):
+            z.writestr(f"unused/{n:04d}-" + "x" * 520, b"")
+    assert p.stat().st_size < userlib.MAX_PACKAGE_ARCHIVE_BYTES
+    with pytest.raises(ValueError, match="ZIP directory"):
+        userlib.read_package(str(p))
