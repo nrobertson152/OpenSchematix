@@ -51,6 +51,8 @@ CATEGORIES = ("Electrical", "Electronic", "Hydraulic", "Pneumatic", "General")
 PRIM_KINDS = ("line", "poly", "circle", "arc", "text")
 ALIAS_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._+\-/]{0,59}")
 MAX_ALIASES = 20
+MAX_SYMBOL_BYTES = 2 * 1024 * 1024  # ordinary .osym files are much smaller
+MAX_SYMBOL_JSON_DEPTH = 64
 
 
 class SymbolFormatError(ValueError):
@@ -58,28 +60,52 @@ class SymbolFormatError(ValueError):
     pass
 
 
-def load_symbol_json(text: str, *, source: str = "") -> dict:
-    """Parse and normalise a symbol document from a JSON string.
+def parse_symbol_json(text: str, *, source: str = "") -> dict:
+    """Decode bounded JSON with deterministic input errors and a nesting limit.
 
-    Raises SymbolFormatError with clear, actionable messages for empty or
-    truncated content, invalid JSON, wrong format, unsupported versions, and
-    structural problems. Does not silently repair data beyond the documented
-    normalisation rules.
+    This helper also validates the object shape. It does not normalise a symbol;
+    package manifests use it before their own schema checks.
     """
-    if text is None or not str(text).strip():
-        where = f" in {source}" if source else ""
-        raise SymbolFormatError(f"symbol file is empty or truncated{where}")
+    where = f" in {source}" if source else ""
+    if text is None or not isinstance(text, str) or not text.strip():
+        raise SymbolFormatError(f"symbol JSON is empty or truncated{where}")
+    if len(text) > MAX_SYMBOL_BYTES or len(text.encode("utf-8")) > MAX_SYMBOL_BYTES:
+        raise SymbolFormatError(f"symbol JSON exceeds {MAX_SYMBOL_BYTES} bytes{where}")
     try:
         data = json.loads(text)
-    except json.JSONDecodeError as e:
-        where = f" in {source}" if source else ""
-        raise SymbolFormatError(
-            f"invalid JSON{where}: {e.msg} (line {e.lineno}, column {e.colno})"
-        ) from e
+    except (json.JSONDecodeError, RecursionError, ValueError) as e:
+        raise SymbolFormatError(f"invalid JSON{where}: {e}") from e
     if not isinstance(data, dict):
-        where = f" in {source}" if source else ""
         raise SymbolFormatError(f"symbol document must be a JSON object{where}")
-    return normalise(data)
+    pending = [(data, 1)]
+    while pending:
+        node, depth = pending.pop()
+        if depth > MAX_SYMBOL_JSON_DEPTH:
+            raise SymbolFormatError(f"JSON nesting exceeds {MAX_SYMBOL_JSON_DEPTH} levels{where}")
+        if isinstance(node, dict):
+            pending.extend((v, depth + 1) for v in node.values() if isinstance(v, (dict, list)))
+        elif isinstance(node, list):
+            pending.extend((v, depth + 1) for v in node if isinstance(v, (dict, list)))
+    return data
+
+
+def load_symbol_json(text: str, *, source: str = "") -> dict:
+    """Parse and normalise a bounded symbol document.
+
+    Raises SymbolFormatError for malformed JSON, invalid containers or excessive
+    nesting. Normalisation retains the established legacy symbol semantics.
+    """
+    return normalise(parse_symbol_json(text, source=source))
+
+
+def _array(data: dict, name: str):
+    """A symbol array field, accepting omitted/null values for legacy files."""
+    value = data.get(name)
+    if value is None:
+        return []
+    if not isinstance(value, (list, tuple)):
+        raise SymbolFormatError(f"{name}: expected an array")
+    return value
 
 
 def new_symbol_id() -> str:
@@ -95,7 +121,7 @@ def blank_symbol(name="New symbol", category="Electrical") -> dict:
 def _num(v, what):
     try:
         f = float(v)
-    except (TypeError, ValueError) as e:
+    except (TypeError, ValueError, OverflowError) as e:
         raise SymbolFormatError(f"{what}: not a number") from e
     if f != f or abs(f) > 1e6:
         raise SymbolFormatError(f"{what}: out of range")
@@ -147,16 +173,21 @@ def normalise(data) -> dict:
         )
     if rev_raw < 0:
         raise SymbolFormatError(f"revision must be non-negative, got {rev_raw}")
+    properties = data.get("properties")
+    if properties is None:
+        properties = {}
+    if not isinstance(properties, dict):
+        raise SymbolFormatError("properties: expected an object")
     out = {"format": SYMBOL_FORMAT, "version": SYMBOL_VERSION, "id": sid,
            "revision": rev_raw,
            "name": str(data.get("name") or "Unnamed symbol")[:120],
            "description": str(data.get("description", ""))[:2000],
            "category": str(data.get("category") or "General"),
            "group": str(data.get("group") or "Custom")[:80],
-           "tags": [str(t)[:40] for t in (data.get("tags") or []) if str(t).strip()][:30],
+           "tags": [str(t)[:40] for t in _array(data, "tags") if str(t).strip()][:30],
            "prefix": str(data.get("prefix", "U"))[:8],
            "convention": str(data.get("convention") or "Custom")[:60],
-           "properties": {str(k): str(v) for k, v in (data.get("properties") or {}).items()},
+           "properties": {str(k): str(v) for k, v in properties.items()},
            "prims": [], "pins": []}
     src = data.get("derived_from")
     if isinstance(src, dict):
@@ -166,7 +197,7 @@ def normalise(data) -> dict:
     aliases = clean_aliases(data.get("aliases"), sid)
     if aliases:
         out["aliases"] = aliases
-    for i, p in enumerate(data.get("prims") or []):
+    for i, p in enumerate(_array(data, "prims")):
         if not isinstance(p, dict) or p.get("k") not in PRIM_KINDS:
             raise SymbolFormatError(f"primitive {i}: unknown kind")
         k = p["k"]
@@ -175,7 +206,7 @@ def normalise(data) -> dict:
         q["w"] = w if w in ("thin", "normal", "thick") else "normal"
         q["dash"] = bool(p.get("dash", False))
         if k in ("line", "poly"):
-            pts = [_pt(v, f"primitive {i}") for v in p.get("pts") or []]
+            pts = [_pt(v, f"primitive {i}") for v in _array(p, "pts")]
             if len(pts) < 2:
                 raise SymbolFormatError(f"primitive {i}: needs at least two points")
             q["pts"] = pts
@@ -212,7 +243,7 @@ def normalise(data) -> dict:
                  else "c"}
         out["prims"].append(q)
     seen = set()
-    for i, p in enumerate(data.get("pins") or []):
+    for i, p in enumerate(_array(data, "pins")):
         if not isinstance(p, dict):
             raise SymbolFormatError(f"pin {i}: invalid")
         pid = str(p.get("id") or f"p{i + 1}")
@@ -224,6 +255,8 @@ def normalise(data) -> dict:
             raise SymbolFormatError(f"pin {p.get('name') or pid} is not on the {GRID}-unit grid")
         d = p.get("dir", "r")
         ptype = p.get("type", "") or ""
+        if not isinstance(ptype, str):
+            raise SymbolFormatError(f"pin {pid}: port type must be a string")
         out["pins"].append({"id": pid, "name": str(p.get("name") or pid)[:20], "x": x, "y": y,
                             "dir": d if d in ("l", "r", "u", "d") else "r",
                             "type": ptype if ptype in PORT_TYPES else "",
