@@ -229,6 +229,8 @@ class LibraryPanel(ttk.Frame):
                 txt += f" · {e.folder or 'My libraries'}"
             if s.keywords:
                 txt += f"\nTags: {', '.join(s.keywords)}"
+            if s.aliases:
+                txt += f"\nAliases: {', '.join(s.aliases)}"
         if s.notes:
             txt += f"\nNote: {s.notes}"
         self.info.configure(text=txt)

@@ -1026,6 +1026,11 @@ class App:
         import re
         hits = [s for s in symbols.search(q) if s.group != "Internal"]
         exact = [s for s in hits if s.name.lower() == q.lower() or s.id == q]
+        if not exact:                         # then an alias (or an id typed in another case)
+            sd = symbols.resolve(q)
+            if sd is not None and sd.group != "Internal":
+                self.start_place(sd.id)
+                return
         if exact or hits:
             sd = (exact or hits)[0]
             self.start_place(sd.id)

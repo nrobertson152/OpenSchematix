@@ -208,8 +208,8 @@ class SymbolDef:
         return self.geometry
 
     def search_text(self) -> str:
-        return " ".join([self.name, self.category, self.group, self.convention, self.description,
-                         self.prefix, *self.keywords, *self.aliases]).lower()
+        return " ".join([self.name, self.category, self.group, self.convention, self.description, self.prefix,
+                         *self.keywords, *self.aliases]).lower()
 
 
 def validate_geometry(g: Geometry) -> list[str]:

@@ -22,7 +22,8 @@ from ..model import Document, Shape
 from ..shapes import (move_shape, rotate_point, shape_distance, shape_prims, shape_to_symbol_prim, shapes_bbox,
                       snap_points, symbol_prim_to_shape)
 from ..symbols.base import PORT_TYPES
-from ..symbols.custom import CATEGORIES, SymbolFormatError, blank_symbol, new_symbol_id, normalise
+from ..symbols.custom import (CATEGORIES, SymbolFormatError, alias_problems, blank_symbol, new_symbol_id,
+                              normalise)
 from ..symbols.explode import symbol_to_doc
 from . import cadcmds
 from . import interact as ia
@@ -149,12 +150,20 @@ class EditorCanvas(DrawingView):
             self.create_oval(x - r, y - r, x + r, y + r, outline=col, width=2)
             dx, dy = {"l": (-1, 0), "r": (1, 0), "u": (0, -1), "d": (0, 1)}[p["dir"]]
             self.create_line(x, y, x + dx * 14, y + dy * 14, fill=col, width=2, arrow="last", arrowshape=(6, 7, 3))
-            if dx:
-                self.create_text(x, y - r - 4, text=p["name"], fill=col, anchor="s",
-                                 font=(self.font_family, -11, "bold"))
+            # A point that is not numbered on drawings shows no number here either; while it is selected
+            # its name is shown in parentheses and muted, so it can still be identified.
+            if p.get("show", True):
+                text, tcol, weight = p["name"], col, "bold"
+            elif key in sel:
+                text, tcol, weight = f"({p['name']})", t["pin"], "normal"
             else:
-                self.create_text(x + r + 5, y, text=p["name"], fill=col, anchor="w",
-                                 font=(self.font_family, -11, "bold"))
+                continue
+            if dx:
+                self.create_text(x, y - r - 4, text=text, fill=tcol, anchor="s",
+                                 font=(self.font_family, -11, weight), tags="pinlabel")
+            else:
+                self.create_text(x + r + 5, y, text=text, fill=tcol, anchor="w",
+                                 font=(self.font_family, -11, weight), tags="pinlabel")
         for i in sel:
             s = self.ed.doc.shapes.get(i) if isinstance(i, int) else None
             if s is None:
@@ -358,9 +367,16 @@ class SymbolEditor(tk.Toplevel):
         self._build()
         self._update_title()
         self.bind("<Escape>", lambda e: self.canvas.escape())
-        self.bind("<Control-z>", lambda e: self.undo())
-        self.bind("<Control-y>", lambda e: self.redo())
-        self.bind("<Control-s>", lambda e: self.save())
+        # same shortcuts as the main window (keymap defaults), also with Caps Lock on
+        for keys, fn in ((("<Control-z>", "<Control-Z>"), self.undo),
+                         (("<Control-y>", "<Control-Y>", "<Control-Shift-z>", "<Control-Shift-Z>"), self.redo),
+                         (("<Control-s>", "<Control-S>"), self.save)):
+            for k in keys:
+                self.bind(k, lambda e, f=fn: (f(), "break")[1])
+        for k in ("<Control-a>", "<Control-A>"):
+            self.bind(k, self._select_all_key)
+        for k, d in (("<Left>", (-1, 0)), ("<Right>", (1, 0)), ("<Up>", (0, -1)), ("<Down>", (0, 1))):
+            self.bind(k, lambda e, d=d: self._nudge_key(e, *d))
         self.bind("<Delete>", lambda e: self._delete_key(e))
         self.bind("<KeyPress>", self._key)
         self.bind("<Return>", self._confirm_key)
@@ -510,6 +526,15 @@ class SymbolEditor(tk.Toplevel):
         Tooltip(e, "Comma separated; used by the library search. Add the tag “terminal” to make a terminal-block "
                    "symbol (numbered per strip).")
         r += 1
+        ttk.Label(f, text="Aliases", style="Muted.TLabel").grid(row=r, column=0, sticky="w", pady=3)
+        self.aliases = tk.StringVar(value=", ".join(self.meta.get("aliases", [])))
+        e = ttk.Entry(f, textvariable=self.aliases, width=26)
+        e.grid(row=r, column=1, sticky="ew", pady=3)
+        self.aliases.trace_add("write", lambda *a: self._mark())
+        Tooltip(e, "Other identifiers for this symbol, comma separated (letters, digits and . _ + - /, no "
+                   "spaces). The library search and INSERT find the symbol by them; drawings always store the "
+                   "symbol itself. Each alias must be unique among all symbols. Delete an alias by removing it.")
+        r += 1
         ttk.Label(f, text="Library folder", style="Muted.TLabel").grid(row=r, column=0, sticky="w", pady=3)
         folders = self.app.userlib.folders()
         self.folder_var = tk.StringVar(value=self.folder or (folders[0] if folders else "My symbols"))
@@ -550,14 +575,24 @@ class SymbolEditor(tk.Toplevel):
         self.pin_dir = tk.StringVar()
         self.pin_show = tk.IntVar(value=1)
         ttk.Label(form_, text="Name / number", style="Muted.TLabel").grid(row=0, column=0, sticky="w", pady=3)
-        ttk.Entry(form_, textvariable=self.pin_name, width=14).grid(row=0, column=1, sticky="ew")
+        name_e = ttk.Entry(form_, textvariable=self.pin_name, width=14)
+        name_e.grid(row=0, column=1, sticky="ew")
+        for k in ("<Return>", "<KP_Enter>"):
+            name_e.bind(k, lambda e: (self._pin_apply(), "break")[1])
+        Tooltip(name_e, "Enter or Apply renames the point.")
         ttk.Label(form_, text="Port type", style="Muted.TLabel").grid(row=1, column=0, sticky="w", pady=3)
-        ttk.Combobox(form_, textvariable=self.pin_type, values=list(PORT_TYPES.values()), state="readonly",
-                     width=28).grid(row=1, column=1, sticky="ew")
+        cb = ttk.Combobox(form_, textvariable=self.pin_type, values=list(PORT_TYPES.values()), state="readonly",
+                          width=28)
+        cb.grid(row=1, column=1, sticky="ew")
+        cb.bind("<<ComboboxSelected>>", lambda e: self._pin_apply())
         ttk.Label(form_, text="Lead direction", style="Muted.TLabel").grid(row=2, column=0, sticky="w", pady=3)
-        ttk.Combobox(form_, textvariable=self.pin_dir, values=list(DIR_LABEL.values()), state="readonly",
-                     width=10).grid(row=2, column=1, sticky="w")
-        show_cb = ttk.Checkbutton(form_, text="Number this point on drawings", variable=self.pin_show)
+        cb = ttk.Combobox(form_, textvariable=self.pin_dir, values=list(DIR_LABEL.values()), state="readonly",
+                          width=10)
+        cb.grid(row=2, column=1, sticky="w")
+        cb.bind("<<ComboboxSelected>>", lambda e: self._pin_apply())
+        # takes effect immediately (it used to need Apply, and was lost when the symbol was saved without it)
+        show_cb = ttk.Checkbutton(form_, text="Number this point on drawings", variable=self.pin_show,
+                                  command=self._pin_apply)
         show_cb.grid(row=3, column=0, columnspan=2, sticky="w")
         Tooltip(show_cb, "When the project shows terminal designations (Project settings), draw this point's "
                          "name next to it. Clear it for points that should never be numbered.")
@@ -914,6 +949,36 @@ class SymbolEditor(tk.Toplevel):
             self.sel_delete(self.selection)
             self.commit_change(s, "Deleted.")
 
+    def _text_focus(self, e) -> bool:
+        return isinstance(e.widget, (tk.Entry, ttk.Entry, ttk.Combobox, tk.Text, tk.Spinbox, ttk.Spinbox,
+                                     tk.Listbox, ttk.Treeview))
+
+    def _select_all_key(self, e):
+        if self._text_focus(e) or self.runner.active:
+            return None
+        self.set_selection(set(self.doc.shapes) | {"pin:" + p["id"] for p in self.pins})
+        self.set_status(f"{len(self.selection)} object(s) selected.")
+        return "break"
+
+    def _nudge_key(self, e, dx, dy):
+        """Arrow keys move the selection by the snap step - by the 2.5 mm grid if it contains connection
+        points, which must stay on that grid (as in the main window)."""
+        if self._text_focus(e) or self.runner.active or not self.selection:
+            return None
+        step = GRID if any(isinstance(i, str) for i in self.selection) else self.snap_step()
+        s = self.begin_change()
+        self.sel_move(self.selection, dx * step, dy * step)
+        self.commit_change(s, "Moved.")
+        return "break"
+
+    def alias_list(self) -> list[str]:
+        return [a.strip() for a in self.aliases.get().split(",") if a.strip()]
+
+    def alias_problems(self) -> list[str]:
+        """Problems with the aliases typed for this symbol (against every built-in, library and project symbol)."""
+        own = self.meta["id"]
+        return alias_problems(self.alias_list(), own, symbols.alias_pairs() + self.app.userlib.alias_pairs())
+
     def context_menu(self, e):
         from .widgets import make_menu
         m = make_menu(self)
@@ -967,10 +1032,12 @@ class SymbolEditor(tk.Toplevel):
         self.pin_tree.delete(*self.pin_tree.get_children())
         for p in self.pins:
             x, y = self.to_user((p["x"], p["y"]))
-            self.pin_tree.insert("", "end", p["id"], values=(p["name"], PORT_TYPES.get(p.get("type", ""), "—"),
+            name = p["name"] if p.get("show", True) else f"({p['name']})"   # not numbered on drawings
+            self.pin_tree.insert("", "end", p["id"], values=(name, PORT_TYPES.get(p.get("type", ""), "—"),
                                                              DIR_LABEL[p["dir"]], f"{x:g}, {y:g}"))
         if sel and self.pin_tree.exists(sel[0]):
             self.pin_tree.selection_set(sel[0])
+        self._sync_pin_form()
 
     def select_pin_row(self, pid):
         if self.pin_tree.exists(pid):
@@ -985,32 +1052,83 @@ class SymbolEditor(tk.Toplevel):
         p = self._pin()
         if p is None:
             return
-        self.pin_name.set(p["name"])
-        self.pin_type.set(PORT_TYPES.get(p.get("type", ""), ""))
-        self.pin_dir.set(DIR_LABEL[p["dir"]])
-        self.pin_show.set(1 if p.get("show", True) else 0)
+        self._load_pin_form(p)
         self.selection = {"pin:" + p["id"]}
         self.canvas.redraw()
 
-    def _pin_apply(self):
+    # The connection-point form: `_pin_form_for` is the point it holds and `_pin_form_base` the values it was
+    # loaded with. Fields the user changed (form != base) are edits; untouched fields follow the point when it
+    # changes underneath (undo, renumber, rotate ...), so a stale form can never overwrite those changes.
+    def _form_field(self, key, value):
+        if key == "name":
+            self.pin_name.set(value)
+        elif key == "type":
+            self.pin_type.set(PORT_TYPES.get(value, ""))
+        elif key == "dir":
+            self.pin_dir.set(DIR_LABEL[value])
+        else:
+            self.pin_show.set(1 if value else 0)
+
+    @staticmethod
+    def _pin_values(p):
+        return {"name": p["name"], "type": p.get("type", ""), "dir": p["dir"], "show": bool(p.get("show", True))}
+
+    def _load_pin_form(self, p):
+        for k, v in self._pin_values(p).items():
+            self._form_field(k, v)
+        self._pin_form_for = p["id"]
+        self._pin_form_base = self._pin_form_values(p)
+
+    def _sync_pin_form(self):
+        """After the points changed: untouched form fields take the selected point's current values."""
         p = self._pin()
-        if p is None:
+        if p is None or getattr(self, "_pin_form_for", None) != p["id"]:
             return
-        name = self.pin_name.get().strip()
+        form, base, cur = self._pin_form_values(p), self._pin_form_base, self._pin_values(p)
+        for k in cur:
+            if form[k] == base[k] and cur[k] != base[k]:
+                self._form_field(k, cur[k])
+                base[k] = cur[k]
+
+    def _pin_form_values(self, p):
+        inv = {v: k for k, v in PORT_TYPES.items()}
+        return {"name": self.pin_name.get().strip(), "type": inv.get(self.pin_type.get(), p.get("type", "")),
+                "dir": {v: k for k, v in DIR_LABEL.items()}.get(self.pin_dir.get(), p["dir"]),
+                "show": bool(self.pin_show.get())}
+
+    def _pin_form_edits(self, p) -> dict:
+        if p is None or getattr(self, "_pin_form_for", None) != p["id"]:
+            return {}                         # the form does not show this point (yet)
+        form = self._pin_form_values(p)
+        return {k: v for k, v in form.items() if v != self._pin_form_base[k]}
+
+    def _pin_form_pending(self) -> bool:
+        """True if the connection-point form holds edits not yet applied to the selected point."""
+        p = self._pin()
+        edits = self._pin_form_edits(p)
+        return any(edits.get(k) != self._pin_values(p)[k] for k in edits)
+
+    def _pin_apply(self) -> bool:
+        """Apply the user's edits in the connection-point form to the selected point. False if the user has
+        to correct them."""
+        p = self._pin()
+        edits = {k: v for k, v in self._pin_form_edits(p).items() if v != self._pin_values(p)[k]}
+        if not edits:
+            return True
+        name = edits.get("name", p["name"])
         if not name:
             messagebox.showinfo("Connection point", "Enter a name or number.", parent=self)
-            return
-        if any(q["name"] == name and q is not p for q in self.pins):
+            return False
+        if "name" in edits and any(q["name"] == name and q is not p for q in self.pins):
             if not messagebox.askyesno("Connection point", f"Another connection point is already named {name}. "
                                        "Use the name anyway?", parent=self):
-                return
+                return False
         s = self.begin_change()
-        inv = {v: k for k, v in PORT_TYPES.items()}
-        p["name"] = name
-        p["type"] = inv.get(self.pin_type.get(), p.get("type", ""))
-        p["dir"] = {v: k for k, v in DIR_LABEL.items()}.get(self.pin_dir.get(), p["dir"])
-        p["show"] = bool(self.pin_show.get())
-        self.commit_change(s, f"Connection point {name} updated.")
+        p.update(edits)
+        self._pin_form_base = self._pin_values(p)
+        note = "" if p.get("show", True) else " (not numbered on drawings)"
+        self.commit_change(s, f"Connection point {name} updated{note}.")
+        return True
 
     def _pin_renumber(self):
         s = self.begin_change()
@@ -1088,6 +1206,7 @@ class SymbolEditor(tk.Toplevel):
             m[k] = v.get().strip()
         m["category"] = self.cat.get()
         m["tags"] = [t.strip() for t in self.tags.get().split(",") if t.strip()]
+        m["aliases"] = self.alias_list()
         m["properties"] = {k: v.get().strip() for k, v in self.prop_vars.items() if v.get().strip()}
         m["prims"] = [shape_to_symbol_prim(s) for s in self.doc.shapes.values()]
         m["pins"] = [dict(p) for p in self.pins]
@@ -1097,6 +1216,7 @@ class SymbolEditor(tk.Toplevel):
                                      "revision": str(self.meta.get("revision", 0))}
             m["id"] = new_symbol_id()
             m["revision"] = 0
+            m.pop("aliases", None)     # aliases belong to the original symbol
         return normalise(m)
 
     def save(self, as_new=False):
@@ -1108,6 +1228,13 @@ class SymbolEditor(tk.Toplevel):
             if name is None or not name.strip():
                 return False
             self.meta_vars["name"].set(name.strip())
+        if self._pin_form_pending() and not self._pin_apply():
+            return False
+        if not as_new:
+            problems = self.alias_problems()
+            if problems:
+                messagebox.showerror("Cannot save symbol", "Aliases: " + "\n".join(problems), parent=self)
+                return False
         try:
             doc = self.build_doc(new_id=as_new or False)
         except SymbolFormatError as e:
