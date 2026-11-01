@@ -4,8 +4,14 @@ Physical devices. One physical device may be drawn as several symbols
 ("units"): a relay coil K1 and its contacts K1 13-14, K1 23-24, possibly on
 different sheets. As in the drawing checks (see docs/VALIDATION.md), all
 purchasable components that share a non-empty identifier are units of ONE
-device and are counted once. Terminal-block terminals (X1:1, X1:2 ...) and
-components without an identifier are each one physical part.
+device and are counted once - provided they can be: no two of them may have
+the same symbol, label and terminal designations (the criterion of the
+"Duplicate identifiers" check; such units would be the same coil or contact
+twice, i.e. an identifier clash such as two copies of resistor R1). A
+clashing identifier is not merged: each of its symbols counts as a part, as
+before, and the drawing checks report it. Terminal-block
+terminals (X1:1, X1:2 ...) and components without an identifier are each one
+physical part.
 
 Part identity. Components are grouped into BOM lines by part identity:
   * with a part number: (manufacturer, part number)
@@ -141,8 +147,16 @@ def _unit(doc, c) -> _Unit:
     return _Unit(doc, c, key, name, desc, mf, pn, rating)
 
 
-def devices(project, include_excluded: bool = False) -> list[list[_Unit]]:
-    """Physical devices in project order, each as the list of its units (see module docstring)."""
+def unit_slot(c) -> tuple:
+    """What tells parts of one device apart, as in the "Duplicate identifiers" drawing check: symbol,
+    label and terminal designations (e.g. contacts labelled 13-14 and 23-24). Two units of one device
+    cannot share all three - they would be the same coil or contact drawn twice."""
+    return (c.symbol, c.label.strip(), tuple(c.terminal_label(n) for n in sorted(c.terminals())))
+
+
+def designator_groups(project, include_excluded: bool = False) -> list[tuple[str, list[_Unit]]]:
+    """Purchasable units grouped by shared identifier, in project order: [(identifier, units)].
+    Terminal-block terminals and components without an identifier form groups of their own ("")."""
     from .project import is_terminal_symbol
     out, by_designator = [], {}
     for doc in project.sheets:
@@ -151,13 +165,35 @@ def devices(project, include_excluded: bool = False) -> list[list[_Unit]]:
                 continue
             u = _unit(doc, c)
             if c.designator and not is_terminal_symbol(c.symbol):
-                dev = by_designator.get(c.designator)
-                if dev is None:
-                    dev = by_designator[c.designator] = []
-                    out.append(dev)
-                dev.append(u)
+                grp = by_designator.get(c.designator)
+                if grp is None:
+                    grp = by_designator[c.designator] = (c.designator, [])
+                    out.append(grp)
+                grp[1].append(u)
             else:
-                out.append([u])
+                out.append(("", [u]))
+    return out
+
+
+def is_one_device(units) -> bool:
+    """True if the units can be parts of one device: no two share symbol, label and terminal designations."""
+    slots = [unit_slot(u.comp) for u in units]
+    return len(set(slots)) == len(slots)
+
+
+def devices(project, include_excluded: bool = False) -> list[list[_Unit]]:
+    """Physical devices in project order, each as the list of its units (see module docstring).
+
+    A shared identifier makes its units one device only if they can be parts of one device
+    (`is_one_device`). Otherwise the identifier is ambiguous (e.g. two different resistors both called R1)
+    and every unit is counted as a part of its own, as before multi-unit support, so an identifier clash can
+    never lower a quantity; the drawing checks report the clash."""
+    out = []
+    for _des, units in designator_groups(project, include_excluded):
+        if len(units) == 1 or is_one_device(units):
+            out.append(units)
+        else:
+            out.extend([u] for u in units)
     return out
 
 

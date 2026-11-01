@@ -241,8 +241,13 @@ rejected intersections and holes, fills stored as plain polygons, a failing test
   counted once on each line + new check rule `device-parts`, warning); else units with description/rating;
   else one line naming the distinct symbols. Sheet-filtered BOM: device included if any unit is on the
   selected sheets, identity from all its units.
-- Tests: `tests/test_bom_devices.py` (15; 11 fail on main). Full pytest 615 passed / 3 skipped (ezdxf), GUI
-  smoke 168/168.
+- Review follow-up (shared identifiers hiding unrelated devices): a group is merged only if no two of its
+  symbols share symbol, label and terminal designations (the duplicate-id criterion); otherwise every symbol
+  counts (pre-fix behaviour) and duplicate-id / device-parts report it. Groups that differ by label, terminal
+  numbers or symbol stay merged: they are the documented multi-unit pattern and cannot be told apart from
+  two devices without explicit device data (owner decision; would need a schema field).
+- Tests: `tests/test_bom_devices.py` (20; 11 fail on main, the 4 clash tests fail on the first PR head).
+  Full pytest 620 passed / 3 skipped (ezdxf), GUI smoke 168/168.
 
 ## Status summary
 

@@ -207,3 +207,81 @@ def test_generation_does_not_change_the_project_and_survives_save_load(tmp_path)
     assert rows(bom.generate(p2)) == rows(lines)
     csv = bom.bom_csv(lines)
     assert csv.lstrip("\ufeff").splitlines()[0] == ",".join(h for _k, h in bom.BOM_COLUMNS)   # columns unchanged
+
+
+# ---------------------------------------------------------------- identifier clashes never lower a quantity
+def _resistors(p, n=2, sheets=None, **props):
+    out = []
+    for i in range(n):
+        d = sheets[i] if sheets else p.sheets[0]
+        c = editing.place(d, "el.resistor.iec", i * 80, 0)
+        c.designator = "R1"
+        c.props.update(props)
+        out.append(c)
+    return out
+
+
+def _codes(p):
+    return sorted({(i.severity, i.code) for i in check.check(p) if i.code in ("duplicate-id", "device-parts")})
+
+
+def test_identical_copies_under_one_identifier_are_each_counted():
+    p = new_project()
+    _resistors(p)
+    assert rows(bom.generate(p)) == [(2, "R1", "", "Resistor")]
+    assert _codes(p) == [(check.ERROR, "duplicate-id")]
+
+
+def test_copies_with_part_numbers_or_ratings_are_each_counted():
+    p = new_project()
+    _resistors(p, manufacturer="Yageo", part_number="RC-10K")
+    assert rows(bom.generate(p)) == [(2, "R1", "RC-10K", "Resistor")]
+    p = new_project()
+    a, b = _resistors(p)
+    a.props["rating"], b.props["rating"] = "10k", "4k7"
+    assert sorted((l.quantity, l.rating) for l in bom.generate(p)) == [(1, "10k"), (1, "4k7")]
+    p = new_project()
+    a, b = _resistors(p)
+    a.props["part_number"], b.props["part_number"] = "RC-10K", "RC-4K7"
+    assert total(bom.generate(p)) == 2
+    assert _codes(p) == [(check.ERROR, "duplicate-id")]    # a clash, not one device with two part numbers
+
+
+def test_clash_hidden_from_duplicate_id_is_reported_and_counted():
+    """A terminal designation entered equal to the symbol's own one: duplicate-id compares overrides and does
+    not flag it, but the units are indistinguishable, so the BOM counts both and device-parts reports it."""
+    p = new_project()
+    a, b = _resistors(p)
+    a.terminal_labels = {"1": "1"}
+    assert a.terminal_label("1") == b.terminal_label("1")
+    assert total(bom.generate(p)) == 2
+    assert _codes(p) == [(check.WARNING, "device-parts")]
+
+
+def test_relay_with_indistinguishable_contacts_is_not_merged():
+    """Two contacts with the same label and terminal designations cannot be one relay's parts: the identifier
+    is ambiguous, so nothing is merged (the pre-multi-unit count) and duplicate-id reports it."""
+    p = new_project()
+    d = p.sheets[0]
+    coil = editing.place(d, "el.coil.iec", 0, 0)
+    coil.designator = "K1"
+    for x in (100, 180):
+        editing.place(d, "el.contact.no.iec", x, 0).designator = "K1"
+    assert sorted((l.quantity, l.description) for l in bom.generate(p)) == \
+        [(1, "Coil (relay / contactor / solenoid)"), (2, "Contact, make (NO)")]
+    assert (check.ERROR, "duplicate-id") in _codes(p)
+
+
+def test_labelled_parts_of_one_device_are_merged():
+    """Documented convention (and examples/start_stop_latch.osch): parts of one device may differ only by
+    label. Such a group is one device; nothing in the data distinguishes it from two different devices
+    with different labels, which is why it is not reported."""
+    p = new_project()
+    d = p.sheets[0]
+    coil = editing.place(d, "el.coil.iec", 0, 0)
+    coil.designator = "K1"
+    for x, lab in ((100, "13-14"), (180, "23-24")):
+        c = editing.place(d, "el.contact.no.iec", x, 0)
+        c.designator, c.label = "K1", lab
+    assert total(bom.generate(p)) == 1
+    assert _codes(p) == []

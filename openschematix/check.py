@@ -28,7 +28,7 @@ RULES = {
     "fluid-rule": "Fluid-power port rules",
     "elec-rule": "Electrical port rules",
     "missing-prop": "Missing component properties",
-    "device-parts": "Devices with different part numbers",
+    "device-parts": "Identifiers shared by several symbols",
     "xref": "Cross-sheet references",
     "junction": "Junction and overlap consistency",
     "symbol": "Unsupported or incomplete symbols",
@@ -221,9 +221,32 @@ def check(project, rules=None, require_part_numbers: bool = False) -> list[Issue
 
     # ------------------------------------------------ devices drawn with several symbols
     if "device-parts" in rules:
-        # Components sharing an identifier are one physical device (see bom.py). If its units carry
-        # different part numbers the bill of materials lists the device once per part number.
-        from .bom import devices
+        # Components sharing an identifier are one physical device (see bom.py) if no two of them have the
+        # same symbol, label and terminal designations. If they do, the bill of materials counts every
+        # symbol separately. The duplicate-id rule reports such clashes; it compares terminal designation
+        # overrides, so a clash it misses (an override equal to the symbol's own designation) is reported here.
+        from .bom import designator_groups, devices, is_one_device, unit_slot
+        for des, units in designator_groups(project):
+            if len(units) < 2 or is_one_device(units):
+                continue
+            slots, dup = {}, {}
+            for u in units:
+                c = u.comp
+                slots.setdefault(unit_slot(c), []).append(u)
+                k = (c.symbol, c.label.strip(), tuple(sorted(c.terminal_labels.items())))
+                dup[k] = dup.get(k, 0) + 1
+            for same in slots.values():
+                if len(same) < 2:
+                    continue
+                for u in same:
+                    c = u.comp
+                    if dup[(c.symbol, c.label.strip(), tuple(sorted(c.terminal_labels.items())))] > 1:
+                        continue              # reported as "duplicate-id"
+                    issue(WARNING, "device-parts", f"Identifier {des} is used for {len(same)} symbols of the same "
+                          f"kind with the same label and terminal designations, so they cannot be parts of one "
+                          f"device; the bill of materials counts each of them.", u.doc.uid, c.id, (c.x, c.y),
+                          "Give separate devices different identifiers. If they are parts of one device, give "
+                          "each part its own label or terminal designations (e.g. 13-14 and 23-24).")
         for dev in devices(project):
             parts = {}
             for u in dev:
