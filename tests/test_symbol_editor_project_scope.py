@@ -341,3 +341,176 @@ def test_in_place_and_copy_edits_ignore_another_registered_project(library_newer
     copy_ed.destroy()
     app.edit_custom_symbol(LIB_SID)
     _assert_library_edit(app, editors(app)[-1], v2)            # the library's revision 2
+
+
+# ---------------------------------------------------------------- integration with project-scoped symbols (Issue #61)
+# After PR #46 (owner-scoped registry), #47 (save rollback), #48 and #58 were merged into #39: editing in the
+# application must never let one project's definition of an id leak into another project's file, revision
+# snapshot, BOM, netlist, check or export, and must never write an older or foreign definition into the library.
+from openschematix import bom, check as erc, export, revisions  # noqa: E402
+from openschematix.netlist import compute_nets  # noqa: E402
+
+
+def library_state(app):
+    return {sid: (e.doc.get("revision"), pins(e.doc), copy.deepcopy(e.doc["prims"]))
+            for sid, e in app.userlib.entries.items()}
+
+
+def drop_library(app, *sids):
+    for sid in sids:
+        if sid in app.userlib.entries:
+            app.userlib.delete_symbol(sid)
+
+
+def wired_pins(project, sid):
+    """Names of the connected terminals of components drawn with `sid`."""
+    out = set()
+    for n in compute_nets(project):
+        if len(n.terminals) < 2:
+            continue
+        for uid, cid, name in n.terminals:
+            if project.find_sheet(uid).components[cid].symbol == sid:
+                out.add(name)
+    return out
+
+
+def engine_outputs(project):
+    """Everything the engine derives from a project's drawings."""
+    d = project.sheets[0]
+    items, extent = export.paper_items(d, project=project)
+    return {
+        "bom": [line.to_row() if hasattr(line, "to_row") else vars(line) for line in bom.generate(project)],
+        "nets": sorted(sorted(map(tuple, n.terminals)) for n in compute_nets(project)),
+        "check": sorted((i.severity, i.code, i.message, i.obj_id) for i in erc.check(project)),
+        "svg": export.to_svg(d, project=project),
+        "paper": (repr(items), extent),
+    }
+
+
+@pytest.fixture
+def two_projects_edited(app, tmp_path, quiet):
+    """Projects Alpha and Bravo both draw SID with different geometry (Alpha:
+    pins A/B, reach 20; Bravo: pins A/Q, reach 40). With Alpha open and
+    Bravo's definition registered, Alpha's SID is edited in place (it is
+    project-only, so saving adds it to the library under SID with Alpha's
+    geometry) and a copy is edited, saved and placed; Alpha is then saved."""
+    a_def = definition(20, "B", "Alpha")
+    b_def = definition(40, "Q", "Bravo")
+    path_a, cid, wid = project_file(tmp_path, "Alpha", a_def, "B")
+    path_b, _c, _w = project_file(tmp_path, "Bravo", b_def, "Q")
+    with open(path_b, "rb") as f:
+        b_bytes = f.read()
+    drop_library(app, SID)
+    app.open_path(path_a, confirm=False)
+    projectio.open_any(path_b)                                     # Bravo's definition registered
+    before = library_state(app)
+    app.edit_custom_symbol(SID)                                    # project-only: in place, embedded source
+    ed = editors(app)[-1]
+    assert pins(ed.meta) == pins(a_def) and ed.save() is True
+    ed.dirty = False
+    ed.destroy()
+    new, c2, w2 = save_copy_and_place(app, a_def)
+    projectio.open_any(path_b)                                     # Bravo registered again at save time
+    projectio.save_project(app.project, path_a)
+    yield dict(app=app, a_def=a_def, b_def=b_def, path_a=path_a, path_b=path_b, b_bytes=b_bytes,
+               before=before, copy=new, wired=[(cid, wid), (c2, w2)])
+    for w in list(app.windows):
+        if w.winfo_exists() and w.__class__.__name__ == "SymbolEditor":
+            w.dirty = False
+            w.destroy()
+    drop_library(app, SID, new["id"])
+
+
+def test_project_only_edit_keeps_project_scope_and_only_adds_its_own_library_entry(two_projects_edited):
+    t = two_projects_edited
+    app, a_def = t["app"], t["a_def"]
+    after = library_state(app)
+    added = set(after) - set(t["before"])
+    assert added == {SID, t["copy"]["id"]}                         # nothing else created
+    assert {k: after[k] for k in t["before"]} == t["before"]       # nothing existing replaced
+    assert pins(app.userlib.entries[SID].doc) == pins(a_def)       # Alpha's geometry, never Bravo's
+    assert app.project.symbols[SID]["pins"] == a_def["pins"]       # drawing kept ("Update drawings?" = No)
+    with open(t["path_b"], "rb") as f:
+        assert f.read() == t["b_bytes"]                            # the other project's file is untouched
+
+
+def test_editing_a_copy_never_overwrites_the_original(two_projects_edited):
+    t = two_projects_edited
+    app, new = t["app"], t["copy"]
+    assert new["id"] != SID
+    assert app.userlib.entries[SID].doc["revision"] == 1           # the in-place save only; the copy left it alone
+    assert pins(app.userlib.entries[SID].doc) == pins(t["a_def"])
+    assert app.project.symbols[SID]["pins"] == t["a_def"]["pins"]
+
+
+def test_two_projects_keep_their_definitions_through_save_reopen_revisions_and_engine(two_projects_edited):
+    """Each project, reopened while the other project's definition of SID is
+    registered, keeps its own definition in its file, its revision
+    snapshots, and every engine output (BOM, netlist, check, SVG/PDF)."""
+    t = two_projects_edited
+    app = t["app"]
+    a = projectio.open_any(t["path_a"], activate=False).project
+    b = projectio.open_any(t["path_b"], activate=False).project
+    assert a.symbols[SID]["pins"] == t["a_def"]["pins"] and b.symbols[SID]["pins"] == t["b_def"]["pins"]
+    assert a.symbols[t["copy"]["id"]]["pins"] == t["a_def"]["pins"]
+    assert t["copy"]["id"] not in b.symbols
+
+    reference = {}
+    for p in (a, b):
+        p.activate_symbols()                                       # only this project registered
+        reference[p.uid] = engine_outputs(p)
+    assert wired_pins(a, SID) == {"B"} and wired_pins(b, SID) == {"Q"}
+    assert reference[a.uid]["svg"] != reference[b.uid]["svg"]       # the comparison below is not vacuous
+    assert reference[a.uid]["nets"] != reference[b.uid]["nets"]
+
+    for p, other, own in ((a, b, t["a_def"]), (b, a, t["b_def"])):
+        other.activate_symbols()                                   # the other project's SID is registered
+        assert symbols.get(SID).custom["pins"] == (t["b_def"] if p is a else t["a_def"])["pins"]
+        assert engine_outputs(p) == reference[p.uid], p.meta
+        assert export.project_pdf(p).startswith(b"%PDF")
+        store = revisions.RevisionStore()
+        store.create(p, "approved", label="A")
+        snap = store.load(store.latest()["n"])
+        assert snap.symbols[SID]["pins"] == own["pins"]
+        snap_foreign = engine_outputs(snap)                        # other project still registered
+        for key in ("bom", "nets", "check"):                       # symbol-derived: identical to the live project
+            assert snap_foreign[key] == reference[p.uid][key], key
+        snap.activate_symbols()
+        assert snap_foreign == engine_outputs(snap)                # drawings (title block now shows rev. A) too
+        other.activate_symbols()
+        path = os.path.join(os.path.dirname(t["path_a"]), f"resaved-{p.uid}.schematix")
+        projectio.save_project(p, path)                            # saved while the other is registered
+        again = projectio.open_any(path, activate=False).project
+        assert again.symbols[SID]["pins"] == own["pins"]
+        other.activate_symbols()
+        assert engine_outputs(again) == reference[p.uid]
+
+
+def test_reopened_app_project_keeps_wires_attached_after_edits(two_projects_edited):
+    t = two_projects_edited
+    assert_reopened(t["app"], t["path_a"], t["a_def"], t["copy"], t["wired"])
+
+
+def test_updating_drawings_from_a_library_edit_never_downgrades(library_newer_than_project, monkeypatch, tmp_path):
+    """Answering Yes to "Update drawings?" after an in-place library edit
+    puts the library's newest revision into the project, and it survives
+    save and reopen while another project's definition is registered."""
+    app, v2, cid = library_newer_than_project
+    from openschematix.gui import symbol_editor
+    monkeypatch.setattr(symbol_editor.messagebox, "askyesno", lambda *a, **k: True)
+    other = dict(definition(40, "Q", "Foreign"), id=LIB_SID, revision=9)
+    q = new_project("Foreign")
+    q.symbols[LIB_SID] = other
+    q_path = str(tmp_path / "foreign-update.schematix")
+    projectio.save_project(q, q_path)
+    app.edit_custom_symbol(LIB_SID)
+    ed = editors(app)[-1]
+    assert ed.meta["revision"] == 2 and ed.save() is True
+    assert app.project.symbols[LIB_SID]["revision"] == 3 and pins(app.project.symbols[LIB_SID]) == pins(v2)
+    projectio.open_any(q_path)                                     # foreign revision 9 registered at save
+    path = str(tmp_path / "updated.schematix")
+    projectio.save_project(app.project, path)
+    reopened = projectio.open_any(path, activate=False).project
+    assert reopened.symbols[LIB_SID]["revision"] == 3 and pins(reopened.symbols[LIB_SID]) == pins(v2)
+    assert app.userlib.entries[LIB_SID].doc["revision"] == 3 and pins(app.userlib.entries[LIB_SID].doc) == pins(v2)
+    assert reopened.sheets[0].components[cid].symbol == LIB_SID
