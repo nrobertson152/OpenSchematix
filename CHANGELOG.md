@@ -2,10 +2,11 @@
 
 All notable changes to this project are documented here. Versions follow [Semantic Versioning](https://semver.org/).
 
-## [1.1.0] - Unreleased (planned)
+## [1.1.0] - 2026-11-01
 
 ### Fixed
 
+- Right-click canvas context menus now use Tk's native popup grab so Escape and outside clicks can dismiss them without the application's Escape handler cancelling the active drawing command. This also preserves nested submenus and avoids temporary root-level event bindings.
 - Netlist generation no longer creates phantom terminals from invalid wire terminal
   references (a missing component, a blank terminal name, or a pin the symbol does
   not define, e.g. `R1:ghost`). Such ends no longer join nets, connection and wire
