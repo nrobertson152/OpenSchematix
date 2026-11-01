@@ -52,6 +52,12 @@ All notable changes to this project are documented here. Versions follow [Semant
   component whose symbol is not available at all stay attached and work again once the symbol is installed.
   File formats are unchanged. *Import sheets* no longer replaces the open project's symbols while reading the
   other file, and reports imported symbols that differ from the project's version.
+- Custom symbols with the same id in two projects: saving (and every revision snapshot) of a project could
+  write the other, most recently opened project's definition into the file, permanently replacing the
+  project's own symbol. The netlist, Check, connectivity, wire numbering, BOM, exports and sheet duplication
+  of a project could likewise use the other project's pin geometry. A project now only takes a definition
+  from the shared symbol registry while it is the registered project, and those operations resolve symbols
+  as the project they work on.
 - Symbol editor: clearing "Number this point on drawings" (and changing a connection point's port type or lead
   direction) took effect only after pressing Apply, and was lost if the symbol was saved first; it now applies
   immediately, and pending edits are applied when saving. A point that is not numbered no longer shows its number

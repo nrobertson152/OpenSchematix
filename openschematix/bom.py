@@ -235,6 +235,7 @@ def device_lines(dev: list[_Unit]) -> list[tuple[tuple, dict, list[_Unit]]]:
                        symbol=" + ".join(names)), dev)]
 
 
+@symbols.project_scoped
 def generate(project, sheet_uids=None, include_excluded: bool = False) -> list[BomLine]:
     groups: dict = {}
     for dev in devices(project, include_excluded):

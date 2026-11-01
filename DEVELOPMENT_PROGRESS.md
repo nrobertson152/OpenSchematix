@@ -424,3 +424,28 @@ system Tk: `uv python install 3.12` (includes Tkinter); PyPI may be blocked — 
 GitHub or copy pure-Python packages; PyInstaller/altgraph/pyinstaller-hooks-contrib can be cloned from GitHub
 and used via PYTHONPATH (bootloaders are in the repo). Standalone-Python builds need
 `LD_LIBRARY_PATH=<python>/lib` for Tk.
+
+## Project-scoped symbol resolution (`fix/project-scoped-symbols`)
+
+- **Root causes:**
+  - `Project.embed_symbols` (every save and revision snapshot) replaced an embedded definition with the
+    process-wide registry's whenever the revision was >=, even when the registry held *another*
+    project's symbols. The other project's definition was then written into the file.
+  - Engine operations on a project resolved symbols through `symbols.get()` → `_PROJECT`, i.e. the
+    project activated last.
+- **Fix:**
+  - `symbols.set_project_symbols(defs, owner=)` records the registered project
+    (`Project.activate_symbols` passes it); `symbols.project_owner()` returns it (weak reference).
+  - `embed_symbols` trusts the registry only for its owner. Otherwise it keeps embedded definitions and
+    takes a missing one from the user library, or, for registrations without an owner, the registry as
+    before.
+  - `symbols.project_scope(project)` and the `@symbols.project_scoped` decorator resolve as the project and
+    then restore the previous registration (no-op for the registered project). Applied to
+    `netlist.compute_nets`, `netlist.assign_wire_numbers`, `check.check`, `bom.generate`,
+    `connectivity.analyse`, `export.paper_items` / `to_svg` / `to_pdf` / `project_pdf`, and
+    `Project.duplicate_sheet`.
+- **Boundary:** direct model calls (`Component.terminals()`, rendering) still use the registered project,
+  i.e. the open one in the GUI. A per-component project resolver is the larger refactor (audit item 11).
+  Load-time validation is PR #37.
+- **Tests:** `tests/test_project_symbol_scope.py` (16); 8 behavioural tests fail on main.
+
