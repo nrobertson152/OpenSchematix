@@ -228,3 +228,47 @@ def test_load_symbol_json_preserves_normalise_contract():
     assert loaded["pins"][0]["id"] == "p1"
     problems = validate_geometry(to_symdef(loaded).geometry)
     assert problems == []
+
+
+def test_optional_and_legacy_fields_accepted():
+    """Documents with optional fields and without optional sections remain valid."""
+    doc = blank_symbol("Legacy-ish")
+    del doc["tags"]
+    doc["derived_from"] = {"id": "el.resistor.iec", "name": "Resistor", "revision": "1"}
+    doc["future_optional"] = {"note": "ignored by current schema"}
+    findings = validate_document(doc)
+    assert not any(f.severity == SEVERITY_ERROR for f in findings)
+    norm = normalise(doc)
+    assert norm["id"].startswith("user:")
+    assert norm["derived_from"]["id"] == "el.resistor.iec"
+    assert "future_optional" not in norm
+    sd = to_symdef(doc)
+    assert sd.id == norm["id"]
+    findings2 = validate_symbol_def(sd)
+    assert not any(f.severity == SEVERITY_ERROR for f in findings2)
+
+
+def test_missing_optional_pins_and_prims_lists():
+    doc = blank_symbol("Empty artwork")
+    doc.pop("pins", None)
+    doc.pop("prims", None)
+    findings = validate_document({**doc, "pins": [], "prims": []})
+    assert not any(f.severity == SEVERITY_ERROR for f in findings)
+    norm = normalise(doc)
+    assert norm["pins"] == []
+    assert norm["prims"] == []
+
+
+def test_invalid_field_types_for_core_metadata():
+    doc = _valid_custom_doc()
+    doc["pins"] = {"not": "a list"}
+    findings = validate_document(doc)
+    assert any("pins must be a list" in f.problem for f in findings)
+
+    doc2 = _valid_custom_doc()
+    doc2["prims"] = "line"
+    findings2 = validate_document(doc2)
+    assert any("prims must be a list" in f.problem for f in findings2)
+
+    with pytest.raises(SymbolFormatError, match=r"JSON object|not an OpenSchematix"):
+        load_symbol_json("[1, 2, 3]", source="array.osym")
