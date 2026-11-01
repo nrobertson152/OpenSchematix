@@ -62,6 +62,7 @@ class Net:
 
 
 
+
 def pin_ref_connects(doc, ref) -> bool:
     """True if *ref* is a wire end that should join the electrical netlist.
 
