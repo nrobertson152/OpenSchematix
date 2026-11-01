@@ -111,3 +111,25 @@ def test_dxf_rejects_mtext_output_shape_amplification():
 def test_dxf_accepts_mtext_below_output_budget():
     data = _entity("MTEXT", [(10, 0), (20, 0), (40, 2.5), (1, r"X\PY")])
     assert len(dxf.import_dxf(data, max_entities=2).shapes) == 2
+
+
+@pytest.mark.parametrize("attachment", [1, 7])
+def test_dxf_rejects_mtext_nonfinite_line_spacing(attachment):
+    data = _entity("MTEXT", [(10, 0), (20, 0), (40, "3e307"),
+                              (71, attachment), (1, r"First\PSecond")])
+    with pytest.raises(dxf.DxfError, match="finite range"):
+        dxf.import_dxf(data)
+
+
+def test_dxf_rejects_mtext_nonfinite_derived_line_position():
+    data = _entity("MTEXT", [(10, "1e308"), (20, 0), (40, "1e307"),
+                              (71, 1), (1, r"First\PSecond")])
+    with pytest.raises(dxf.DxfError, match="finite range"):
+        dxf.import_dxf(data)
+
+
+@pytest.mark.parametrize("units", ["invalid", 42, [], {}])
+def test_dxf_rejects_invalid_units_override_with_dxf_error(units):
+    data = _entity("LINE", [(10, 0), (20, 0), (11, 1), (21, 1)])
+    with pytest.raises(dxf.DxfError, match="units override"):
+        dxf.import_dxf(data, units=units)
