@@ -981,12 +981,15 @@ if shutil.which("import") and cv.winfo_depth() >= 24:
     app.set_selection(set())
     INK, PAPER, SEL = (cv.colors[k].lower() for k in ("ink", "paper", "select"))
     P = {"fill": (48, 30), "annulus": (70, 64), "island": (70, 50), "outside": (130, 50)}
+    # Off-sheet pixels show the canvas background, which differs from paper.
+    # Record it independently before selecting or moving the fill.
+    outside_color = pixel(M(P["outside"]))
     got = {k: pixel(M(v)) for k, v in P.items()}
-    check(got == {"fill": INK, "annulus": PAPER, "island": INK, "outside": PAPER},
+    check(got == {"fill": INK, "annulus": PAPER, "island": INK, "outside": outside_color},
           f"screen: fill drawn, hole empty, island filled separately ({got})")
     app.set_selection({outer.id})
     got = {k: pixel(M(v)) for k, v in P.items()}
-    check(got == {"fill": SEL, "annulus": PAPER, "island": INK, "outside": PAPER},
+    check(got == {"fill": SEL, "annulus": PAPER, "island": INK, "outside": outside_color},
           f"screen: selection recolours the fill but not its hole ({got})")
     cv.set_zoom(cv.zoom * 2.7, anchor=cv.to_screen(M((70, 50))))
     cv.ox += 15
@@ -994,14 +997,16 @@ if shutil.which("import") and cv.winfo_depth() >= 24:
     got = {k: pixel(M(P[k])) for k in ("fill", "annulus", "island")}
     check(got == {"fill": SEL, "annulus": PAPER, "island": INK}, f"screen: correct after zoom and pan ({got})")
     cv.fit()
+    # Sample the destination island's background before the move.
+    moved_island_background = pixel(M((P["island"][0] + 130, P["island"][1])))
     cmd("M")
     cmd("20,20")
     cmd("@130,0")
     app.set_selection(set())
     got = {k: pixel(M(v)) for k, v in P.items()}
     moved = {k: pixel(M((P[k][0] + 130, P[k][1]))) for k in ("fill", "annulus", "island")}
-    check(got == {"fill": PAPER, "annulus": PAPER, "island": INK, "outside": PAPER} and
-          moved == {"fill": INK, "annulus": PAPER, "island": PAPER}, f"screen: correct after MOVE ({got}, {moved})")
+    check(got == {"fill": PAPER, "annulus": PAPER, "island": INK, "outside": outside_color} and
+          moved == {"fill": INK, "annulus": PAPER, "island": moved_island_background}, f"screen: correct after MOVE ({got}, {moved})")
     app.settings["show_grid"] = grid_was
 else:
     print("  (ImageMagick 'import' or a 24-bit display not available: pixel checks skipped)")
