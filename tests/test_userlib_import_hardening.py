@@ -219,3 +219,36 @@ def test_package_merge_replace_keeps_identity(tmp_path):
     count = userlib.import_package(info, lib, mode="merge", target="Original", on_conflict="replace")
     assert count["replaced"] == 1 and len(lib.entries) == 1
     assert lib.entries[d["id"]].name == "Updated"
+
+
+
+def test_scan_recovers_interrupted_package_import_backup(tmp_path):
+    root = tmp_path / "user-libs"
+    lib = userlib.UserLibrary(str(root))
+    doc = symbol_doc("Protected")
+    original = lib.save_symbol(doc, "Original")
+    original_name = Path(original.path).name
+    original_bytes = Path(original.path).read_bytes()
+
+    interrupted = tmp_path / ".osymlib-import-simulated"
+    interrupted.mkdir()
+    (interrupted / "target.txt").write_text(str(root), encoding="utf-8")
+    os.replace(root, interrupted / "previous")
+    assert not root.exists()
+
+    lib.scan()
+    assert root.exists()
+    assert (root / "Original" / original_name).read_bytes() == original_bytes
+    assert doc["id"] in lib.entries
+
+
+def test_scan_does_not_restore_another_librarys_backup(tmp_path):
+    root = tmp_path / "unrelated"
+    interrupted = tmp_path / ".osymlib-import-other"
+    backup = interrupted / "previous"
+    backup.mkdir(parents=True)
+    (interrupted / "target.txt").write_text(str(tmp_path / "different"), encoding="utf-8")
+    lib = userlib.UserLibrary(str(root))
+    lib.scan()
+    assert not root.exists()
+    assert backup.exists()
