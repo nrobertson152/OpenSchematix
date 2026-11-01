@@ -728,7 +728,7 @@ def import_dxf(raw: bytes, units: str | None = None, scale: float = 1.0, origin=
                     vx, vy = math.cos(a), math.sin(a)
                     return math.degrees(math.atan2(m[1] * vx + m[3] * vy, m[0] * vx + m[2] * vy)) % 360
                 st = mapped(en) if mirrored(m) else mapped(st)
-                add(t, Shape(nid(), "arc", c=c, r=e.f(40) * k * mscale(m), start=st, extent=ext, dash=dash), ly)
+                add(t, Shape(nid(), "arc", c=c, r=scaled_length(e.f(40), m), start=st, extent=ext, dash=dash), ly)
             elif t == "ELLIPSE":
                 cx, cy = e.f(10), e.f(20)
                 mx, my = e.f(11), e.f(21)
