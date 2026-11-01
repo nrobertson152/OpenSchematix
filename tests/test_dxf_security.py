@@ -133,3 +133,11 @@ def test_dxf_rejects_invalid_units_override_with_dxf_error(units):
     data = _entity("LINE", [(10, 0), (20, 0), (11, 1), (21, 1)])
     with pytest.raises(dxf.DxfError, match="units override"):
         dxf.import_dxf(data, units=units)
+
+
+@pytest.mark.parametrize("bulge", ["1", "1e308"])
+def test_dxf_rejects_extreme_polyline_bulge_geometry(bulge):
+    data = _entity("LWPOLYLINE", [(10, "-1e308"), (20, 0), (42, bulge),
+                                    (10, "1e308"), (20, 0)])
+    with pytest.raises(dxf.DxfError, match="finite range"):
+        dxf.import_dxf(data)
