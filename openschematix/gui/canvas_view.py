@@ -45,12 +45,19 @@ def region_screen_points(rings, to_screen, zoom) -> list:
 
 
 def draw_items(cv: tk.Canvas, items, to_screen, zoom, colors, font_family, selected=(), override=None,
-               tag="scene", color_fn=None, hovered=None, width_scale=1.0):
-    """Draw scene primitives on a Tk canvas. `colors` is a Theme (or dict)."""
+               tag="scene", color_fn=None, hovered=None, width_scale=1.0, hover_index=None):
+    """Draw scene primitives on a Tk canvas. `colors` is a Theme (or dict).
+
+    `hover_index` (optional HoverIndex): records the canvas items whose color hover would change (not
+    overridden, not selected), so the hover highlight can later be moved without redrawing."""
     sel_col = colors["select"]
+    record = hover_index is not None
+    if record:
+        rec_item, rec_cid = hover_index.items.append, hover_index.cids.append
     for it in items:
         role = it.get("role", "ink")
         item = it.get("item")
+        hoverable = False
         if override:
             color = override
         elif color_fn is not None:
@@ -59,36 +66,39 @@ def draw_items(cv: tk.Canvas, items, to_screen, zoom, colors, font_family, selec
                 continue
         elif item is not None and item in selected:
             color = sel_col
-        elif item is not None and item == hovered:
-            color = colors["hover"]
-        elif it.get("color"):
-            color = it["color"]
-        elif role == "designator":
-            color = colors["ink"]
         else:
-            color = colors.get(role, colors["ink"]) if hasattr(colors, "get") else colors["ink"]
+            if it.get("color"):
+                normal = it["color"]
+            elif role == "designator":
+                normal = colors["ink"]
+            else:
+                normal = colors.get(role, colors["ink"]) if hasattr(colors, "get") else colors["ink"]
+            hoverable = item is not None
+            color = colors["hover"] if hoverable and item == hovered else normal
         w = max(1.0, it.get("wpx", 1.4) * zoom * width_scale)
         if item is not None and item in selected and not override:
             w += 1
         dash = (max(2, int(6 * zoom)), max(2, int(3 * zoom))) if it.get("dash") else None
         k = it["k"]
+        cid = None
         if k == "line":
             pts = [v for p in it["pts"] for v in to_screen(p)]
             if len(pts) >= 4:
-                cv.create_line(*pts, fill=color, width=w, dash=dash, capstyle="round", joinstyle="round", tags=tag)
+                cid = cv.create_line(*pts, fill=color, width=w, dash=dash, capstyle="round", joinstyle="round",
+                                     tags=tag)
         elif k == "poly":
             pts = [v for p in it["pts"] for v in to_screen(p)]
-            cv.create_polygon(*pts, outline=color, fill=color if it.get("fill") else "", width=w, dash=dash,
-                              joinstyle="round", tags=tag)
+            cid = cv.create_polygon(*pts, outline=color, fill=color if it.get("fill") else "", width=w, dash=dash,
+                                    joinstyle="round", tags=tag)
         elif k == "region":
             pts = region_screen_points(it["rings"], to_screen, zoom)
             if len(pts) >= 6:
-                cv.create_polygon(*pts, outline="", fill=color, width=0, tags=tag)
+                cid = cv.create_polygon(*pts, outline="", fill=color, width=0, tags=tag)
         elif k == "circle":
             x, y = to_screen(it["c"])
             r = it["r"] * zoom
-            cv.create_oval(x - r, y - r, x + r, y + r, outline=color, fill=color if it.get("fill") else "",
-                           width=w, dash=dash, tags=tag)
+            cid = cv.create_oval(x - r, y - r, x + r, y + r, outline=color, fill=color if it.get("fill") else "",
+                                 width=w, dash=dash, tags=tag)
         elif k == "text":
             px = it.get("size", 10) * zoom
             if px < 3:
@@ -99,7 +109,49 @@ def draw_items(cv: tk.Canvas, items, to_screen, zoom, colors, font_family, selec
             kw = {}
             if it.get("angle"):
                 kw["angle"] = it["angle"]
-            cv.create_text(x, y, text=it["s"], fill=color, font=font, anchor=anchor, tags=tag, **kw)
+            cid = cv.create_text(x, y, text=it["s"], fill=color, font=font, anchor=anchor, tags=tag, **kw)
+        if record and hoverable and cid is not None:
+            rec_item(item)
+            rec_cid(cid)
+            if item == hovered:
+                hover_index.normal[cid] = normal
+
+
+class HoverIndex:
+    """Canvas items of each hoverable document item, as drawn by one full redraw (see draw_items).
+
+    Recording is two list appends per canvas item; the item -> canvas ids map is built on first use.
+    `normal` holds the un-hovered color of canvas items currently drawn in the hover color."""
+    __slots__ = ("items", "cids", "normal", "_map")
+
+    def __init__(self):
+        self.items, self.cids, self.normal, self._map = [], [], {}, None
+
+    def canvas_ids(self, item):
+        if self._map is None:
+            m = {}
+            for it, cid in zip(self.items, self.cids):
+                m.setdefault(it, []).append(cid)
+            self._map = m
+        return self._map.get(item, ())
+
+
+def recolor(cv: tk.Canvas, cid, color):
+    """Set the drawing color of one canvas item drawn by draw_items, exactly as draw_items would have
+    drawn it in `color`: lines and text use `fill`; polygons and ovals use `outline`, and `fill` when they
+    are filled (an empty option means "not drawn" and stays empty). Returns the previous color."""
+    if cv.type(cid) in ("line", "text"):
+        old = cv.itemcget(cid, "fill")
+        cv.itemconfigure(cid, fill=color)
+        return old
+    outline, fill = cv.itemcget(cid, "outline"), cv.itemcget(cid, "fill")
+    kw = {}
+    if outline:
+        kw["outline"] = color
+    if fill:
+        kw["fill"] = color
+    cv.itemconfigure(cid, **kw)
+    return outline or fill
 
 
 # ================================================================ base view
@@ -273,6 +325,10 @@ class SchematicCanvas(DrawingView):
         self.request = None          # current interactive request
         self._fitted = False
         self._scene_cache = None
+        # hover highlighting without redraws: canvas items per document item (rebuilt by every full
+        # redraw) and the item currently drawn highlighted
+        self._hover_index = HoverIndex()
+        self._hover_shown = None
         self.bind("<Configure>", self._on_configure)
         self.bind("<Motion>", self._on_motion)
         self.bind("<ButtonPress-1>", self._on_press)
@@ -338,8 +394,11 @@ class SchematicCanvas(DrawingView):
         conn = analyse(doc)
         self.app.update_connection_status(conn)
         items = scene(doc, screen=self.app.settings["show_markers"], conn=conn, project=self.app.project)
+        hovered = self.hover if self.tool == "select" and self.request is None else None
+        self._hover_index = HoverIndex()
         draw_items(self, items, self.to_screen, self.zoom, c, self.font_family, selected=self.app.selection,
-                   hovered=self.hover if self.tool == "select" and self.request is None else None)
+                   hovered=hovered, hover_index=self._hover_index)
+        self._hover_shown = hovered
         for i in self.app.selection:
             o = doc.item(i)
             if isinstance(o, Component):
@@ -619,11 +678,33 @@ class SchematicCanvas(DrawingView):
         self.redraw()
 
     # ---------------------------------------------------------------- events
+    def _set_hover(self, h):
+        """Change the hovered item. Only the colors of the canvas items of the previously and newly
+        hovered objects change, so no connectivity, scene or canvas rebuild is needed. If a full redraw is
+        already pending it draws the new state itself."""
+        if h == self.hover:
+            return
+        self.hover = h
+        if self._redraw_pending:
+            return
+        shown = self._hover_shown
+        if h == shown:
+            return
+        index = self._hover_index
+        if shown is not None:
+            for cid in index.canvas_ids(shown):
+                normal = index.normal.pop(cid, None)
+                if normal is not None:
+                    recolor(self, cid, normal)
+        if h is not None:
+            hov = self.colors["hover"]
+            for cid in index.canvas_ids(h):
+                index.normal[cid] = recolor(self, cid, hov)
+        self._hover_shown = h
+
     def _on_leave(self, _e):
         self.app.show_cursor(None)
-        if self.hover is not None:
-            self.hover = None
-            self.redraw()
+        self._set_hover(None)
 
     def _on_motion(self, e):
         self.raw_cursor = self._event_world(e)
@@ -644,9 +725,7 @@ class SchematicCanvas(DrawingView):
             self._draw_overlay()
         elif self.tool == "select" and not self.drag:
             h = editing.hit_test(self.doc, self.raw_cursor, PICK_PX / self.zoom, self.selectable)
-            if h != self.hover:
-                self.hover = h
-                self.redraw()
+            self._set_hover(h)
 
     def _on_press(self, e):
         self.focus_set()

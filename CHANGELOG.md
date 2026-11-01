@@ -56,6 +56,9 @@ All notable changes to this project are documented here. Versions follow [Semant
   that share a cell of a per-call grid index instead of every pair. Results and their order are identical;
   crossing detection on the 1,152-component benchmark sheet drops from 0.34 s to 0.009 s and a full canvas
   redraw from about 0.56 s to about 0.22 s. No caching was introduced.
+- Performance: moving the mouse onto, off or between objects no longer redraws the whole drawing; only the
+  colors of the previously and newly highlighted objects' canvas items change. Appearance is unchanged; a
+  hover change on the 1,152-component benchmark sheet takes about 6 ms instead of about 0.27 s.
 - File format: new `hatch` drafting shape and sheet schema 3. Projects and `.osch` sheets are written with the
   lowest schema that can hold their content, so files without fills remain schema 2 and open in 1.0.x;
   1.0.x refuses files with fills with a clear "newer schema" message. A fill stored only in the revision
