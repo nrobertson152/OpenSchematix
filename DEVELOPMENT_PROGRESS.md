@@ -443,10 +443,16 @@ and used via PYTHONPATH (bootloaders are in the repo). Standalone-Python builds 
   drop in `Document.from_dict`.
 - **Writing:** `projectio.check_savable` runs before the revision snapshot; members are written with
   `allow_nan=False`; `fileio.save` checks too.
+- **Failed saves change nothing (PR #47 review, Issue #50):** serialising re-embeds custom symbols
+  (`Project.to_dict` → `embed_symbols`: newer registered definitions replace embedded ones, unused ones
+  are dropped). `save_project` now restores `project.symbols` with the revision store on any failure
+  (preflight, snapshot, verification, write), and `check_savable` restores it too. A committed save keeps
+  the re-embedded symbols. `export_project_copy` and recovery autosaves still re-embed in memory, as the
+  GUI's undo-state key (`App.snapshot` → `to_dict`) does on every edit; they are not save transactions.
 - **GUI (`gui/errors.py`):** `report_callback_exception` and `sys.excepthook` log to
   `<config>/logs/openschematix-errors.log` (rotated at 1 MB) and show a dialog naming only the error type
   and the log; one dialog at a time, same error at most every 30 s. Start-up failures exit with status 1.
 - **Fuzz:** `tools/fuzz_project_loader.py` (node and container mutations, then Check/netlist/BOM/exports/
   revision restore/save). main @ 6a9c543: 337 leaked and 94 latent crashes in 4,148 files; this branch: 0
   in 4,148, and 0 in 4 × 12,148 other seeds.
-- Tests: `tests/test_project_file_reliability.py` (98), `tests/test_gui_error_reporting.py` (11, Tk).
+- Tests: `tests/test_project_file_reliability.py` (107), `tests/test_gui_error_reporting.py` (11, Tk).

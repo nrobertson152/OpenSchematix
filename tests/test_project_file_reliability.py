@@ -511,3 +511,84 @@ def test_symbol_format_error_is_retained_and_round_trips(tmp_path, files):
     with zipfile.ZipFile(output) as z:
         saved_doc = json.loads(z.read(member))
     assert saved_doc == source_doc
+
+
+# ---------------------------------------------------------------- independent PR #47 review (Issue #50)
+# A save runs Project.to_dict(), which re-embeds custom symbols from the
+# registry (Project.embed_symbols): it takes a newer registered definition of
+# a used symbol and drops definitions no drawing uses. A save that fails must
+# leave the project exactly as it was, embedded symbols included.
+def _diverged_symbols_project():
+    """A saved project whose next to_dict() would change project.symbols in
+    both ways: the registry holds a newer definition of the used custom symbol
+    (registered as this project's own, as the symbol editor does), and an
+    unused definition is embedded."""
+    from openschematix.symbols.custom import to_symdef
+    p = rich_project()
+    sid = next(iter(p.symbols))
+    p.activate_symbols()
+    newer = dict(p.symbols[sid], revision=p.symbols[sid].get("revision", 0) + 1)
+    newer["prims"] = [{"k": "circle", "c": [0, 0], "r": 15}]
+    symbols.add_project_symbol(to_symdef(normalise(newer)))
+    p.symbols["user:00000000000000ff"] = normalise(dict(sensor_doc(), id="user:00000000000000ff"))
+    return p, sid
+
+
+def _canonical_symbols(p):
+    return json.dumps(p.symbols, sort_keys=True)
+
+
+def _save_state(path, store):
+    return open(path, "rb").read(), list(store.entries), dict(store.objects)
+
+
+def test_failed_preflight_leaves_embedded_symbols_unchanged(tmp_path):
+    p, _sid = _diverged_symbols_project()
+    path = str(tmp_path / "unchanged.schematix")
+    projectio.atomic_write_bytes(path, b"previous file")
+    store = p.revisions
+    before = _canonical_symbols(p)
+    state = _save_state(path, store)
+    p.sheets[0].components[next(iter(p.sheets[0].components))].x = float("nan")
+
+    with pytest.raises(projectio.ProjectFormatError, match="not a finite number"):
+        projectio.save_project(p, path)
+    assert _canonical_symbols(p) == before
+    assert p.revisions is store and _save_state(path, store) == state
+
+
+@pytest.mark.parametrize("stage", ["verify", "write"])
+def test_failure_after_snapshot_leaves_embedded_symbols_unchanged(tmp_path, monkeypatch, stage):
+    p, _sid = _diverged_symbols_project()
+    path = str(tmp_path / "unchanged.schematix")
+    projectio.atomic_write_bytes(path, b"previous file")
+    store = p.revisions
+    before = _canonical_symbols(p)
+    state = _save_state(path, store)
+    editing.place(p.sheets[0], "el.resistor.iec", 900, 100)   # content changed: a snapshot is recorded
+
+    def fail(*_args):
+        raise OSError(f"{stage} failed")
+    monkeypatch.setattr(projectio, "_verify" if stage == "verify" else "atomic_write_bytes", fail)
+    with pytest.raises(OSError, match=f"{stage} failed"):
+        projectio.save_project(p, path)
+    assert _canonical_symbols(p) == before
+    assert p.revisions is store and _save_state(path, store) == state
+
+
+def test_check_savable_does_not_mutate_the_project():
+    p, _sid = _diverged_symbols_project()
+    before = _canonical_symbols(p)
+    projectio.check_savable(p)
+    assert _canonical_symbols(p) == before
+
+
+def test_successful_save_still_embeds_newer_and_drops_unused_symbols(tmp_path):
+    """The rollback must not stop a committed save from re-embedding."""
+    p, sid = _diverged_symbols_project()
+    path = str(tmp_path / "saved.schematix")
+    projectio.save_project(p, path)
+    assert [pr["r"] for pr in p.symbols[sid]["prims"]] == [15]
+    assert "user:00000000000000ff" not in p.symbols
+    res = projectio.open_any(path)
+    assert _canonical_symbols(res.project) == _canonical_symbols(p)

@@ -88,13 +88,29 @@ def _dumps(obj, member: str) -> str:
     return json.dumps(obj, indent=1, ensure_ascii=False, allow_nan=False)
 
 
+def _restore_symbols(project: Project, saved: dict) -> None:
+    """Put back the embedded-symbol map captured by dict(project.symbols).
+
+    Serialising (Project.to_dict -> embed_symbols) re-embeds custom symbols:
+    it replaces or deletes entries of project.symbols but never edits a
+    definition in place, so a shallow copy restores it exactly. The dict is
+    restored in place to keep its identity for callers holding it."""
+    project.symbols.clear()
+    project.symbols.update(saved)
+
+
 def check_savable(project: Project) -> None:
     """Validate every serialized member before recording a save snapshot.
 
     Sheets alone are insufficient: embedded symbols, the manifest and the
-    revision index must also be serializable. This does not mutate the project.
+    revision index must also be serializable. This does not mutate the project:
+    the embedded symbols that serialising re-embeds are restored afterwards.
     """
-    project_bytes(project)
+    saved = dict(project.symbols)
+    try:
+        project_bytes(project)
+    finally:
+        _restore_symbols(project, saved)
 
 
 def write_zip(project: Project, fileobj):
@@ -148,8 +164,12 @@ def atomic_write_bytes(path: str, data: bytes):
 
 def save_project(project: Project, path: str, snapshot: bool = True):
     """Save atomically. With `snapshot`, an automatic revision snapshot is
-    recorded first if the content changed since the last snapshot."""
-    check_savable(project)      # validate all existing members before mutation
+    recorded first if the content changed since the last snapshot.
+
+    A save that fails leaves the project as it was: no new revision, and the
+    embedded symbols unchanged (serialising re-embeds them, see
+    _restore_symbols); a committed save keeps the re-embedded symbols."""
+    original_symbols = dict(project.symbols)
     original_store = project.revisions
     # Keep the original store identity for any callers holding a reference.
     # A failed serialization, verification, or disk write must not leave a
@@ -162,6 +182,7 @@ def save_project(project: Project, path: str, snapshot: bool = True):
             dict(original_store._schema_cache),
         )
     try:
+        check_savable(project)      # validate all existing members before recording a snapshot
         if project.revisions is None:
             project.revisions = RevisionStore()
         if snapshot:
@@ -171,6 +192,7 @@ def save_project(project: Project, path: str, snapshot: bool = True):
         _verify(data)
         atomic_write_bytes(path, data)
     except BaseException:
+        _restore_symbols(project, original_symbols)
         if original_store is None:
             project.revisions = None
         else:
