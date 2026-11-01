@@ -202,7 +202,9 @@ def numberable(project, n: Net) -> bool:
     if not n.wires:
         return False
     doms = net_domain(project, n)
-    return not doms or "elec" in doms
+    # A mixed-domain net is invalid (reported by ERC), not an electrical net.
+    # Domain-neutral terminals do not restrict otherwise electrical nets.
+    return not doms or doms == {"elec"}
 
 
 def assign_wire_numbers(project, renumber: bool = False) -> int:
@@ -227,6 +229,12 @@ def assign_wire_numbers(project, renumber: bool = False) -> int:
     pending = []
     for n in nets:
         if not numberable(project, n):
+            # A wire can acquire a fluid-domain terminal after being numbered.
+            # Remove stale automatic numbers, but never erase user overrides.
+            for u, i in n.wires:
+                w = wire(u, i)
+                if not w.number_manual:
+                    w.number = ""
             continue
         manual = sorted({wire(u, i).number for u, i in n.wires if wire(u, i).number_manual and wire(u, i).number})
         autos = sorted({wire(u, i).number for u, i in n.wires if not wire(u, i).number_manual and wire(u, i).number},
