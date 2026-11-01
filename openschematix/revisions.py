@@ -236,11 +236,11 @@ class RevisionStore:
 
 
 def _describe(raw, i: int) -> str:
-    """Name of an index entry for a message: its number and label if usable."""
+    """Identify a damaged entry without exposing user-supplied labels."""
     if isinstance(raw, dict):
-        n, label = raw.get("n"), raw.get("label")
-        if isinstance(n, int) and not isinstance(n, bool):
-            return f"revision #{n}" + (f" ({label})" if isinstance(label, str) and label else "")
+        n = raw.get("n")
+        if isinstance(n, int) and not isinstance(n, bool) and n >= 1:
+            return f"revision #{n}"
     return f"revision entry {i + 1}"
 
 
