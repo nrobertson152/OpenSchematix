@@ -619,7 +619,16 @@ def import_dxf(raw: bytes, units: str | None = None, scale: float = 1.0, origin=
         return (px, py)
 
     def mscale(m):
-        return math.sqrt(abs(m[0] * m[3] - m[1] * m[2]))
+        value = math.sqrt(abs(m[0] * m[3] - m[1] * m[2]))
+        if not math.isfinite(value):
+            raise DxfError("DXF transform scale exceeds finite range")
+        return value
+
+    def scaled_length(value, m):
+        result = value * k * mscale(m)
+        if not math.isfinite(result):
+            raise DxfError("DXF geometry size exceeds finite range")
+        return result
 
     def mrot(m):
         return math.degrees(math.atan2(m[1], m[0]))
@@ -634,6 +643,8 @@ def import_dxf(raw: bytes, units: str | None = None, scale: float = 1.0, origin=
         return ACI.get(abs(ci), "")
 
     def add(kind_name, shape, layer):
+        if len(rep.shapes) >= max_entities:
+            raise DxfError(f"the drawing emits more than {max_entities} shapes")
         shape.layer = layer
         rep.shapes.append(shape)
         rep.counts[kind_name] = rep.counts.get(kind_name, 0) + 1
@@ -706,7 +717,7 @@ def import_dxf(raw: bytes, units: str | None = None, scale: float = 1.0, origin=
                     add(t, Shape(nid(), "line" if len(mp) == 2 else "polyline", pts=mp, dash=dash), ly)
             elif t == "CIRCLE":
                 c = tr(m, e.f(10), e.f(20))
-                add(t, Shape(nid(), "circle", c=c, r=e.f(40) * k * mscale(m), dash=dash), ly)
+                add(t, Shape(nid(), "circle", c=c, r=scaled_length(e.f(40), m), dash=dash), ly)
             elif t == "ARC":
                 c = tr(m, e.f(10), e.f(20))
                 st, en = e.f(50), e.f(51)
@@ -763,7 +774,7 @@ def import_dxf(raw: bytes, units: str | None = None, scale: float = 1.0, origin=
                 s = _unescape(e.get(1) or "")
                 if not s.strip():
                     continue
-                h = e.f(40, 2.5) * k * mscale(m)
+                h = scaled_length(e.f(40, 2.5), m)
                 hal, val = e.i(72), e.i(73)
                 if hal or val:
                     x, y = e.f(11, e.f(10)), e.f(21, e.f(20))
@@ -777,7 +788,7 @@ def import_dxf(raw: bytes, units: str | None = None, scale: float = 1.0, origin=
             elif t == "MTEXT":
                 raw_s = "".join(e.all(3)) + (e.get(1) or "")
                 lines = [_unescape(x) for x in mtext_plain(raw_s)]
-                h = e.f(40, 2.5) * k * mscale(m)
+                h = scaled_length(e.f(40, 2.5), m)
                 att = e.i(71, 1)
                 anchor = {1: "nw", 2: "n", 3: "ne", 4: "w", 5: "c", 6: "e", 7: "sw", 8: "s", 9: "se"}.get(att, "nw")
                 ang = e.f(50)
