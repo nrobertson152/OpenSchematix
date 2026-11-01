@@ -509,45 +509,96 @@ def read_package(path: str, lib: UserLibrary | None = None) -> PackageInfo:
 
 def import_package(info: PackageInfo, lib: UserLibrary, mode: str = "separate", target: str = "",
                    on_conflict: str = "duplicate", selected_ids=None) -> dict:
-    """Import a previewed package.
+    """Import all selected symbols as one filesystem transaction.
 
-    mode "separate": create a new top-level library named after the package
-                     (made unique), keeping the package's folder structure.
-    mode "merge":    import into folder `target` (an existing library or
-                     folder), merging folders with the same names.
-    on_conflict for symbols whose id already exists: skip | replace | duplicate
-    (duplicate = import as a new symbol with a new id).
-    Returns counts {"imported", "skipped", "replaced", "duplicated"}."""
-    if mode == "separate":
-        base = safe_name(info.name, "Imported library")
-        name, n = base, 2
-        while os.path.exists(lib.abs(name)):
-            name = f"{base} ({n})"
-            n += 1
-        os.makedirs(lib.abs(name))
-        root = name
-    else:
-        root = target
-        os.makedirs(lib.abs(root), exist_ok=True)
-    for f in info.folders:
-        os.makedirs(lib.abs(f"{root}/{f}" if root else f), exist_ok=True)
-    counts = {"imported": 0, "skipped": 0, "replaced": 0, "duplicated": 0}
-    for it in info.items:
-        if selected_ids is not None and it.id not in selected_ids:
-            continue
-        folder = "/".join(x for x in (root, it.folder) if x)
-        exists = it.id in lib.entries
-        res = lib.import_symbol_doc(it.doc, folder, on_conflict if exists else "replace")
-        if res is None:
-            counts["skipped"] += 1
-        elif exists and on_conflict == "replace":
-            counts["replaced"] += 1
-        elif exists:
-            counts["duplicated"] += 1
+    Work is performed in a private sibling staging tree. An exception before
+    commit leaves the original library untouched; a commit error restores the
+    original tree. No project, symbol or package files are modified in place.
+    """
+    if mode not in ("separate", "merge"):
+        raise ValueError(f"invalid import mode {mode!r}")
+    if on_conflict not in ("skip", "replace", "duplicate"):
+        raise ValueError(f"invalid symbol conflict action {on_conflict!r}")
+    if not isinstance(target, str) or (target and not _rel_ok(target)):
+        raise ValueError(f"invalid destination folder {target!r}")
+    for folder in info.folders:
+        if not isinstance(folder, str) or not _rel_ok(folder):
+            raise ValueError(f"invalid package folder {folder!r}")
+    for item in info.items:
+        if not isinstance(item.folder, str) or (item.folder and not _rel_ok(item.folder)):
+            raise ValueError(f"invalid symbol folder {item.folder!r}")
+        if selected_ids is None or item.id in selected_ids:
+            to_symdef(item.doc)  # preflight complete symbol geometry before writing
+
+    original_root = os.path.abspath(lib.root)
+    parent = os.path.dirname(original_root)
+    os.makedirs(parent, exist_ok=True)
+    workdir = tempfile.mkdtemp(prefix=".osymlib-import-", dir=parent)
+    staged_root = os.path.join(workdir, "staged")
+    backup_root = os.path.join(workdir, "previous")
+    failed_root = os.path.join(workdir, "failed")
+    original_exists = os.path.isdir(original_root)
+    user_registry = symbols.user_symbols()
+    moved_old = moved_new = False
+    try:
+        if original_exists:
+            shutil.copytree(original_root, staged_root)
         else:
-            counts["imported"] += 1
-    lib.scan()
-    return counts
+            os.makedirs(staged_root)
+        staged = UserLibrary(staged_root)
+        staged.scan()
+        if mode == "separate":
+            base = safe_name(info.name, "Imported library")
+            name, n = base, 2
+            while os.path.exists(staged.abs(name)):
+                name = f"{base} ({n})"
+                n += 1
+            os.makedirs(staged.abs(name))
+            root = name
+        else:
+            root = target
+            os.makedirs(staged.abs(root), exist_ok=True)
+        for folder in info.folders:
+            os.makedirs(staged.abs(f"{root}/{folder}" if root else folder), exist_ok=True)
+        counts = {"imported": 0, "skipped": 0, "replaced": 0, "duplicated": 0}
+        for item in info.items:
+            if selected_ids is not None and item.id not in selected_ids:
+                continue
+            folder = "/".join(x for x in (root, item.folder) if x)
+            exists = item.id in staged.entries
+            res = staged.import_symbol_doc(item.doc, folder, on_conflict if exists else "replace")
+            if res is None:
+                counts["skipped"] += 1
+            elif exists and on_conflict == "replace":
+                counts["replaced"] += 1
+            elif exists:
+                counts["duplicated"] += 1
+            else:
+                counts["imported"] += 1
+
+        if original_exists:
+            os.replace(original_root, backup_root)
+            moved_old = True
+        os.replace(staged_root, original_root)
+        moved_new = True
+        lib.scan()
+        return counts
+    except BaseException:
+        # Neither staged writes nor a partially completed swap may alter
+        # the existing user's library. Keep all backup bytes until restored.
+        if moved_new:
+            os.replace(original_root, failed_root)
+        if moved_old:
+            os.replace(backup_root, original_root)
+        if moved_new or moved_old:
+            lib.scan()
+        else:
+            symbols.set_user_symbols(user_registry.values())
+        raise
+    finally:
+        shutil.rmtree(workdir, ignore_errors=True)
+
+
 
 
 # ================================================================ favourites / recent (in settings)
