@@ -10,7 +10,7 @@
 **[Download the latest version for Windows or Linux](https://github.com/nrobertson152/openschematix/releases/latest)**
 
 **Free and open-source schematic editor for electrical, electronic, hydraulic and pneumatic circuits.**
-Windows and Linux. Version 1.0.1.
+Windows and Linux. Development version 1.1.0 (latest published release: 1.0.1).
 
 Copyright © 2026 Nate Robertson.
 Licensed under the GNU General Public License v3.0 or later (see `LICENSE`).
