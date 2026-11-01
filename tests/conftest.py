@@ -125,3 +125,19 @@ def pytest_collection_modifyitems(config, items):
             item.add_marker(skip_tk)
         elif skip_gui is not None and "gui" in item.keywords:
             item.add_marker(skip_gui)
+
+
+@pytest.fixture(autouse=True)
+def isolate_symbol_registry():
+    """Prevent process-global symbol registry state from leaking between tests.
+
+    Built-in symbols (``_REGISTRY``) are never cleared. Only the project and
+    user layers are saved and restored, matching the production mutators
+    ``set_project_symbols`` / ``set_user_symbols``.
+    """
+    from openschematix import symbols
+    user = symbols.user_symbols()
+    project = symbols.project_symbols()
+    yield
+    symbols.set_user_symbols(user.values())
+    symbols.set_project_symbols(project.values())

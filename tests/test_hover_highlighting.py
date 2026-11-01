@@ -17,6 +17,8 @@ from openschematix.project import Layer
 
 OPTS = ("fill", "outline", "width", "dash", "text", "font", "anchor", "angle", "capstyle", "joinstyle", "tags")
 
+pytestmark = pytest.mark.gui
+
 
 @pytest.fixture(scope="module")
 def env():
@@ -68,10 +70,10 @@ def scene(env):
 
 
 def settle(root):
-    """Process all pending events, including geometry (<Configure>) changes. On Windows a withdrawn
-    window's geometry can be computed late, which changes the canvas size and therefore the grid."""
-    root.update_idletasks()
-    root.update()
+    """Process pending events including geometry. Two passes stabilize Windows withdrawn windows."""
+    for _ in range(2):
+        root.update_idletasks()
+        root.update()
 
 
 def full_redraw(root, app):
@@ -97,6 +99,23 @@ def snapshot(cv):
         out.append((cv.type(cid), tuple(round(v, 3) for v in cv.coords(cid)),
                     tuple((k, str(opts[k][4])) for k in OPTS if k in opts)))
     return out
+
+
+def assert_same_snapshot(a, b, *, context=""):
+    """Require identical snapshots; report the first difference without relaxing equality."""
+    if a == b:
+        return
+    details = []
+    if len(a) != len(b):
+        details.append(f"length {len(a)} != {len(b)}")
+    for i in range(min(len(a), len(b))):
+        if a[i] != b[i]:
+            details.append(f"index {i}: {a[i]!r} != {b[i]!r}")
+            break
+    msg = "canvas snapshot mismatch"
+    if context:
+        msg += f" ({context})"
+    raise AssertionError(msg + ": " + "; ".join(details))
 
 
 def move_to(app, world):
@@ -156,11 +175,12 @@ def test_enter_switch_leave_recolor_without_rebuilding(scene, counting):
 
     move_to(app, (700, 700))                                   # leave to empty space
     assert cv.hover is None
-    assert snapshot(cv) == before                              # every item restored exactly
+    assert_same_snapshot(snapshot(cv), before)                              # every item restored exactly
 
     move_to(app, target_point(app, "r", ids))
     cv._on_leave(None)                                         # pointer leaves the canvas
-    assert cv.hover is None and snapshot(cv) == before
+    assert cv.hover is None
+    assert_same_snapshot(snapshot(cv), before)
 
     settle(root)
     assert cv.find_all() == canvas_ids                         # nothing was recreated
@@ -179,11 +199,11 @@ def test_incremental_hover_equals_full_redraw(scene, key, zoom):
     assert cv.hover == ids[key] and not cv._redraw_pending
     incremental = snapshot(cv)
     reference_redraw(app)                                      # same hover state, drawn from scratch
-    assert incremental == snapshot(cv)
+    assert_same_snapshot(incremental, snapshot(cv))
     move_to(app, (700, 700))
     unhovered = snapshot(cv)
     reference_redraw(app)
-    assert unhovered == snapshot(cv)
+    assert_same_snapshot(unhovered, snapshot(cv))
 
 
 def test_overlapping_objects_pick_and_restore(scene):
@@ -196,9 +216,9 @@ def test_overlapping_objects_pick_and_restore(scene):
     assert cv.hover == ids["r"]
     incremental = snapshot(cv)
     reference_redraw(app)
-    assert incremental == snapshot(cv)
+    assert_same_snapshot(incremental, snapshot(cv))
     move_to(app, (700, 700))
-    assert snapshot(cv) == before
+    assert_same_snapshot(snapshot(cv), before)
 
 
 def test_selected_object_keeps_selection_color(scene):
@@ -209,9 +229,9 @@ def test_selected_object_keeps_selection_color(scene):
     before = snapshot(cv)
     move_to(app, target_point(app, "w", ids))
     assert cv.hover == ids["w"]
-    assert snapshot(cv) == before                # selection color has priority; nothing changes
+    assert_same_snapshot(snapshot(cv), before)                # selection color has priority; nothing changes
     reference_redraw(app)
-    assert snapshot(cv) == before
+    assert_same_snapshot(snapshot(cv), before)
 
 
 # ---------------------------------------------------------------- no stale highlights
@@ -226,7 +246,7 @@ def test_hover_while_redraw_pending_is_drawn_by_the_redraw(scene):
     assert not cv._redraw_pending
     drawn = snapshot(cv)
     reference_redraw(app)
-    assert drawn == snapshot(cv)
+    assert_same_snapshot(drawn, snapshot(cv))
     assert cv._hover_shown == ids["w"]
 
 
@@ -250,7 +270,7 @@ def test_deleting_hovered_object_leaves_no_highlight(scene):
     move_to(app, target_point(app, "red", ids))
     inc = snapshot(cv)
     reference_redraw(app)
-    assert inc == snapshot(cv)
+    assert_same_snapshot(inc, snapshot(cv))
 
 
 def test_edit_undo_tool_and_theme_changes_rebuild_hover_state(scene):
@@ -266,7 +286,7 @@ def test_edit_undo_tool_and_theme_changes_rebuild_hover_state(scene):
     assert cv.hover == ids["r"]
     inc = snapshot(cv)
     reference_redraw(app)
-    assert inc == snapshot(cv)
+    assert_same_snapshot(inc, snapshot(cv))
     # undo
     app.undo()
     # Windows Tk can finish sizing a withdrawn test window after the undo redraw.
@@ -276,7 +296,7 @@ def test_edit_undo_tool_and_theme_changes_rebuild_hover_state(scene):
     move_to(app, target_point(app, "red", ids))
     inc = snapshot(cv)
     reference_redraw(app)
-    assert inc == snapshot(cv)
+    assert_same_snapshot(inc, snapshot(cv))
     # another tool: no hover highlight drawn; back to select
     cv.set_tool("wire")
     settle(root)
@@ -287,7 +307,7 @@ def test_edit_undo_tool_and_theme_changes_rebuild_hover_state(scene):
     move_to(app, target_point(app, "circ", ids))
     inc = snapshot(cv)
     reference_redraw(app)
-    assert inc == snapshot(cv)
+    assert_same_snapshot(inc, snapshot(cv))
     # theme change: hover color comes from the new theme
     old = app.settings["theme"]
     other = "dark" if old != "dark" else "light"
@@ -299,7 +319,7 @@ def test_edit_undo_tool_and_theme_changes_rebuild_hover_state(scene):
         assert all(cv.itemcget(c, "fill") == app.theme["hover"] for c in hover_items(cv, ids["fill"]))
         inc = snapshot(cv)
         reference_redraw(app)
-        assert inc == snapshot(cv)
+        assert_same_snapshot(inc, snapshot(cv))
     finally:
         app.set_theme(old)
         settle(root)
