@@ -394,7 +394,7 @@ class SymbolCollisionDialog(Dialog):
         super().__init__(app, "Edit symbol")
         f = self.frame
         ttk.Label(f, text="This project and your library have different definitions of this symbol",
-                  style="Surface.TLabel", font=("TkDefaultFont", 10, "bold")).pack(anchor="w")
+                  style="Bold.TLabel").pack(anchor="w")
         rows = (("Drawn in this project:", f"{label(drawn)}  ·  connection points {pin_list(drawn)}"),
                 ("In your library:", f"{label(library)}  ·  connection points {pin_list(library)}"))
         grid = ttk.Frame(f, style="Surface.TFrame")

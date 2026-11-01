@@ -2730,8 +2730,8 @@ def symbol_update_message(impact, drawn, library, limit=12) -> str:
     for d in impact.diff.summary():
         if not d.startswith(("different name", "connection points only in the drawn", "connection points in other")):
             lines.append(f"• {d}")
-    lines += ["", "Disconnected wires stay in the drawing but are no longer connected. Edit ▸ Undo reverts "
-                  "the update.", "", "Update the drawings anyway?"]
+    lines += ["", "Disconnected wires stay in the drawing but are no longer connected. Undo (Ctrl+Z) "
+                  "reverts the update.", "", "Update the drawings anyway?"]
     return "\n".join(lines)
 
 

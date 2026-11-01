@@ -13,6 +13,11 @@ All notable changes to this project are documented here. Versions follow [Semant
   `invalid-wire-ref`. Pins are validated against the definition of the project
   that owns the sheet, never another open project's symbol with the same id.
   References to a temporarily unavailable custom symbol keep their attachment.
+- Editing or updating a custom symbol whose id the library holds with a different definition (an older
+  revision, or another symbol saved under the same id) no longer disconnects wires without warning.
+  *Edit symbol* first shows both definitions and asks whether to edit the library symbol or a copy of the
+  project's (Cancel is the default). Before *Update drawings*, OpenSchematix lists every wire end that would
+  be disconnected or re-routed and asks again (No is the default); declining leaves the drawing unchanged.
 
 ### Added
 
