@@ -44,7 +44,11 @@
   from in the symbol editor (*Edit a copy…* / *Open existing symbol*, *Save as new symbol…*). It is informational
   only; older versions ignore it. A copy keeps the source's connection-point ids (for built-in symbols, the
   terminal names such as `1`, `A1`, `P`), so it connects the same way and can replace the original on a drawing
-  without losing wires.
+  without losing wires. Copies can also be made of a `.osym` file (*Edit a copy of a symbol file…*); its
+  `derived_from` names the file's symbol.
+* Making a copy never alters geometry silently: every primitive and connection point of the copy is compared
+  with the source (`symbols/explode.py`, `conversion_losses`), and anything the format above cannot hold
+  exactly is reported as an error instead.
 
 ## A library package: `.osymlib` (version 1)
 

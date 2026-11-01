@@ -295,6 +295,8 @@ class LibraryPanel(ttk.Frame):
         m = make_menu(self)
         m.add_command(label="Import library package (.osymlib)…", command=self.import_package)
         m.add_command(label="Import symbol file (.osym)…", command=self.import_symbol)
+        m.add_command(label="Edit a copy of a symbol file (.osym)…",
+                      command=lambda: self.app.edit_symbol_file_copy(folder=self.selected_folder()))
         x, y = self.winfo_pointerxy()
         m.tk_popup(x, y)
 
@@ -368,6 +370,8 @@ class LibraryPanel(ttk.Frame):
                 m.add_command(label="Export as library package…", command=lambda: self._export_package(folder))
             m.add_command(label="Import library package…", command=self.import_package)
             m.add_command(label="Import symbol file…", command=self.import_symbol)
+            m.add_command(label="Edit a copy of a symbol file…",
+                          command=lambda: self.app.edit_symbol_file_copy(folder=folder or None))
             if folder:
                 m.add_separator()
                 m.add_command(label="Delete folder…", command=lambda: self._delete_folder(folder))
