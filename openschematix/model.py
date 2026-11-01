@@ -378,6 +378,7 @@ class Sheet:
     checked_by: str = ""
     approved_by: str = ""
     description: str = ""
+    drawing_status: str = "Released"  # sheet-level status; legacy drawings default to Released
 
     def size_mm(self):
         if self.size == CUSTOM_SIZE:
@@ -426,6 +427,8 @@ class Sheet:
             s.size = "A3"
         if s.orientation not in ("landscape", "portrait"):
             s.orientation = "landscape"
+        if s.drawing_status not in ("Preliminary", "Released"):
+            s.drawing_status = "Released"
         if s.title_block not in TITLE_BLOCKS:
             s.title_block = "standard"
         if not s.show_title_block:
