@@ -1889,6 +1889,13 @@ class App:
         self.set_selection({i for i in self.doc.all_ids() if self.doc.item(i).layer == name})
 
     # ---------------------------------------------------------------- symbols / templates
+    def project_symbol(self, sid):
+        """Definition of symbol `sid` as the open project draws it: built-in,
+        then the project's own embedded definition, then the user library
+        (Project.symbol_resolver). Never the process-wide registry, which may
+        hold another project's definition of the same custom-symbol id."""
+        return self.project.symbol_resolver()(sid)
+
     def open_symbol_editor(self, doc=None, folder=None, from_builtin=None, copy_of=None, params=None):
         """Open the symbol editor: empty, on a custom symbol `doc` (edited in
         place), or on an editable copy of any symbol `copy_of` (built-in,
@@ -1900,7 +1907,7 @@ class App:
             # clear message instead of an empty editor window.
             from ..symbols.custom import SymbolFormatError
             from ..symbols.explode import symbol_to_doc
-            sd = symbols.get(src)
+            sd = self.project_symbol(src)
             try:
                 if sd is None:
                     raise SymbolFormatError(f"The symbol {src} is not available.")
@@ -1917,7 +1924,7 @@ class App:
 
     def edit_symbol_copy(self, sid, params=None):
         """Open any symbol as an editable copy; the original is never changed."""
-        if symbols.get(sid) is None:
+        if self.project_symbol(sid) is None:
             return None
         return self.open_symbol_editor(copy_of=sid, params=params)
 
@@ -1940,7 +1947,7 @@ class App:
         return self.open_symbol_editor(doc=doc, folder=folder)
 
     def edit_custom_symbol(self, sid):
-        sd = symbols.get(sid)
+        sd = self.project_symbol(sid)
         if sd is None or not sd.is_custom:
             return
         e = self.userlib.entries.get(sid)

@@ -339,7 +339,7 @@ class SymbolEditor(tk.Toplevel):
             self.meta = normalise(copy.deepcopy(doc))
             self.is_new = doc.get("id") not in app.userlib.entries
         elif copy_of is not None:
-            sd = symbols.get(copy_of)
+            sd = app.project_symbol(copy_of)        # the open project's definition, not the registry's
             if sd is None:
                 raise ValueError(f"unknown symbol {copy_of}")
             self.meta = symbol_to_doc(sd, params, as_copy=True)
@@ -1192,7 +1192,7 @@ class SymbolEditor(tk.Toplevel):
                 return None
         from ..symbols.custom import SymbolFormatError
         from ..symbols.explode import symbol_to_doc
-        sd = symbols.get(sid)
+        sd = self.app.project_symbol(sid)
         try:
             if sd is None:
                 raise SymbolFormatError(f"The symbol {sid} is not available.")
