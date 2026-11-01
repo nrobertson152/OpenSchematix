@@ -243,7 +243,11 @@ def test_deleting_hovered_object_leaves_no_highlight(scene):
     colors = {cv.itemcget(c, o) for c in cv.find_withtag("scene") for o in ("fill", "outline")
               if o in cv.itemconfigure(c)}
     assert hov not in colors
-    move_to(app, target_point(app, "red", ids))              # hovering still works afterwards
+    # hovering still works afterwards. Baseline: a settled full redraw (on Windows the redraw after the
+    # deletion can run during a transient re-layout of the withdrawn test window, which then reports a
+    # different size without a <Configure> redraw; unrelated to hover)
+    full_redraw(root, app)
+    move_to(app, target_point(app, "red", ids))
     inc = snapshot(cv)
     reference_redraw(app)
     assert inc == snapshot(cv)
