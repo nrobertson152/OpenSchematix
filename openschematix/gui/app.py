@@ -1889,11 +1889,32 @@ class App:
         self.set_selection({i for i in self.doc.all_ids() if self.doc.item(i).layer == name})
 
     # ---------------------------------------------------------------- symbols / templates
+    def project_symbol(self, sid):
+        """Definition of symbol `sid` as the open project draws it: built-in,
+        then the project's own embedded definition, then the user library
+        (Project.symbol_resolver). Never the process-wide registry, which may
+        hold another project's definition of the same custom-symbol id."""
+        return self.project.symbol_resolver()(sid)
+
     def open_symbol_editor(self, doc=None, folder=None, from_builtin=None, copy_of=None, params=None):
         """Open the symbol editor: empty, on a custom symbol `doc` (edited in
         place), or on an editable copy of any symbol `copy_of` (built-in,
         library or project; `params` = variant of a parametric symbol)."""
         from .symbol_editor import SymbolEditor
+        src = copy_of or from_builtin
+        if src is not None:
+            # Convert first so a symbol that cannot be copied faithfully gives a
+            # clear message instead of an empty editor window.
+            from ..symbols.custom import SymbolFormatError
+            from ..symbols.explode import symbol_to_doc
+            sd = self.project_symbol(src)
+            try:
+                if sd is None:
+                    raise SymbolFormatError(f"The symbol {src} is not available.")
+                symbol_to_doc(sd, params)
+            except SymbolFormatError as e:
+                messagebox.showerror("Cannot edit a copy", str(e), parent=self.root)
+                return None
         if not self.userlib.folders():
             try:
                 self.userlib.create_folder("", "My symbols")
@@ -1903,16 +1924,58 @@ class App:
 
     def edit_symbol_copy(self, sid, params=None):
         """Open any symbol as an editable copy; the original is never changed."""
-        if symbols.get(sid) is None:
+        if self.project_symbol(sid) is None:
             return None
         return self.open_symbol_editor(copy_of=sid, params=params)
 
+    def edit_symbol_file_copy(self, path=None, folder=None):
+        """Open the symbol in an ``.osym`` file as an editable copy (new id,
+        based on the file's symbol). The file itself is only read; saving
+        adds a new symbol to the library. Returns the editor or None."""
+        if path is None:
+            path = filedialog.askopenfilename(parent=self.root, title="Edit a copy of a symbol file",
+                                              filetypes=[("OpenSchematix symbol", "*.osym"), ("All files", "*")])
+            if not path:
+                return None
+        from ..symbols.custom import SymbolFormatError
+        from ..symbols.explode import doc_from_file
+        try:
+            doc = doc_from_file(path)
+        except (OSError, SymbolFormatError) as e:
+            messagebox.showerror("Cannot open symbol file", f"{os.path.basename(path)}:\n{e}", parent=self.root)
+            return None
+        return self.open_symbol_editor(doc=doc, folder=folder)
+
     def edit_custom_symbol(self, sid):
-        sd = symbols.get(sid)
+        """Edit a custom symbol in place ("Edit symbol"). Saving stores the
+        editor's content as the user library's next revision of `sid`, so a
+        symbol that is in the library is edited from the library's own
+        definition: starting from the project's embedded copy (possibly an
+        older revision) would silently replace the newer library geometry.
+        The drawings keep their version until updated (save offers it). A
+        symbol that exists only in the open project is edited from its
+        embedded definition and saving adds it to the library."""
+        e = self.userlib.entries.get(sid)
+        if e is not None:
+            self.edit_library_symbol(sid)
+            return
+        sd = self.project_symbol(sid)
         if sd is None or not sd.is_custom:
             return
+        self.open_symbol_editor(doc=sd.custom, folder=None)
+
+    def edit_library_symbol(self, sid):
+        """Edit the user-library symbol `sid` in place, from the library's
+        definition (never the registry or an embedded copy). Returns the
+        editor, or None if `sid` is not in the library."""
         e = self.userlib.entries.get(sid)
-        self.open_symbol_editor(doc=sd.custom, folder=e.folder if e else None)
+        if e is None:
+            return None
+        drawn = self.project.symbols.get(sid)
+        if drawn is not None and drawn.get("revision", 0) != e.doc.get("revision", 0):
+            self.log(f"Editing “{e.name}” revision {e.doc.get('revision', 0)} from the library; this project "
+                     f"draws revision {drawn.get('revision', 0)} until its drawings are updated.", "info")
+        return self.open_symbol_editor(doc=e.doc, folder=e.folder)
 
     def update_project_symbol(self, sid):
         """Switch the project's embedded copy of a custom symbol to the library version."""
