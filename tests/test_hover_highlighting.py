@@ -80,6 +80,14 @@ def full_redraw(root, app):
     app.canvas._redraw_now()
 
 
+def reference_redraw(app):
+    """Full redraw with the current state and WITHOUT processing events first, so the reference is drawn
+    at the same canvas size as the snapshot it is compared with (processing events could apply a pending
+    geometry change, which legitimately triggers its own full redraw in the application)."""
+    app.canvas._redraw_pending = True
+    app.canvas._redraw_now()
+
+
 def snapshot(cv):
     """Canvas size and every canvas item in stacking order: type, coordinates and drawing options
     (ids excluded)."""
@@ -170,11 +178,11 @@ def test_incremental_hover_equals_full_redraw(scene, key, zoom):
     move_to(app, target_point(app, key, ids))
     assert cv.hover == ids[key] and not cv._redraw_pending
     incremental = snapshot(cv)
-    full_redraw(root, app)                                     # same hover state, drawn from scratch
+    reference_redraw(app)                                      # same hover state, drawn from scratch
     assert incremental == snapshot(cv)
     move_to(app, (700, 700))
     unhovered = snapshot(cv)
-    full_redraw(root, app)
+    reference_redraw(app)
     assert unhovered == snapshot(cv)
 
 
@@ -187,7 +195,7 @@ def test_overlapping_objects_pick_and_restore(scene):
     move_to(app, (200 + 9 / cv.zoom, 197))       # still on the resistor, off the wire
     assert cv.hover == ids["r"]
     incremental = snapshot(cv)
-    full_redraw(root, app)
+    reference_redraw(app)
     assert incremental == snapshot(cv)
     move_to(app, (700, 700))
     assert snapshot(cv) == before
@@ -202,7 +210,7 @@ def test_selected_object_keeps_selection_color(scene):
     move_to(app, target_point(app, "w", ids))
     assert cv.hover == ids["w"]
     assert snapshot(cv) == before                # selection color has priority; nothing changes
-    full_redraw(root, app)
+    reference_redraw(app)
     assert snapshot(cv) == before
 
 
@@ -217,7 +225,7 @@ def test_hover_while_redraw_pending_is_drawn_by_the_redraw(scene):
     settle(root)                      # the pending redraw runs
     assert not cv._redraw_pending
     drawn = snapshot(cv)
-    full_redraw(root, app)
+    reference_redraw(app)
     assert drawn == snapshot(cv)
     assert cv._hover_shown == ids["w"]
 
@@ -237,7 +245,7 @@ def test_deleting_hovered_object_leaves_no_highlight(scene):
     assert hov not in colors
     move_to(app, target_point(app, "red", ids))              # hovering still works afterwards
     inc = snapshot(cv)
-    full_redraw(root, app)
+    reference_redraw(app)
     assert inc == snapshot(cv)
 
 
@@ -253,14 +261,14 @@ def test_edit_undo_tool_and_theme_changes_rebuild_hover_state(scene):
     move_to(app, (214, 238))
     assert cv.hover == ids["r"]
     inc = snapshot(cv)
-    full_redraw(root, app)
+    reference_redraw(app)
     assert inc == snapshot(cv)
     # undo
     app.undo()
     settle(root)
     move_to(app, target_point(app, "red", ids))
     inc = snapshot(cv)
-    full_redraw(root, app)
+    reference_redraw(app)
     assert inc == snapshot(cv)
     # another tool: no hover highlight drawn; back to select
     cv.set_tool("wire")
@@ -271,7 +279,7 @@ def test_edit_undo_tool_and_theme_changes_rebuild_hover_state(scene):
     settle(root)
     move_to(app, target_point(app, "circ", ids))
     inc = snapshot(cv)
-    full_redraw(root, app)
+    reference_redraw(app)
     assert inc == snapshot(cv)
     # theme change: hover color comes from the new theme
     old = app.settings["theme"]
@@ -283,7 +291,7 @@ def test_edit_undo_tool_and_theme_changes_rebuild_hover_state(scene):
         move_to(app, target_point(app, "fill", ids))
         assert all(cv.itemcget(c, "fill") == app.theme["hover"] for c in hover_items(cv, ids["fill"]))
         inc = snapshot(cv)
-        full_redraw(root, app)
+        reference_redraw(app)
         assert inc == snapshot(cv)
     finally:
         app.set_theme(old)
