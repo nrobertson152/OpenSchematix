@@ -235,16 +235,29 @@ class Project:
             if sid not in used:
                 del self.symbols[sid]
 
-    def activate_symbols(self) -> list:
-        """Register the embedded symbols for this project. Returns warnings."""
-        from .symbols.custom import SymbolFormatError, to_symdef
-        defs, warnings = [], []
+    def embedded_symdefs(self) -> tuple[dict, list]:
+        """Definitions of the embedded custom symbols ({id: SymbolDef}) and load warnings. Pure: the
+        global symbol registry is neither read nor changed."""
+        from .symbols.custom import to_symdef
+        defs, warnings = {}, []
         for sid, doc in self.symbols.items():
             try:
-                defs.append(to_symdef(doc))
-            except SymbolFormatError as e:
+                defs[sid] = to_symdef(doc)
+            except Exception as e:  # noqa: BLE001 - one damaged embedded symbol must not block the project
                 warnings.append(f"Embedded symbol {sid} could not be loaded: {e}")
-        symbols.set_project_symbols(defs)
+        return defs, warnings
+
+    def symbol_resolver(self):
+        """Function symbol_id -> SymbolDef | None for reading this project's drawings without depending
+        on which project is active: built-in symbols, then this project's embedded symbols, then the user
+        libraries (symbols.lookup)."""
+        defs, _warnings = self.embedded_symdefs()
+        return lambda sid: symbols.lookup(sid, defs)
+
+    def activate_symbols(self) -> list:
+        """Register the embedded symbols for this project. Returns warnings."""
+        defs, warnings = self.embedded_symdefs()
+        symbols.set_project_symbols(list(defs.values()))
         return warnings
 
     # ---------------------------------------------------------------- serialisation
@@ -283,9 +296,13 @@ class Project:
             for name in (DEFAULT_LAYER_COMPONENTS, DEFAULT_LAYER_WIRES, DEFAULT_LAYER_SHAPES):
                 p.ensure_layer(name)
         p.symbols = {str(k): v for k, v in (d.get("symbols") or {}).items() if isinstance(v, dict)}
+        # Sheets are validated against this project's own symbols, not the registry: the embedded symbols
+        # are only registered (activate_symbols) after loading, and the registry may hold another
+        # project's versions (undo/redo, revisions, import, a second open file).
+        resolve = p.symbol_resolver()
         p.sheets = []
         for sd in d.get("sheets") or []:
-            doc = Document.from_dict(sd)
+            doc = Document.from_dict(sd, resolve=resolve)
             p._adopt(doc)
             p.sheets.append(doc)
         if not p.sheets:

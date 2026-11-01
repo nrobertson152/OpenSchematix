@@ -41,6 +41,18 @@ def get(symbol_id: str) -> SymbolDef | None:
     return _REGISTRY.get(symbol_id) or _PROJECT.get(symbol_id) or _USER.get(symbol_id)
 
 
+def lookup(symbol_id: str, project_defs: dict | None = None) -> SymbolDef | None:
+    """Definition of a symbol for a project that may not be the active one.
+
+    Searches the built-in symbols, then `project_defs` (that project's own embedded definitions, id ->
+    SymbolDef), then the user libraries. Unlike get(), it never consults the active project's symbols,
+    so reading one project cannot pick up another project's version of a custom symbol."""
+    sd = _REGISTRY.get(symbol_id)
+    if sd is None and project_defs:
+        sd = project_defs.get(symbol_id)
+    return sd or _USER.get(symbol_id)
+
+
 def alias_pairs(defs=None) -> list[tuple[str, tuple, str]]:
     """(symbol id, aliases, name) of every known symbol (or of `defs`), for symbols.custom.alias_problems."""
     return [(s.id, s.aliases, s.name) for s in (all_symbols() if defs is None else defs)]

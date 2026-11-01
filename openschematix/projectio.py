@@ -208,16 +208,23 @@ def read_zip(fileobj) -> OpenResult:
     return OpenResult(project, warnings=warnings)
 
 
-def open_any(path: str) -> OpenResult:
+def open_any(path: str, activate: bool = True) -> OpenResult:
     """Open a .schematix project, or convert a legacy drawing into a
-    new (unsaved) one-sheet project. The original file is never modified."""
+    new (unsaved) one-sheet project. The original file is never modified.
+
+    With `activate` (the default, for the project that becomes the open one) the project's embedded
+    symbols are registered as the active project symbols. With activate=False the global symbol
+    registry is left untouched, so a file can be read (imported, used as a template, compared) without
+    disturbing the project that is currently open."""
     with open(path, "rb") as f:
         head = f.read(4)
     if head.startswith(b"PK"):
         with open(path, "rb") as f:
             res = read_zip(f)
-        warnings = res.project.activate_symbols()
-        res.warnings += warnings
+        if activate:
+            res.warnings += res.project.activate_symbols()
+        else:
+            res.warnings += res.project.embedded_symdefs()[1]
         _check_unknown(res)
         return res
     try:
@@ -227,7 +234,8 @@ def open_any(path: str) -> OpenResult:
     name = os.path.splitext(os.path.basename(path))[0]
     project = project_from_document(legacy.document, title=legacy.document.sheet.title or name)
     project.revisions = RevisionStore()
-    project.activate_symbols()
+    if activate:
+        project.activate_symbols()
     fmt = "legacy" if legacy.migrated else "osch"
     warnings = list(legacy.warnings)
     warnings.insert(0, f"Converted from an older drawing format. "
@@ -236,8 +244,8 @@ def open_any(path: str) -> OpenResult:
 
 
 def _check_unknown(res: OpenResult):
-    from . import symbols
-    unknown = sorted({c.symbol for _s, c in res.project.all_components() if symbols.get(c.symbol) is None})
+    resolve = res.project.symbol_resolver()
+    unknown = sorted({c.symbol for _s, c in res.project.all_components() if resolve(c.symbol) is None})
     if unknown:
         res.warnings.append("Unknown symbols shown as placeholders: " + ", ".join(unknown))
 
