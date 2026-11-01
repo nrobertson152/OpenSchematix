@@ -162,7 +162,9 @@ def _package_rel_ok(path: str) -> bool:
     """Cross-platform, bounded package path; do not change local folder rules."""
     if not isinstance(path, str) or len(path) > MAX_PACKAGE_PATH_BYTES or not _rel_ok(path):
         return False
-    parts = path.replace("\\\\", "/").split("/")
+    if "\\" in path:
+        return False
+    parts = path.split("/")
     return (len(parts) <= MAX_PACKAGE_PATH_DEPTH
             and all(p not in ("", ".", "..") and safe_name(p) == p for p in parts))
 
