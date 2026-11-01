@@ -503,19 +503,28 @@ def _bulge_points(p1, p2, bulge, segs=8):
     theta = 4 * math.atan(bulge)
     dx, dy = p2[0] - p1[0], p2[1] - p1[1]
     chord = math.hypot(dx, dy)
+    if not math.isfinite(chord):
+        raise DxfError("POLYLINE bulge geometry exceeds finite range")
     if chord < 1e-12:
         return [p2]
     r = chord / (2 * math.sin(theta / 2))
     mx, my = (p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2
     h = r * math.cos(theta / 2)
+    if not math.isfinite(r) or not math.isfinite(h):
+        raise DxfError("POLYLINE bulge geometry exceeds finite range")
     nx, ny = -dy / chord, dx / chord
     cx, cy = mx + nx * h, my + ny * h
+    if not all(map(math.isfinite, (cx, cy))):
+        raise DxfError("POLYLINE bulge geometry exceeds finite range")
     a1 = math.atan2(p1[1] - cy, p1[0] - cx)
     n = max(2, int(abs(math.degrees(theta)) / 10) + 1, segs if abs(theta) > 1 else 2)
     pts = []
     for i in range(1, n + 1):
         a = a1 + theta * i / n
-        pts.append((cx + abs(r) * math.cos(a), cy + abs(r) * math.sin(a)))
+        pt = (cx + abs(r) * math.cos(a), cy + abs(r) * math.sin(a))
+        if not all(map(math.isfinite, pt)):
+            raise DxfError("POLYLINE bulge geometry exceeds finite range")
+        pts.append(pt)
     pts[-1] = p2
     return pts
 
