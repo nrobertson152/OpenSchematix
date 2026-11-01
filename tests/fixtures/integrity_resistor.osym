@@ -12,93 +12,14 @@
   "convention": "Custom",
   "properties": {},
   "prims": [
-    {
-      "k": "line",
-      "pts": [
-        [
-          -20,
-          0
-        ],
-        [
-          -8,
-          0
-        ]
-      ],
-      "w": "normal"
-    },
-    {
-      "k": "line",
-      "pts": [
-        [
-          -8,
-          0
-        ],
-        [
-          -4,
-          10
-        ],
-        [
-          0,
-          -10
-        ],
-        [
-          4,
-          10
-        ],
-        [
-          8,
-          0
-        ]
-      ],
-      "w": "normal"
-    },
-    {
-      "k": "line",
-      "pts": [
-        [
-          8,
-          0
-        ],
-        [
-          20,
-          0
-        ]
-      ],
-      "w": "normal",
-      "arrow_end": true,
-      "arrow_size": 12.0
-    },
-    {
-      "k": "text",
-      "p": [
-        0,
-        20
-      ],
-      "s": "R",
-      "size": 10,
-      "anchor": "s"
-    }
+    {"k": "line", "pts": [[-20, 0], [-8, 0]], "w": "normal"},
+    {"k": "line", "pts": [[-8, 0], [-4, 10], [0, -10], [4, 10], [8, 0]], "w": "normal"},
+    {"k": "line", "pts": [[8, 0], [20, 0]], "w": "normal", "arrow_end": true, "arrow_size": 12.0},
+    {"k": "text", "p": [0, 20], "s": "R", "size": 10, "anchor": "s"}
   ],
   "pins": [
-    {
-      "id": "p1",
-      "name": "1",
-      "x": -20,
-      "y": 0,
-      "dir": "l",
-      "type": "elec.passive"
-    },
-    {
-      "id": "p2",
-      "name": "2",
-      "x": 20,
-      "y": 0,
-      "dir": "r",
-      "type": "elec.passive"
-    }
+    {"id": "p1", "name": "1", "x": -20, "y": 0, "dir": "l", "type": "elec.passive"},
+    {"id": "p2", "name": "2", "x": 20, "y": 0, "dir": "r", "type": "elec.passive"}
   ],
-  "aliases": [
-    "FIX-R",
-    "R.fixture"
-  ]
+  "aliases": ["FIX-R", "R.fixture"]
 }
