@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from . import symbols
 from .connectivity import analyse
 from .geometry import point_on_segment, same
-from .netlist import compute_nets, link_label
+from .netlist import compute_nets, link_label, pin_ref_connects
 from .project import is_terminal_symbol
 from .symbols.general import OFFPAGE_IDS, UNKNOWN_ID
 
@@ -33,6 +33,7 @@ RULES = {
     "junction": "Junction and overlap consistency",
     "symbol": "Unsupported or incomplete symbols",
     "wire-number": "Wire numbers",
+    "invalid-wire-ref": "Invalid wire terminal references",
 }
 
 
@@ -124,6 +125,27 @@ def check(project, rules=None, require_part_numbers: bool = False) -> list[Issue
             for wid, p in conn.open_wire_ends:
                 issue(WARNING, "dangling-wire", "Wire end is not connected to a terminal or another wire.",
                       doc.uid, wid, p, "Extend the wire to a terminal or wire, or delete the loose piece.")
+        if "invalid-wire-ref" in rules:
+            for w in doc.wires.values():
+                for attr in ("start", "end"):
+                    ref = getattr(w, attr)
+                    if not ref:
+                        continue
+                    if pin_ref_connects(doc, ref):
+                        continue
+                    cid = ref[0] if isinstance(ref, (list, tuple)) and ref else None
+                    pin = ref[1] if isinstance(ref, (list, tuple)) and len(ref) > 1 else ref
+                    if cid not in doc.components:
+                        issue(WARNING, "invalid-wire-ref",
+                              f"Wire end references missing component #{cid}.",
+                              doc.uid, w.id, w.points[0 if attr == "start" else -1],
+                              "Clear the attachment or restore the component.")
+                    else:
+                        issue(WARNING, "invalid-wire-ref",
+                              f"Wire end references unknown pin {pin!r} on component "
+                              f"{doc.components[cid].tag()}.",
+                              doc.uid, w.id, w.points[0 if attr == "start" else -1],
+                              "Attach the wire to a real pin, or update the pin name.")
         if "junction" in rules:
             _junction_rules(doc, issue)
 
