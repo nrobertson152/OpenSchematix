@@ -5,10 +5,9 @@ This is a release gate, not a claim that a test or build has passed. Record evid
 ## 1. Integration and scope
 
 - [ ] Confirm release scope and intended version; update version metadata, README, changelog, and packaging names consistently.
-- [ ] Review and merge baseline QA changes independently of feature development (PR #6, if accepted).
-- [ ] Rebase or merge the latest `main` into the boundary-fill branch, resolve conflicts, and rerun all tests.
-- [ ] Complete independent review of boundary fill (PR #4); close release-blocking findings before merge.
-- [ ] Resolve the Phase 3 naming conflict in `DEVELOPMENT_PROGRESS.md` (localisation versus boundary fill).
+- [ ] Review currently open PRs and include only changes approved for this release.
+- [ ] Verify merged boundary fill (PR #4), connectivity indexing (PR #20), and crossing indexing (PR #21) with the final integrated test suite.
+- [ ] Confirm Phase 3 terminology and feature documentation are consistent with the release.
 - [ ] Confirm no unrelated files or unreviewed changes are included in the release diff.
 - [ ] Record the exact release commit and tag.
 
@@ -34,6 +33,9 @@ This is a release gate, not a claim that a test or build has passed. Record evid
 
 ## 4. Windows and Linux packages
 
+- [ ] Verify Windows pytest and Linux GUI smoke checks are mandatory in release CI, and publication requires successful Linux and Windows jobs.
+- [ ] Check the release tag, application, Python project, Windows executable and Windows installer versions agree.
+- [ ] Confirm pinned release-build dependencies and SHA-256 verification of appimagetool.
 - [ ] Build Windows executable and installer from the release commit.
 - [ ] Test Windows startup, icon/splash, installer/uninstaller, file associations, DPI scaling, and mouse/keyboard behavior on a real Windows environment.
 - [ ] Build Linux archive from the release commit; test launch on supported distributions and desktop environments.
