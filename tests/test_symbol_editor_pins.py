@@ -268,3 +268,50 @@ def test_save_as_new_symbol_does_not_copy_aliases(app, quiet, monkeypatch):
         assert app.userlib.entries[orig].doc["aliases"] == ["ORIGINAL-X"]
     finally:
         ed.destroy()
+
+
+def test_save_never_reverts_rotation_redo_or_deletion(app, quiet):
+    """Item-by-item: changes made outside the form survive saving."""
+    ed = new_editor(app)
+    try:
+        select_pin(ed, 1)                              # form holds point 2 (lead "r")
+        assert ed.pins[1]["dir"] == "r"
+        s = ed.begin_change()
+        ed.sel_rotate({"pin:" + p["id"] for p in ed.pins} | set(ed.doc.shapes), (0, 0), 90)
+        ed.commit_change(s, "rotated")
+        rotated = ed.pins[1]["dir"]
+        assert rotated != "r" and not ed._pin_form_pending()
+        ed.undo()
+        ed.redo()
+        assert ed.pins[1]["dir"] == rotated and not ed._pin_form_pending()
+        assert ed.save()
+        saved = app.userlib.entries[ed.meta["id"]].doc["pins"]
+        assert [p["dir"] for p in saved] == [p["dir"] for p in ed.pins] and saved[1]["dir"] == rotated
+        # the point the form holds is deleted: nothing pending, the save does not resurrect it
+        ed._pin_delete()
+        assert len(ed.pins) == 1 and not ed._pin_form_pending()
+        assert ed.save()
+        assert len(app.userlib.entries[ed.meta["id"]].doc["pins"]) == 1
+    finally:
+        ed.destroy()
+
+
+def test_insert_prefers_exact_names_over_aliases(app, quiet):
+    """A hand-edited library file whose alias equals a built-in name cannot take over INSERT <name>;
+    the editor and library would have refused that alias."""
+    from openschematix.symbols.custom import blank_symbol, to_symdef
+    d = blank_symbol("Hand-edited")
+    d["prims"] = [{"k": "line", "pts": [[0, 0], [10, 0]]}]
+    d["aliases"] = ["Fuse", "HAND-1"]
+    sd = to_symdef(d)
+    symbols.set_user_symbols(list(symbols.user_symbols().values()) + [sd])
+    try:
+        app.cmd_insert("Fuse")
+        assert app.canvas.place_symbol == "el.fuse.iec"
+        app.cmd_insert("hand-1")
+        assert app.canvas.place_symbol == sd.id
+        app.cmd_insert("EL.COIL.IEC")                   # canonical id typed in another case
+        assert app.canvas.place_symbol == "el.coil.iec"
+    finally:
+        app.canvas.set_tool("select")
+        symbols.set_user_symbols([s for s in symbols.user_symbols().values() if s.id != sd.id])

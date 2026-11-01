@@ -41,21 +41,25 @@ def get(symbol_id: str) -> SymbolDef | None:
     return _REGISTRY.get(symbol_id) or _PROJECT.get(symbol_id) or _USER.get(symbol_id)
 
 
-def alias_pairs(defs=None) -> list[tuple[str, tuple]]:
-    """(symbol id, aliases) of every known symbol (or of `defs`), for symbols.custom.alias_problems."""
-    return [(s.id, s.aliases) for s in (all_symbols() if defs is None else defs)]
+def alias_pairs(defs=None) -> list[tuple[str, tuple, str]]:
+    """(symbol id, aliases, name) of every known symbol (or of `defs`), for symbols.custom.alias_problems."""
+    return [(s.id, s.aliases, s.name) for s in (all_symbols() if defs is None else defs)]
 
 
 def resolve(identifier: str) -> SymbolDef | None:
-    """Symbol for a canonical id or an alias (case-insensitive). An alias claimed by more than one symbol
-    (possible only with libraries edited outside OpenSchematix) resolves to nothing."""
+    """Symbol for a canonical id (exact, else case-insensitive) or an alias (case-insensitive). Never
+    ambiguous: if more than one symbol matches case-insensitively - possible only with symbol files edited
+    outside OpenSchematix, since aliases are checked against every id and alias when saved - it resolves to
+    nothing."""
+    if not identifier:
+        return None
     sd = get(identifier)
-    if sd is not None or not identifier:
+    if sd is not None:
         return sd
     low = identifier.strip().lower()
     hits = {}
     for s in all_symbols():
-        if any(a.lower() == low for a in s.aliases):
+        if s.id.lower() == low or any(a.lower() == low for a in s.aliases):
             hits[s.id] = s
     return next(iter(hits.values())) if len(hits) == 1 else None
 

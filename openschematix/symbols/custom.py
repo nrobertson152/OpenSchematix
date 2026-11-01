@@ -28,8 +28,9 @@ renumbering a pin never disconnects existing drawings.
 ``aliases`` are extra identifiers for the same symbol (letters, digits and
 ``. _ + - /``; case-insensitive). They are found by the library search and
 INSERT and resolve to the symbol (``symbols.resolve``); drawings always
-store the canonical ``id``. Aliases must not equal any symbol id or another
-symbol's alias (``alias_problems``). Older versions ignore the field.
+store the canonical ``id``. Aliases must not equal any symbol id, another
+symbol's alias or another symbol's name (``alias_problems``). Older versions
+ignore the field.
 """
 from __future__ import annotations
 
@@ -195,16 +196,20 @@ def clean_aliases(values, own_id: str = "") -> list[str]:
 def alias_problems(aliases, own_id: str, others) -> list[str]:
     """Problems with assigning `aliases` to symbol `own_id` (empty list if none).
 
-    `others`: iterable of (symbol id, aliases) for every other known symbol (built-in and custom); entries
-    with `own_id` itself are ignored, so other copies of the same symbol never conflict."""
+    `others`: iterable of (symbol id, aliases[, name]) for every other known symbol (built-in and custom);
+    entries with `own_id` itself are ignored, so other copies of the same symbol never conflict. An alias may
+    not equal another symbol's name either: INSERT matches exact names before aliases, so such an alias could
+    never be used and would only look ambiguous."""
     problems, seen = [], set()
-    ids, owners = {}, {}
-    for sid, als in others:
+    ids, owners, names = {}, {}, {}
+    for sid, als, *rest in others:
         if sid == own_id:
             continue
         ids[sid.lower()] = sid
         for a in als or ():
             owners.setdefault(str(a).lower(), sid)
+        if rest and rest[0]:
+            names.setdefault(str(rest[0]).strip().lower(), rest[0])
     if len(aliases) > MAX_ALIASES:
         problems.append(f"at most {MAX_ALIASES} aliases are allowed")
     for a in aliases:
@@ -217,6 +222,8 @@ def alias_problems(aliases, own_id: str, others) -> list[str]:
             problems.append(f"“{a}” is the identifier of another symbol ({ids[low]})")
         elif low in owners:
             problems.append(f"“{a}” is already an alias of another symbol ({owners[low]})")
+        elif low in names:
+            problems.append(f"“{a}” is the name of another symbol (“{names[low]}”)")
         elif not ALIAS_RE.fullmatch(a):
             problems.append(f"“{a}” is not a valid alias (use letters, digits and . _ + - /, no spaces, "
                             f"at most 60 characters)")

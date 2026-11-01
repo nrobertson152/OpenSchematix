@@ -243,10 +243,10 @@ class UserLibrary:
         self.scan()
         return self.entries[doc["id"]]
 
-    def alias_pairs(self) -> list[tuple[str, tuple]]:
-        """(id, aliases) of the built-in symbols and of every library symbol (see alias_problems)."""
-        return [(s.id, s.aliases) for s in symbols.builtin_symbols()] + \
-            [(sid, tuple(e.doc.get("aliases", ()))) for sid, e in self.entries.items()]
+    def alias_pairs(self) -> list[tuple[str, tuple, str]]:
+        """(id, aliases, name) of the built-in symbols and of every library symbol (see alias_problems)."""
+        return symbols.alias_pairs(symbols.builtin_symbols()) + \
+            [(sid, tuple(e.doc.get("aliases", ())), e.doc.get("name", "")) for sid, e in self.entries.items()]
 
     def _free_path(self, d: str, name: str) -> str:
         base = safe_name(name)

@@ -193,3 +193,113 @@ def test_pins_must_stay_on_the_grid():
     bad = make_doc(pins=[{"id": "p1", "name": "1", "x": -25, "y": 0, "dir": "l"}])
     with pytest.raises(SymbolFormatError, match="grid"):
         normalise(bad)
+
+
+# ---------------------------------------------------------------- review follow-up: no ambiguous resolution
+def test_resolve_is_never_ambiguous_with_hand_edited_aliases():
+    hand = make_doc("Hand-edited", aliases=["EL.RESISTOR.IEC", "Twin"])  # bypasses the editor's checks
+    twin = make_doc("Other", aliases=["twin"])
+    a, b = to_symdef(hand), to_symdef(twin)
+    symbols.set_user_symbols([a, b])
+    assert symbols.resolve("el.resistor.iec").id == "el.resistor.iec"   # exact id always wins
+    assert symbols.resolve("EL.RESISTOR.IEC") is None                   # id in another case vs alias: ambiguous
+    assert symbols.resolve("El.Coil.Iec").id == "el.coil.iec"           # unique case-insensitive id
+    assert symbols.resolve("TWIN") is None                              # alias claimed twice
+    assert symbols.resolve(a.id.upper()) is a
+
+
+def test_alias_may_not_equal_another_symbols_name():
+    sd = to_symdef(make_doc("Prox sensor"))
+    others = symbols.alias_pairs(symbols.builtin_symbols()) + symbols.alias_pairs([sd])
+    own = "user:00000000000000aa"
+    probs = alias_problems(["fuse", "MOTOR", "prox-ok"], own, others)
+    assert probs == ["“fuse” is the name of another symbol (“Fuse”)",
+                     "“MOTOR” is the name of another symbol (“Motor”)"]
+    # names with spaces can never be aliases; a symbol may use its own name as an alias
+    assert alias_problems(["Sensor1"], sd.id, others + [(sd.id, (), "Sensor1")]) == []
+
+
+def test_library_and_import_apply_the_name_rule(tmp_path):
+    lib = userlib.UserLibrary(str(tmp_path / "libs"))
+    lib.save_symbol(make_doc("Valve-X"), "My symbols")
+    with pytest.raises(ValueError, match="name of another symbol"):
+        lib.save_symbol(make_doc("Other", aliases=["valve-x"]), "My symbols")
+    imp = lib.import_symbol_doc(make_doc("Imported", aliases=["Fuse", "keep-me"]), "My symbols")
+    assert imp.doc["aliases"] == ["keep-me"]
+
+
+# ---------------------------------------------------------------- compatibility with the released 1.0.x reader
+LEGACY_SYMBOL_PROBE = """
+import json, sys
+sys.path.insert(0, sys.argv[1])
+from openschematix.symbols.custom import normalise, to_symdef
+mode, path = sys.argv[2], sys.argv[3]
+if mode == "symbol":
+    doc = json.load(open(path, encoding="utf-8"))
+    n = normalise(doc)
+    sd = to_symdef(doc)
+    print(json.dumps({"keys": sorted(n), "pins": [t.name for t in sd.build(None).terminals]}))
+elif mode == "blank":
+    from openschematix.symbols.custom import blank_symbol
+    d = blank_symbol("Legacy")
+    d["prims"] = [{"k": "line", "pts": [[-20, 0], [20, 0]]}]
+    d["pins"] = [{"id": "p1", "name": "1", "x": -20, "y": 0, "dir": "l", "show": False}]
+    print(json.dumps(normalise(d)))
+else:
+    from openschematix import projectio
+    res = projectio.open_any(path)
+    print("OPENED", res.project.activate_symbols(), sorted(res.project.symbols))
+"""
+
+
+def _legacy_package(tmp_path_factory):
+    import shutil
+    import subprocess
+    root = os.path.join(os.path.dirname(__file__), "..")
+    if shutil.which("git") is None or not os.path.isdir(os.path.join(root, ".git")):
+        pytest.skip("git checkout not available")
+    if subprocess.run(["git", "-C", root, "rev-parse", "--verify", "-q", "v1.0.0^{commit}"],
+                      capture_output=True).returncode != 0:
+        pytest.skip("tag v1.0.0 not available in this clone")
+    dest = tmp_path_factory.mktemp("legacy_syms")
+    arch = subprocess.run(["git", "-C", root, "archive", "v1.0.0", "openschematix"], capture_output=True, check=True)
+    (dest / "pkg.tar").write_bytes(arch.stdout)
+    subprocess.run(["tar", "-xf", str(dest / "pkg.tar"), "-C", str(dest)], check=True)
+    return dest
+
+
+@pytest.fixture(scope="module")
+def legacy_pkg(tmp_path_factory):
+    return _legacy_package(tmp_path_factory)
+
+
+def _legacy(legacy_pkg, mode, path=""):
+    import subprocess
+    import sys
+    r = subprocess.run([sys.executable, "-I", "-c", LEGACY_SYMBOL_PROBE, str(legacy_pkg), mode, str(path)],
+                       capture_output=True, text=True, timeout=120)
+    assert r.returncode == 0, r.stderr
+    return r.stdout.strip()
+
+
+def test_released_1_0_reads_symbols_and_projects_with_aliases(legacy_pkg, tmp_path):
+    doc = normalise(make_doc("With aliases", aliases=["ALIAS-1", "a.2"]))
+    path = tmp_path / "s.osym"
+    path.write_text(json.dumps(doc), encoding="utf-8")
+    out = json.loads(_legacy(legacy_pkg, "symbol", path))
+    assert "aliases" not in out["keys"] and out["pins"] == ["p1", "p2"]    # field ignored, symbol intact
+    symbols.set_user_symbols([to_symdef(doc)])
+    p = new_project()
+    editing.place(p.sheets[0], doc["id"], 100, 100)
+    proj = tmp_path / "p.schematix"
+    projectio.save_project(p, str(proj))
+    assert _legacy(legacy_pkg, "project", proj) == f"OPENED [] ['{doc['id']}']"
+
+
+def test_symbols_written_by_1_0_load_unchanged(legacy_pkg):
+    old = json.loads(_legacy(legacy_pkg, "blank"))
+    assert "aliases" not in old
+    # nothing added, nothing changed (compared as written to a file)
+    assert json.dumps(normalise(copy.deepcopy(old)), sort_keys=True) == json.dumps(old, sort_keys=True)
+    sd = to_symdef(old)
+    assert sd.aliases == () and [t.show for t in sd.build(None).terminals] == [False]

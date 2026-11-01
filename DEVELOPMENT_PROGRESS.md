@@ -263,7 +263,11 @@ rejected intersections and holes, fills stored as plain polygons, a failing test
   `SymbolDef.aliases`; `symbols.resolve()`; search text; `userlib` search, save check, import drops colliding
   ones; every copy path drops them; library details panel; `INSERT <alias>`). Drawings store canonical ids.
   Built-in symbols have no aliases (not editable).
-- Tests: `tests/test_symbol_aliases.py` (11), `tests/test_symbol_editor_pins.py` (9, Tk). Full pytest 661 passed /
+- Review (integration prep): `symbols.resolve()` also compares ids case-insensitively and returns nothing unless
+  exactly one symbol matches; aliases may not equal another symbol's name; INSERT order is exact id, exact name,
+  alias, search (keeps pre-alias behaviour for names). Real 1.0.0 reader verified (tag v1.0.0) for `.osym` and
+  projects with aliases. PR #30 overlap: on merge, `doc.pop("aliases", None)` belongs in its `_as_copy()`.
+- Tests: `tests/test_symbol_aliases.py` (16), `tests/test_symbol_editor_pins.py` (11, Tk). Full pytest 661 passed /
   3 skipped (ezdxf), GUI smoke 168/168.
 
 ## Status summary

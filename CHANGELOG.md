@@ -8,8 +8,8 @@ All notable changes to this project are documented here. Versions follow [Semant
 
 - Symbol aliases: a custom symbol can have extra identifiers (symbol editor, *Symbol* tab, "Aliases"). The library
   search, the symbol pickers and `INSERT <alias>` find it by them; drawings always store the symbol itself.
-  Aliases are unique among all symbols (collisions with symbol ids or other aliases are refused) and are not
-  copied to derived symbols. Stored as an optional `aliases` list in `.osym` documents (format version unchanged).
+  Aliases are unique among all symbols (collisions with symbol ids, other aliases or other symbols' names are
+  refused; `INSERT` matches an exact id, then an exact name, then an alias) and are not copied to derived symbols. Stored as an optional `aliases` list in `.osym` documents (format version unchanged).
 - Symbol editor: Ctrl+A selects everything, arrow keys move the selection (by the 2.5 mm grid when it contains
   connection points, otherwise by the snap step), Ctrl+Shift+Z redoes, and the shortcuts also work with Caps Lock;
   Enter in a connection point's name field applies it.

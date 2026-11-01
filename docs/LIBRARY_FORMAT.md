@@ -48,8 +48,8 @@
 * Optional `aliases` (list of strings) are extra identifiers for the symbol: letters, digits and `. _ + - /`, no
   spaces, at most 60 characters, at most 20 per symbol, compared case-insensitively. The library search, the
   symbol pickers and `INSERT <alias>` find the symbol by them; placed components always store the symbol's `id`,
-  so drawings never depend on an alias. An alias must not equal any symbol id (built-in or custom) or another
-  symbol's alias: the symbol editor and the library refuse to save one that does, importing drops colliding
+  so drawings never depend on an alias. `INSERT` matches an exact id, then an exact name, then an alias. An alias
+  must not equal any symbol id (built-in or custom), another symbol's alias or another symbol's name: the symbol editor and the library refuse to save one that does, importing drops colliding
   aliases, and copies (*Save as new symbol*, *Edit a copy*, library copy, duplicate on import) start without
   aliases. Invalid entries are dropped when a file is read; older versions ignore the field.
 * `pins[].show` (default `true`): `false` means the connection point is never numbered on drawings (it is
