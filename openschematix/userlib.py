@@ -46,6 +46,9 @@ SYMBOL_EXT = ".osym"
 PACKAGE_EXT = ".osymlib"
 MAX_PACKAGE_ENTRIES = 2048
 MAX_PACKAGE_SYMBOLS = 1000
+MAX_PACKAGE_FOLDERS = 1024
+MAX_PACKAGE_PATH_DEPTH = 16
+MAX_PACKAGE_PATH_BYTES = 512
 MAX_PACKAGE_UNCOMPRESSED = 64 * 1024 * 1024
 MAX_PACKAGE_ARCHIVE_BYTES = 80 * 1024 * 1024
 MAX_PACKAGE_DIRECTORY_BYTES = 512 * 1024
@@ -153,6 +156,15 @@ def _zip_member(z: zipfile.ZipFile, name: str, limit: int) -> str:
         raise ValueError(f"missing package entry: {name}") from e
     except (zipfile.BadZipFile, RuntimeError, NotImplementedError, EOFError, UnicodeDecodeError, OSError) as e:
         raise ValueError(f"unreadable package entry {name}: {e}") from e
+
+
+def _package_rel_ok(path: str) -> bool:
+    """Cross-platform, bounded package path; do not change local folder rules."""
+    if not isinstance(path, str) or len(path) > MAX_PACKAGE_PATH_BYTES or not _rel_ok(path):
+        return False
+    parts = path.replace("\\\\", "/").split("/")
+    return (len(parts) <= MAX_PACKAGE_PATH_DEPTH
+            and all(p not in ("", ".", "..") and safe_name(p) == p for p in parts))
 
 
 def _atomic_json(path: str, data):
@@ -535,12 +547,14 @@ def read_package(path: str, lib: UserLibrary | None = None) -> PackageInfo:
         listed = man.get("symbols", [])
         if not isinstance(folders, list) or not isinstance(listed, list):
             raise ValueError("package manifest folders and symbols must be arrays")
+        if len(folders) > MAX_PACKAGE_FOLDERS:
+            raise ValueError(f"package contains more than {MAX_PACKAGE_FOLDERS} folders")
         if len(listed) > MAX_PACKAGE_SYMBOLS:
             raise ValueError(f"package contains more than {MAX_PACKAGE_SYMBOLS} symbols")
         info = PackageInfo(path, str(man.get("name") or "Imported library"), str(man.get("description", "")),
                            str(man.get("author", "")), str(man.get("created", "")))
         for folder in folders:
-            if isinstance(folder, str) and _rel_ok(folder):
+            if _package_rel_ok(folder):
                 info.folders.append(folder)
             else:
                 info.problems.append(f"unsafe or malformed folder skipped: {folder!r}")
@@ -551,8 +565,8 @@ def read_package(path: str, lib: UserLibrary | None = None) -> PackageInfo:
                 continue
             f = item.get("file", "")
             folder = item.get("folder", "") or ""
-            if not isinstance(f, str) or not isinstance(folder, str) or not _rel_ok(f) or (
-                    folder and not _rel_ok(folder)):
+            if (not _package_rel_ok(f) or not f.lower().endswith(SYMBOL_EXT) or
+                    not isinstance(folder, str) or (folder and not _package_rel_ok(folder))):
                 info.problems.append(f"unsafe or malformed symbol path skipped: {f!r}")
                 continue
             if f in seen_files:
@@ -591,10 +605,10 @@ def import_package(info: PackageInfo, lib: UserLibrary, mode: str = "separate", 
     if not isinstance(target, str) or (target and not _rel_ok(target)):
         raise ValueError(f"invalid destination folder {target!r}")
     for folder in info.folders:
-        if not isinstance(folder, str) or not _rel_ok(folder):
+        if not _package_rel_ok(folder):
             raise ValueError(f"invalid package folder {folder!r}")
     for item in info.items:
-        if not isinstance(item.folder, str) or (item.folder and not _rel_ok(item.folder)):
+        if not isinstance(item.folder, str) or (item.folder and not _package_rel_ok(item.folder)):
             raise ValueError(f"invalid symbol folder {item.folder!r}")
         if selected_ids is None or item.id in selected_ids:
             to_symdef(item.doc)  # preflight complete symbol geometry before writing
