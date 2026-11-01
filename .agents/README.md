@@ -14,3 +14,5 @@ Files:
 - [RELEASE_STATUS.md](RELEASE_STATUS.md): release gates and known risks.
 
 Avoid committing frequent status churn to these files; use Issues and PR comments for day-to-day updates. Refresh snapshots deliberately after material milestones.
+
+- [AGENT_PROTOCOL.md](AGENT_PROTOCOL.md): standing active-session task cycle, ownership, independent review, and startup instruction.
