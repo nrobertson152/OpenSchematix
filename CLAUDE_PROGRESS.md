@@ -24,7 +24,7 @@ _Checkpoint updated 2026-10-31 by Claude (Opus 5.5). Longer history: `DEVELOPMEN
 | Item | Value |
 |---|---|
 | Base | `main` @ `0e2823b` (PR #21) |
-| Branch | `perf/hover-highlighting`: implementation + tests + docs commit, then this checkpoint |
+| Branch | `perf/hover-highlighting`: `2c2e4a9` implementation + tests + bench + docs, `a399cde` checkpoint, `9ff03d2`/`4422e38`/`e484bb7` Windows-only test-harness fixes (window geometry), then this update. CI: all 8 checks green at `e484bb7` |
 | Do not touch | `test/cache-invalidation-regressions`, any Jules branch or PR |
 
 ## 4. Architectural decisions
@@ -95,3 +95,11 @@ xvfb-run -a -s "-screen 0 1920x1200x24" <py3.13> tools/bench_phase4.py --sizes s
 - **`point_on_segment` overshoot** on very short diagonals: pre-existing; preserved.
 - **`crossings()` and diagonals:** a diagonal is treated as vertical at its first x. Pre-existing; preserved.
 - **Dead state:** `SchematicCanvas._scene_cache` is never read.
+- **Windows test harness:** in the hover tests, a withdrawn Tk window on Windows can be re-laid out transiently
+  without a `<Configure>` redraw, so the background grid may not match a fresh redraw. The tests therefore:
+  - use a fixed window size;
+  - settle events (`root.update`) after setup;
+  - draw the reference without processing events;
+  - take a settled baseline after a deletion.
+
+  This is a test-environment artifact; a mapped window redraws on `<Configure>`.
