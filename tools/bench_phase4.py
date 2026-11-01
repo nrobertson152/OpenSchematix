@@ -219,18 +219,46 @@ def bench_gui(name, repeat):
     res["redraw_zoom4_s"] = timed(full, repeat)[0]
     res["canvas_items_zoom4"] = len(cv.find_all())
 
-    # hover change in the select tool triggers a full redraw: measure one motion that changes hover
-    w = next(iter(d.wires.values()))
-    a = cv.to_screen(w.points[0])
-    bpt = cv.to_screen(w.points[-1])
-    on = ((a[0] + bpt[0]) / 2, (a[1] + bpt[1]) / 2)
+    # hover transitions in the select tool: alternate between two wires (enter A / switch to B / back),
+    # then leave to empty space; each motion is a real hover change, and pending idle work is run
+    ws = list(d.wires.values())
+    mids = []
+    for w in (ws[0], ws[len(ws) // 2]):
+        a, bpt = cv.to_screen(w.points[0]), cv.to_screen(w.points[1])
+        mids.append(((a[0] + bpt[0]) / 2, (a[1] + bpt[1]) / 2))
+    empty = cv.to_screen((b[2] + 500, b[3] + 500))
 
-    def hover_cycle():
-        cv.hover = None
-        ev = type("E", (), {"x": on[0], "y": on[1], "state": 0})()
-        cv._on_motion(ev)       # hover changes -> redraw scheduled
-        root.update_idletasks()  # run the coalesced redraw
-    res["hover_change_redraw_s"] = timed(hover_cycle, repeat)[0]
+    def ev(p):
+        return type("E", (), {"x": p[0], "y": p[1], "state": 0})()
+    cv._on_motion(ev(empty))
+    root.update_idletasks()
+    state = {"i": 0}
+
+    def hover_switch():
+        state["i"] ^= 1
+        cv._on_motion(ev(mids[state["i"]]))
+        root.update_idletasks()
+    res["hover_change_redraw_s"] = timed(hover_switch, repeat)[0]
+
+    def hover_leave():
+        cv._on_motion(ev(mids[0]))
+        root.update_idletasks()
+        t = time.perf_counter()
+        cv._on_motion(ev(empty))
+        root.update_idletasks()
+        return time.perf_counter() - t
+    res["hover_leave_s"] = statistics.median(hover_leave() for _ in range(repeat))
+    # the motion handler's own hit test (paid on every motion, hover change or not)
+    w0 = cv.to_world(*mids[0])
+    res["hover_hit_test_s"] = timed(lambda: editing.hit_test(d, w0, cv_mod.PICK_PX / cv.zoom, cv.selectable),
+                                    repeat)[0]
+    # peak Python memory of a full redraw (scene, connectivity and, on newer code, the hover item map)
+    gc.collect()
+    tracemalloc.start()
+    full()
+    res["redraw_peak_kib"] = tracemalloc.get_traced_memory()[1] / 1024
+    tracemalloc.stop()
+    res["hover_index_items"] = len(getattr(getattr(cv, "_hover_index", None), "cids", ()))
     root.destroy()
     return res
 

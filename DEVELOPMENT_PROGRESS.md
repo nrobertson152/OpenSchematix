@@ -212,6 +212,24 @@ rejected intersections and holes, fills stored as plain polygons, a failing test
   full redraw large 0.56→0.22 s, medium 0.104→0.074 s, small unchanged within noise. Peak memory of the call
   on large 188 KiB → 1.27 MiB (linear in segments).
 
+### Phase 4 (performance) — optimization 3: hover highlighting without redraws (session 10, branch `perf/hover-highlighting`)
+
+- Root cause: `SchematicCanvas._on_motion` (select tool) and `_on_leave` called `redraw()` on every hover
+  change; `_redraw_now` deletes all canvas items and reruns connectivity, crossings, scene and Tk item creation,
+  although hover only changes the color of the hovered object's own items (not width, dash or order;
+  selected items never show hover).
+- Change (`gui/canvas_view.py` only): `draw_items(hover_index=)` records (document item, canvas id) for every
+  hoverable canvas item (not overridden, not selected) with two list appends, plus the normal color of items
+  drawn hovered. `SchematicCanvas._set_hover` recolors only the old and new hovered objects' items via
+  `recolor()` (replaces whichever of fill/outline is non-empty, exactly as draw_items colors them) and
+  remembers the previous color to restore. The item map is built lazily on first hover and discarded by every
+  full redraw; if a redraw is already pending the redraw draws the new hover itself.
+- Tests: `tests/test_hover_highlighting.py` (28, real App under Tk; compare complete canvas snapshots —
+  type, coords, options, stacking order — of incremental hover vs a full redraw with the same state).
+- Result (median of 9, main @ 0e2823b → branch): hover change 0.048→0.0022 s / 0.103→0.0028 s /
+  0.266→0.0057 s; full redraw unchanged within noise (interleaved 5 rounds: medium 0.074→0.075 s, large
+  0.222→0.229 s medians); redraw peak memory large 5.0→5.4 MiB.
+
 ## Status summary
 
 **Version 1.0.1 (originally developed internally as "3.0") is implemented and tested on Linux** (engine + GUI). All 25 sections of the brief are
