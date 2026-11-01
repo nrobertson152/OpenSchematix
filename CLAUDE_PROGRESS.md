@@ -1,67 +1,87 @@
 # CLAUDE_PROGRESS — development checkpoint (Phase 4: performance)
 
-_Checkpoint written 2026-10-31 by Claude (Opus 5.5). Replaces the Phase 3 checkpoint (Phase 3 was merged as
-PR #4). Longer history: `DEVELOPMENT_PROGRESS.md`._
+_Checkpoint updated 2026-10-31 by Claude (Opus 5.5). Longer history: `DEVELOPMENT_PROGRESS.md`._
 
 ## 1. Where things stand
 
-Phase 4 optimization 1 (connectivity spatial index) is **implemented, tested and benchmarked** on branch
-`perf/connectivity-index`, draft PR open (see section 3). **Nothing is in progress.** Waiting for the owner's
-(and ChatGPT's) review. Do not merge. Do not start the crossings optimization until authorised.
+- Optimization 1 (connectivity spatial index) is **merged** (PR #20, `81a8da2`).
+- Optimization 2 (crossing-detection index) is **implemented, tested and benchmarked** on branch
+  `perf/crossing-detection`, with a draft PR open. **Nothing is in progress.**
+- Waiting for independent review. Do not merge, and do not start another optimization until authorised.
 
 ## 2. Exact next step when resuming
 
-1. `git fetch origin`; check `main` and the PR for new commits, comments and reviews
+1. `git fetch origin`, then check `main` and the PR for new commits, comments and reviews. Use the REST API
    (`gh api repos/nrobertson152/OpenSchematix/issues/<n>/comments`, `.../pulls/<n>/reviews`,
-   `.../pulls/<n>/comments`; GraphQL / `gh pr view` is blocked in this environment).
-2. Address review feedback on `perf/connectivity-index` (a regression test per defect), rerun section 5.
+   `.../pulls/<n>/comments`); GraphQL and `gh pr view` are blocked in this environment.
+2. Address review feedback on `perf/crossing-detection` with a regression test per defect, then rerun section 5.
 3. Without new instructions: report status and wait.
 
 ## 3. Git / PR state
 
 | Item | Value |
 |---|---|
-| Base | `main` @ `dc163ea` (PR #19 on top of PR #4) |
-| Branch | `perf/connectivity-index` (benchmark tool commit, then the optimization commit, then this checkpoint) |
-| Do not touch | `test/cache-invalidation-regressions` (separate cache-invalidation effort; identical to main at checkpoint), any Jules branch/PR |
+| Base | `main` @ `81a8da2` (PR #20) |
+| Branch | `perf/crossing-detection`: optimization + tests + docs commit, then this checkpoint |
+| Do not touch | `test/cache-invalidation-regressions`, any Jules branch or PR |
 
 ## 4. Architectural decisions
 
-- `connectivity._WireIndex`: uniform grid, `_CELL` = 50 units, wires registered by segment bbox padded by
-  `_PAD` = tol + 1 (covers `point_on_segment`'s along-segment overshoot of up to tol/length < 1/√2 on short
-  diagonals). Index only filters; exact per-wire tests and output order unchanged. Built per call — **no
-  caching, no invalidation**.
-- Memory bound: segment > `_MAX_CELLS_PER_SEGMENT` (256) cells, non-finite coordinates, < 2 points, or total
-  registrations > 32·S + 4096 → wire goes to the always-examined list (falls back to the old full test).
-- Oracle: `tests/test_connectivity_index.py::reference_analyse` is a verbatim copy of the old algorithm.
+- **Connectivity (`connectivity._WireIndex`, merged):**
+  - Grid of 50-unit cells; segment bounding boxes padded by tol + 1.
+  - Segments over 256 cells, non-finite wires and wires over the 32·S + 4096 registration budget go to an
+    always-examined list.
+  - Built per call; no caching.
+- **Crossings (`editing.crossings`, this branch):**
+  - The pair test `_crossing_pair` keeps the original body.
+  - Horizontals are registered in the cells of their row (y = a.y); non-horizontals in the cells of their
+    column (x = a.x, i.e. the first point, matching the original quirk that ignores a diagonal's x extent).
+  - A row and a column share at most one cell, so each candidate pair is found exactly once.
+  - Per segment i, candidates j > i are tested in increasing j, so output order and duplicates are unchanged.
+  - Non-finite, over-256-cell and over-budget segments are paired with every opposite-kind segment
+    (the original behaviour).
+  - Built per call; no caching.
+- **Oracles:** each test file holds a verbatim copy of the original algorithm (`reference_analyse`,
+  `reference_crossings`).
 
 ## 5. Test / benchmark commands and results (2026-10-31)
 
-Environment: standalone CPython 3.13.14 + Tk 9.0 (uv), Xvfb, 2 vCPU; system Pythons have no tkinter; PyPI
-blocked (ezdxf unavailable).
+Environment:
+- Standalone CPython 3.13.14 + Tk 9.0 (installed with uv), Xvfb, 2 vCPU.
+- The system Pythons have no tkinter.
+- PyPI is blocked, so ezdxf is unavailable.
+- Run `git fetch --depth=1 origin tag v1.0.0` so the fill-compat tests run.
 
 ```
 PYTHONPATH=.:/usr/local/lib/python3.13/site-packages xvfb-run -a <py3.13> -m pytest -q -rs
 xvfb-run -a <py3.13> tests/gui_smoke.py OUT
-xvfb-run -a -s "-screen 0 1920x1200x24" <py3.13> tools/bench_phase4.py --sizes small,medium,large --repeat 5 --gui --json OUT.json
+xvfb-run -a -s "-screen 0 1920x1200x24" <py3.13> tools/bench_phase4.py --sizes small,medium,large --repeat 7 --gui --json OUT.json
 ```
 
-- pytest: **527 passed, 3 skipped** (ezdxf ×3), with `git fetch --depth=1 origin tag v1.0.0` so the two
-  compat tests run. New file: 31 tests. GUI smoke: **168/168 ok, 0 failures**.
-- Mutation check: the new tests fail for `_PAD = tol`, `_PAD = 0` and for dropping the always-list.
+**Tests:**
+- pytest: **572 passed, 3 skipped** (ezdxf ×3), 0 failed.
+- GUI smoke: **168/168**, 0 failures.
+- `tests/test_crossings_index.py`: 40 tests.
+- Mutation check:
+  - Caught: using the wrong column anchor (b.x), dropping the fallback list, reversing the candidate order.
+  - Never finishes: removing the cap (killed by the timeout).
+  - Survives, but equivalent: row from b.y, and a shifted cell origin.
 
-| median of 5 | small (96 c / 144 w) | medium (384 / 576) | large (1152 / 1728) |
+**Benchmarks** (median of 7, main @ 81a8da2 → branch):
+
+| | small | medium | large |
 |---|---|---|---|
-| analyse() main → branch | 0.060 → 0.0032 s | 0.99 → 0.014 s | 8.84 → 0.046 s |
-| full redraw (fit) | 0.14 → 0.033 s | 1.06 → 0.11 s | 10.06 → 0.57 s |
-| hover-change redraw | 0.10 → 0.033 s | 1.09 → 0.14 s | 9.77 → 0.59 s |
-| analyse peak memory | 189 → 238 KiB | 749 → 944 KiB | 2.3 → 2.9 MiB |
+| crossings() | 0.0025 → 0.0006 s | 0.036 → 0.0028 s | 0.337 → 0.0093 s (36×) |
+| full redraw (fit) | 0.027 → 0.029 s (noise) | 0.104 → 0.074 s | 0.556 → 0.217 s |
+| crossings() peak memory | 17 → 96 KiB | 63 → 396 KiB | 188 KiB → 1.27 MiB |
 
 ## 6. Known issues / follow-ups (need owner decision)
 
-- `geometry.point_on_segment` compares the projection `dot` against `tol` in squared-length units, so a point
-  up to tol/length beyond a very short diagonal segment counts as on it (e.g. 0.49 units off a 0.017-unit
-  stub). Pre-existing; preserved deliberately; not fixed.
-- Next candidate: `editing.crossings()` — O(S²), ~0.35 s of the remaining 0.57 s large redraw.
-- Later: hover hit-test (12 ms/motion on large), object snap, per-press JSON undo snapshot (13 ms on large).
-- `SchematicCanvas._scene_cache` is dead state (never read).
+- **`point_on_segment`:** a point up to tol/length beyond a very short diagonal counts as on it.
+  Pre-existing; preserved.
+- **`crossings()` and non-horizontal segments:** a diagonal is treated as vertical at its first point's x, so
+  crossings with diagonal wires are reported at a point not on the diagonal, or missed. Pre-existing;
+  preserved.
+- **Remaining large-redraw costs:** connectivity ~0.04 s, scene ~0.06 s, Tk ~0.10 s. Further candidates
+  (hover hit-test ~12 ms per motion, object snap, the per-press JSON undo snapshot) are not started.
+- **Dead state:** `SchematicCanvas._scene_cache` is never read.
