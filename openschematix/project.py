@@ -120,6 +120,7 @@ class Project:
             n += 1
         return f"{base} {n}"
 
+    @symbols.project_scoped
     def duplicate_sheet(self, uid: str) -> Document:
         src = self.sheet(uid)
         doc = src.copy()
@@ -224,12 +225,27 @@ class Project:
         """Store the definition of every custom symbol used in the project,
         so the project opens identically on another computer. Definitions
         already embedded are kept (the drawing keeps the version it was made
-        with) unless the registry holds a newer project-level version."""
+        with) unless the registry holds a newer project-level version.
+
+        The registry is process-wide, so it is trusted only while it holds
+        this project's symbols (symbols.project_owner()). Otherwise another
+        project's definition of the same id would replace this project's
+        own on save. Then embedded definitions are kept, and a missing one
+        comes from the user library (or, for registrations made without an
+        owner, from the registry as before)."""
         used = self.used_custom_symbols()
+        owner = symbols.project_owner()
         for sid in used:
-            sd = symbols.get(sid)
+            cur = self.symbols.get(sid)
+            if owner is self:
+                sd = symbols.get(sid)
+            elif cur is not None:
+                continue
+            elif owner is None:
+                sd = symbols.get(sid)
+            else:
+                sd = symbols.user_symbols().get(sid)
             if sd is not None and sd.custom is not None:
-                cur = self.symbols.get(sid)
                 if cur is None or sd.custom.get("revision", 0) >= cur.get("revision", 0):
                     self.symbols[sid] = copy.deepcopy(sd.custom)
         for sid in list(self.symbols):
@@ -258,7 +274,7 @@ class Project:
     def activate_symbols(self) -> list:
         """Register the embedded symbols for this project. Returns warnings."""
         defs, warnings = self.embedded_symdefs()
-        symbols.set_project_symbols(list(defs.values()))
+        symbols.set_project_symbols(list(defs.values()), owner=self)
         return warnings
 
     # ---------------------------------------------------------------- serialisation

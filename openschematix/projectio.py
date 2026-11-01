@@ -344,16 +344,23 @@ def _read_symbols(z: zipfile.ZipFile, entries) -> tuple[dict, list]:
             # the id keys the symbol; the revision is compared when saving (Project.embed_symbols)
             problems.append(f"The embedded custom symbol in '{path}' is damaged and was not loaded.")
             continue
+        # A malformed structural container is not a recoverable drawing
+        # definition. Preserve only semantically invalid but structurally
+        # well-formed symbol documents for lossless round-tripping.
+        if (any(key in doc and doc[key] is not None and not isinstance(doc[key], list)
+                for key in ("tags", "prims", "pins")) or
+                ("properties" in doc and doc["properties"] is not None and
+                 not isinstance(doc["properties"], dict))):
+            problems.append(f"The embedded custom symbol {sid} is damaged (invalid field structure) and was "
+                            "not loaded; its components are shown as placeholders.")
+            continue
         try:
             to_symdef(doc)
         except SymbolFormatError:
-            pass        # kept: activation reports it, and the document is saved back unchanged
+            pass        # kept: semantically invalid symbols are preserved unchanged
         except (ValueError, TypeError, AttributeError, KeyError, IndexError, OverflowError, RecursionError) as e:
-            # symbols.custom.normalise reports wrong value types this way
-            # rather than as SymbolFormatError; such a document would make
-            # symbol activation fail, so it is left out here, per symbol.
             problems.append(f"The embedded custom symbol {sid} is damaged ({type(e).__name__}) and was not "
-                            f"loaded; its components are shown as placeholders.")
+                            "loaded; its components are shown as placeholders.")
             continue
         out[sid] = doc
     return out, problems
