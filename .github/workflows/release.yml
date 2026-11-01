@@ -30,8 +30,10 @@ jobs:
       - name: Set up build environment
         run: |
           python3 -m venv .build-venv
-          .build-venv/bin/python -m pip install --upgrade pip
-          .build-venv/bin/python -m pip install pyinstaller pytest pypdf ezdxf
+          .build-venv/bin/python -m pip install -r packaging/requirements-release.txt
+
+      - name: Verify release version metadata
+        run: python3 packaging/check_release_version.py
 
       - name: Check version matches the release tag
         if: github.event_name == 'release'
@@ -44,8 +46,6 @@ jobs:
         run: .build-venv/bin/python -m pytest -q tests
 
       - name: GUI test
-        # Informational until it has proven stable on the hosted runners.
-        continue-on-error: true
         run: xvfb-run -a -s "-screen 0 1600x1000x24" .build-venv/bin/python tests/gui_smoke.py gui-test-output
 
       - name: Build bundle
@@ -85,13 +85,20 @@ jobs:
 
       - name: Set up build environment
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install pyinstaller pytest pypdf ezdxf
+          python -m pip install -r packaging/requirements-release.txt
+
+      - name: Verify release version metadata
+        run: python packaging/check_release_version.py
+
+      - name: Check version matches the release tag
+        if: github.event_name == 'release'
+        shell: pwsh
+        run: |
+          $version = python -c "import openschematix; print(openschematix.VERSION)"
+          $tagVersion = '${{ github.event.release.tag_name }}' -replace '^v', ''
+          if ($version -ne $tagVersion) { throw "Tag $tagVersion does not match program version $version" }
 
       - name: Unit tests
-        # The suite is developed on Linux; until it has passed on Windows, failures are reported but do not
-        # block the release. Check this step's log on the first run.
-        continue-on-error: true
         run: python -m pytest -q tests
 
       - name: Build application
@@ -111,7 +118,8 @@ jobs:
           Copy-Item examples\* dist\OpenSchematix\examples\
           $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
           if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress; }
-          & $iscc packaging\installer.iss
+          if (-not (Test-Path $iscc)) { throw "Inno Setup compiler unavailable: $iscc" }
+          & $iscc "/DMyAppVersion=$v" packaging\installer.iss
           if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed" }
           Compress-Archive -Path dist\OpenSchematix -DestinationPath "dist\OpenSchematix-$v-windows-x64-portable.zip"
           Copy-Item installer_output\*.exe dist\
