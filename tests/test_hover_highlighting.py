@@ -60,8 +60,38 @@ def env():
     from openschematix.gui.app import App
     app = App(root, check_recovery=False)
     _diag_install(root, app)
+    wait_for_startup_layout(root, app)
     yield root, app
     root.destroy()
+
+
+def wait_for_startup_layout(root, app, timeout_ms=15000):
+    """Process events until the App has applied its saved pane layout.
+
+    App.__init__ restores the pane sizes from a timer that retries until Tk has sized the panes (up to
+    about 2 s; on Windows a withdrawn window can be laid out that late). If a test is already running, that
+    resizes the drawing canvas under it, and an unmapped (withdrawn) canvas gets no <Configure>, so nothing
+    redraws: the canvas then shows a drawing made for the previous size. Tests compare canvas contents, so
+    they start only once the layout is final."""
+    import tkinter as tk
+    done = tk.BooleanVar(root, False)
+    give_up = [False]
+
+    def poll():
+        if app.layout_restored or give_up[0]:
+            done.set(True)
+        else:
+            root.after(25, poll)
+
+    def timeout():
+        give_up[0] = True
+
+    deadline = root.after(timeout_ms, timeout)
+    poll()
+    if not done.get():
+        root.wait_variable(done)
+    root.after_cancel(deadline)
+    assert app.layout_restored, "the application never finished restoring its pane layout"
 
 
 @pytest.fixture

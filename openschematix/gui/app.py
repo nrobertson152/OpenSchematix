@@ -216,6 +216,9 @@ class App:
         lay = self.settings["layout"]
         self.panel_visible = {"left": lay.get("left", True), "right": lay.get("right", True),
                               "bottom": lay.get("bottom", True)}
+        # True once _restore_layout has applied the saved pane sizes. Until then the panes (and the
+        # drawing canvas) can still be resized by it, up to about 2 s after start-up.
+        self.layout_restored = False
         self.root.after(60, self._restore_layout)
 
     def _restore_layout(self, attempts=0):
@@ -254,6 +257,7 @@ class App:
             if not self.panel_visible[side]:
                 self.panel_visible[side] = True
                 self.toggle_panel(side)
+        self.layout_restored = True
 
     def _save_layout(self):
         lay = self.settings["layout"]
