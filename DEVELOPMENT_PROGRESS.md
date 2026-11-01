@@ -230,6 +230,20 @@ rejected intersections and holes, fills stored as plain polygons, a failing test
   0.266→0.0057 s; full redraw unchanged within noise (interleaved 5 rounds: medium 0.074→0.075 s, large
   0.222→0.229 s medians); redraw peak memory large 5.0→5.4 MiB.
 
+### v1.1.0 engineering correctness — multi-unit BOM quantities (branch `fix/bom-multi-unit-quantities`)
+
+- Defect (reproduced on main @ 5b0f46b): `bom.generate` counted every schematic symbol as a physical part, so
+  relay K1 drawn as coil + 2 contacts was ordered 3× (also in `examples/start_stop_latch.osch`).
+- Device identity uses the existing, documented model (check.py duplicate-id rule, docs/VALIDATION.md):
+  purchasable non-terminal components with the same identifier are one device; terminal-block terminals and
+  components without identifier are individual parts. No schema or file-format change.
+- Line choice per device: part-number units decide (pn-less units absorbed; several distinct part numbers →
+  counted once on each line + new check rule `device-parts`, warning); else units with description/rating;
+  else one line naming the distinct symbols. Sheet-filtered BOM: device included if any unit is on the
+  selected sheets, identity from all its units.
+- Tests: `tests/test_bom_devices.py` (15; 11 fail on main). Full pytest 615 passed / 3 skipped (ezdxf), GUI
+  smoke 168/168.
+
 ## Status summary
 
 **Version 1.0.1 (originally developed internally as "3.0") is implemented and tested on Linux** (engine + GUI). All 25 sections of the brief are

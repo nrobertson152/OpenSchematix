@@ -4,6 +4,14 @@ _Checkpoint updated 2026-10-31 by Claude (Opus 5.5). Longer history: `DEVELOPMEN
 
 ## 1. Where things stand
 
+- **v1.1.0 correctness — multi-unit BOM:** fix implemented on `fix/bom-multi-unit-quantities` (PR "Fix: Correct
+  BOM quantities for multi-unit components", not merged). See `DEVELOPMENT_PROGRESS.md`.
+- **Overlapping-wire junctions:** reproduced on main @ 5b0f46b but not worked on (task switched). Collinear overlaps
+  get false dots at the overlap ends (A 0..100 with B 40..80 gives dots at 40 and 80, in both insertion orders;
+  partial overlaps, shared-end overlaps and a stub along an L-wire's leg do the same). T-junctions, 4-way,
+  crossings, end-to-end joins and exact duplicates are correct. Not yet checked whether nets/netlist are affected.
+  A local branch `fix/overlapping-wire-junctions` exists with no changes.
+
 - Optimization 1 (connectivity spatial index) is merged as PR #20.
 - Optimization 2 (crossing-detection index) is merged as PR #21 (`0e2823b`).
 - Optimization 3 (hover highlighting without full redraws) is **implemented, tested and benchmarked** on

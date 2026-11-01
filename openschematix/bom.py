@@ -1,8 +1,27 @@
 """Automatic bill of materials.
 
-Components are grouped into BOM lines by part identity:
+Physical devices. One physical device may be drawn as several symbols
+("units"): a relay coil K1 and its contacts K1 13-14, K1 23-24, possibly on
+different sheets. As in the drawing checks (see docs/VALIDATION.md), all
+purchasable components that share a non-empty identifier are units of ONE
+device and are counted once. Terminal-block terminals (X1:1, X1:2 ...) and
+components without an identifier are each one physical part.
+
+Part identity. Components are grouped into BOM lines by part identity:
   * with a part number: (manufacturer, part number)
   * without:           (symbol, description, rating, parameters)
+For a device drawn with several units, the units that carry purchasing data
+decide its line, and units without it are absorbed:
+  1. Units with a part number. A device whose units carry DIFFERENT part
+     numbers (e.g. a contactor and an auxiliary contact block both called
+     K1) is counted once on each of those lines; the drawing check reports
+     it ("device-parts").
+  2. Otherwise units with a description or rating.
+  3. Otherwise all units: if they differ, one line describes the device by
+     its distinct symbols ("Coil ... + Contact, make (NO)").
+A device belongs to a sheet-filtered BOM if any of its units is on the
+selected sheets; its part identity always considers all of its units.
+
 Items that are not purchasable are left out: components switched off with
 "Include in BOM", and symbols that represent no physical part (earth and
 ground marks, connection points, sheet connectors, missing-symbol
@@ -88,33 +107,115 @@ def compress_designators(ds: list) -> str:
     return ", ".join(out)
 
 
-def generate(project, sheet_uids=None, include_excluded: bool = False) -> list[BomLine]:
-    groups: dict = {}
-    for i, doc in enumerate(project.sheets, 1):
-        if sheet_uids is not None and doc.uid not in sheet_uids:
-            continue
+@dataclass
+class _Unit:
+    doc: object
+    comp: object
+    key: tuple
+    name: str            # symbol name
+    description: str
+    manufacturer: str
+    part_number: str
+    rating: str
+
+    @property
+    def has_part_number(self) -> bool:
+        return bool(self.part_number)
+
+    @property
+    def described(self) -> bool:
+        return bool(self.comp.props.get("description", "").strip() or self.rating)
+
+
+def _unit(doc, c) -> _Unit:
+    sd = symbols.get(c.symbol)
+    name = sd.name if sd else c.symbol
+    pn = c.props.get("part_number", "").strip()
+    mf = c.props.get("manufacturer", "").strip()
+    desc = c.props.get("description", "").strip() or name
+    rating = c.props.get("rating", "").strip()
+    if pn:
+        key = ("pn", mf.lower(), pn.lower())
+    else:
+        key = ("sym", c.symbol, desc.lower(), rating.lower(), json.dumps(c.params, sort_keys=True))
+    return _Unit(doc, c, key, name, desc, mf, pn, rating)
+
+
+def devices(project, include_excluded: bool = False) -> list[list[_Unit]]:
+    """Physical devices in project order, each as the list of its units (see module docstring)."""
+    from .project import is_terminal_symbol
+    out, by_designator = [], {}
+    for doc in project.sheets:
         for c in doc.components.values():
             if not include_excluded and not purchasable(c):
                 continue
-            sd = symbols.get(c.symbol)
-            name = sd.name if sd else c.symbol
-            pn = c.props.get("part_number", "").strip()
-            mf = c.props.get("manufacturer", "").strip()
-            desc = c.props.get("description", "").strip() or name
-            rating = c.props.get("rating", "").strip()
-            if pn:
-                key = ("pn", mf.lower(), pn.lower())
+            u = _unit(doc, c)
+            if c.designator and not is_terminal_symbol(c.symbol):
+                dev = by_designator.get(c.designator)
+                if dev is None:
+                    dev = by_designator[c.designator] = []
+                    out.append(dev)
+                dev.append(u)
             else:
-                key = ("sym", c.symbol, desc.lower(), rating.lower(), json.dumps(c.params, sort_keys=True))
+                out.append([u])
+    return out
+
+
+def _distinct(units):
+    seen = {}
+    for u in units:
+        seen.setdefault(u.key, u)
+    return list(seen.values())
+
+
+def device_lines(dev: list[_Unit]) -> list[tuple[tuple, dict, list[_Unit]]]:
+    """BOM lines one device is counted on: [(line key, line fields, units shown on that line)]."""
+    with_pn = [u for u in dev if u.has_part_number]
+    if with_pn:
+        plain = [u for u in dev if not u.has_part_number]
+        out = []
+        for first in _distinct(with_pn):
+            units = [u for u in with_pn if u.key == first.key] + plain
+            out.append((first.key, dict(description=first.description, manufacturer=first.manufacturer,
+                                        part_number=first.part_number, rating=first.rating, symbol=first.name),
+                        units))
+        return out
+    defining = [u for u in dev if u.described] or dev
+    kinds = _distinct(defining)
+    if len(kinds) == 1:
+        u = kinds[0]
+        return [(u.key, dict(description=u.description, rating=u.rating, symbol=u.name), dev)]
+    kinds.sort(key=lambda u: u.key)
+    ratings = []
+    for u in kinds:
+        if u.rating and u.rating not in ratings:
+            ratings.append(u.rating)
+    names = []
+    for u in kinds:
+        if u.name not in names:
+            names.append(u.name)
+    key = ("device",) + tuple(u.key for u in kinds)
+    return [(key, dict(description=" + ".join(u.description for u in kinds), rating=", ".join(ratings),
+                       symbol=" + ".join(names)), dev)]
+
+
+def generate(project, sheet_uids=None, include_excluded: bool = False) -> list[BomLine]:
+    groups: dict = {}
+    for dev in devices(project, include_excluded):
+        if sheet_uids is not None and not any(u.doc.uid in sheet_uids for u in dev):
+            continue
+        for key, fields, units in device_lines(dev):
             line = groups.get(key)
             if line is None:
-                line = groups[key] = BomLine(description=desc, manufacturer=mf, part_number=pn, rating=rating,
-                                             symbol=name)
+                line = groups[key] = BomLine(**fields)
             line.quantity += 1
-            line.designators.append(c.tag())
-            line.refs.append((doc.uid, c.id))
-            if doc.name not in line.sheets:
-                line.sheets.append(doc.name)
+            for u in units:
+                if sheet_uids is not None and u.doc.uid not in sheet_uids:
+                    continue
+                line.designators.append(u.comp.tag())
+                line.refs.append((u.doc.uid, u.comp.id))
+                if u.doc.name not in line.sheets:
+                    line.sheets.append(u.doc.name)
     lines = sorted(groups.values(), key=lambda l: natural_key(min(l.designators, key=natural_key)))
     for n, l in enumerate(lines, 1):
         l.item = n

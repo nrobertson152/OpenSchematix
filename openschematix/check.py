@@ -28,6 +28,7 @@ RULES = {
     "fluid-rule": "Fluid-power port rules",
     "elec-rule": "Electrical port rules",
     "missing-prop": "Missing component properties",
+    "device-parts": "Devices with different part numbers",
     "xref": "Cross-sheet references",
     "junction": "Junction and overlap consistency",
     "symbol": "Unsupported or incomplete symbols",
@@ -217,6 +218,28 @@ def check(project, rules=None, require_part_numbers: bool = False) -> list[Issue
                 if require_part_numbers and purchasable(c) and not c.props.get("part_number"):
                     issue(INFO, "missing-prop", f"{c.tag()} has no part number.", doc.uid, c.id, (c.x, c.y),
                           "Enter manufacturer and part number for an accurate bill of materials.")
+
+    # ------------------------------------------------ devices drawn with several symbols
+    if "device-parts" in rules:
+        # Components sharing an identifier are one physical device (see bom.py). If its units carry
+        # different part numbers the bill of materials lists the device once per part number.
+        from .bom import devices
+        for dev in devices(project):
+            parts = {}
+            for u in dev:
+                if u.has_part_number:
+                    parts.setdefault(u.key, u)
+            if len(parts) < 2:
+                continue
+            names = ", ".join(f"{u.manufacturer} {u.part_number}".strip() for u in parts.values())
+            for u in dev:
+                if u.has_part_number:
+                    c = u.comp
+                    issue(WARNING, "device-parts", f"{c.designator} is drawn with different part numbers ({names}); "
+                          f"the bill of materials lists it once for each.", u.doc.uid, c.id, (c.x, c.y),
+                          "Correct if these are separate parts of one device (e.g. a contactor and an auxiliary "
+                          "contact block). Otherwise enter the same part number on every symbol of the device, "
+                          "or on one symbol only.")
 
     # ------------------------------------------------ symbols
     if "symbol" in rules:
