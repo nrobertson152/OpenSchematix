@@ -12,7 +12,8 @@ import pytest
 
 from openschematix import APP_NAME, VERSION, fileio, projectio
 from openschematix.gui import dialogs
-from openschematix import model
+
+pytestmark = pytest.mark.requires_tk
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 EXAMPLES = ROOT / "examples"
@@ -50,7 +51,7 @@ def test_demo_generator_writes_current_version_and_reopens(tmp_path):
     with zipfile.ZipFile(target) as archive:
         manifest = json.loads(archive.read("manifest.json"))
     assert manifest["app"] == f"{APP_NAME} {VERSION}"
-    reopened = projectio.load_project(str(target))
+    reopened = projectio.open_any(str(target)).project
     assert len(reopened.sheets) == 3
 
 
@@ -62,7 +63,7 @@ def test_checked_in_demo_is_readable_even_if_created_by_older_writer():
         manifest = json.loads(archive.read("manifest.json"))
         assert manifest["format"] == projectio.PROJECT_FORMAT
         assert manifest["version"] == projectio.PROJECT_VERSION
-    project = projectio.load_project(str(path))
+    project = projectio.open_any(str(path)).project
     assert len(project.sheets) == 3
 
 
