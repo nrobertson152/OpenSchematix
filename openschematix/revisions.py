@@ -20,10 +20,18 @@ import copy
 import datetime as _dt
 import hashlib
 import json
+import re
 import zlib
 
 AUTO_KEEP = 25
 KINDS = ("auto", "approved")
+MAX_OBJECT_BYTES = 64 * 1024 * 1024     # one decompressed snapshot object (a sheet or the project header)
+_HASH = re.compile(r"[0-9a-f]{64}")
+_ENTRY_TEXT = ("label", "description", "author", "approved_by", "timestamp", "content")
+
+
+class RevisionDataError(ValueError):
+    """A revision index entry or snapshot object read from a file is damaged."""
 
 
 def _canon(obj) -> bytes:
@@ -186,17 +194,121 @@ class RevisionStore:
         return {"version": 1, "entries": copy.deepcopy(self.entries)}
 
     @classmethod
-    def from_parts(cls, index: dict, objects: dict[str, bytes]) -> "RevisionStore":
-        st = cls()
-        for e in (index or {}).get("entries", []):
-            if not isinstance(e, dict) or e.get("kind") not in KINDS:
+    def from_parts(cls, index, objects: dict[str, bytes]) -> "RevisionStore":
+        """Store from a file's index and objects; damaged entries are left
+        out. See from_file for the list of what was left out and why."""
+        return cls.from_file(index, objects.get)[0]
+
+    @classmethod
+    def from_file(cls, index, read_object) -> tuple["RevisionStore", list[str]]:
+        """Rebuild the history read from a project file, keeping every entry
+        that is intact and leaving out only damaged ones.
+
+        `index` is the parsed revisions/index.json; `read_object(hash)`
+        returns that object's stored bytes, or None if it is missing (it may
+        raise RevisionDataError). Every object an entry uses is verified
+        (size, zlib stream, SHA-256 against its name, strict JSON, and the
+        structure of a sheet or project header), so restoring a kept
+        revision cannot fail on damaged data later. Returns the store and one
+        message per entry left out (empty if nothing was)."""
+        st, problems = cls(), []
+        if not isinstance(index, dict) or not isinstance(index.get("entries"), list):
+            return st, ["the revision index is not in the expected format; no revisions could be read"]
+        verdict: dict[str, str | None] = {}     # hash -> problem (None = verified)
+        seen = set()
+        for i, raw in enumerate(index["entries"]):
+            try:
+                e = check_entry(raw)
+                if e["n"] in seen:
+                    raise RevisionDataError(f"duplicate revision number {e['n']}")
+                for h, kind in [(e["head"], "head")] + [(sh[2], "sheet") for sh in e["sheets"]]:
+                    if h not in verdict:
+                        verdict[h] = _verify_object(st, h, kind, read_object)
+                    if verdict[h]:
+                        raise RevisionDataError(verdict[h])
+            except RevisionDataError as exc:
+                problems.append(f"{_describe(raw, i)}: {exc}")
                 continue
-            hashes = [e.get("head")] + [h for _u, _n, h in e.get("sheets", [])]
-            if all(h in objects for h in hashes):
-                st.entries.append(e)
-        st.objects = dict(objects)
+            seen.add(e["n"])
+            st.entries.append(e)
         st.gc()
-        return st
+        return st, problems
+
+
+def _describe(raw, i: int) -> str:
+    """Identify a damaged entry without exposing user-supplied labels."""
+    if isinstance(raw, dict):
+        n = raw.get("n")
+        if isinstance(n, int) and not isinstance(n, bool) and n >= 1:
+            return f"revision #{n}"
+    return f"revision entry {i + 1}"
+
+
+def check_entry(raw) -> dict:
+    """Validated copy of one revisions/index.json entry, or RevisionDataError."""
+    if not isinstance(raw, dict):
+        raise RevisionDataError("the entry is not an object")
+    n = raw.get("n")
+    if isinstance(n, bool) or not isinstance(n, int) or n < 1:
+        raise RevisionDataError("the revision number is missing or invalid")
+    if raw.get("kind") not in KINDS:
+        raise RevisionDataError("the revision kind is missing or invalid")
+    e = copy.deepcopy(raw)          # unknown keys (newer versions) are kept and written back
+    for k in _ENTRY_TEXT:
+        v = raw.get(k, "")
+        if not isinstance(v, str):
+            raise RevisionDataError(f"'{k}' is not text")
+        e[k] = v
+    head = raw.get("head")
+    if not isinstance(head, str) or not _HASH.fullmatch(head):
+        raise RevisionDataError("the snapshot reference is invalid")
+    e["head"] = head
+    sheets = raw.get("sheets")
+    if not isinstance(sheets, list):
+        raise RevisionDataError("the sheet list is invalid")
+    e["sheets"] = []
+    for sh in sheets:
+        if (not isinstance(sh, list) or len(sh) != 3 or not all(isinstance(x, str) for x in sh)
+                or not _HASH.fullmatch(sh[2])):
+            raise RevisionDataError("a sheet reference is invalid")
+        e["sheets"].append(list(sh))
+    return e
+
+
+def _verify_object(st: "RevisionStore", h: str, kind: str, read_object) -> str | None:
+    """Load object `h` into `st.objects` if it is intact; else the problem."""
+    from . import safejson
+    try:
+        blob = read_object(h)
+    except RevisionDataError as e:
+        return str(e)
+    if blob is None:
+        return "a snapshot it uses is missing from the file"
+    try:
+        d = zlib.decompressobj()
+        raw = d.decompress(blob, MAX_OBJECT_BYTES + 1)
+        if len(raw) > MAX_OBJECT_BYTES:
+            return "a snapshot it uses is unreasonably large"
+        if not d.eof or d.unused_data:
+            return "a snapshot it uses is truncated or damaged"
+    except zlib.error:
+        return "a snapshot it uses is damaged (not a valid compressed stream)"
+    if _sha(raw) != h:
+        return "a snapshot it uses is damaged (checksum mismatch)"
+    try:
+        obj = safejson.loads(raw)
+        if kind == "sheet":
+            from .model import Document
+            Document.from_dict(obj)
+        else:
+            from .project import Project
+            if not isinstance(obj, dict) or "sheets" in obj:
+                raise ValueError("not a project header")
+            Project.from_dict(obj)
+    except ValueError as e:
+        return f"a snapshot it uses is invalid ({e})"
+    st.objects[h] = blob
+    return None
 
 
 def restore(project, store: RevisionStore, n: int):

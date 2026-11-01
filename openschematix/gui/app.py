@@ -2273,15 +2273,21 @@ class App:
             messagebox.showerror("Could not open", f"{path}\n\n{e}", parent=self.root)
             return
         self.settings["last_dir"] = os.path.dirname(os.path.abspath(path))
-        if res.migrated:
+        if res.needs_new_name:
+            # converted, or opened with damaged parts left out: never save over the original
             self._reset(res.project, None)
             self._suggested_path = projectio.suggested_project_path(path)
             self.dirty = True
             self.update_title()
             for w in res.warnings:
                 self.log(w, "warning")
-            self.toast(f"Converted {os.path.basename(path)} to a project. The original file is unchanged; "
-                       f"Save asks for a new name (suggested: {os.path.basename(self._suggested_path)}).", "info")
+            if res.migrated:
+                self.toast(f"Converted {os.path.basename(path)} to a project. The original file is unchanged; "
+                           f"Save asks for a new name (suggested: {os.path.basename(self._suggested_path)}).",
+                           "info")
+            else:
+                self.toast(f"Parts of {os.path.basename(path)} are damaged and were left out (see the Output "
+                           f"panel). The file is unchanged; Save asks for a new name.", "warning")
         else:
             self._reset(res.project, path)
             self.settings.add_recent(path)
@@ -2299,7 +2305,7 @@ class App:
             return self.save_as()
         try:
             projectio.save_project(self.project, self.filename)
-        except OSError as e:
+        except (OSError, projectio.ProjectFormatError) as e:
             messagebox.showerror("Save failed", f"{self.filename}\n\n{e}\n\nYour previous file is unchanged.",
                                  parent=self.root)
             return False
@@ -2336,7 +2342,11 @@ class App:
                                          defaultextension=PROJECT_EXTENSION,
                                          filetypes=[("OpenSchematix project", "*" + PROJECT_EXTENSION)])
         if p:
-            projectio.atomic_write_bytes(p, projectio.project_bytes(self.project))
+            try:
+                projectio.atomic_write_bytes(p, projectio.project_bytes(self.project))
+            except (OSError, projectio.ProjectFormatError) as e:
+                messagebox.showerror("Export failed", f"{p}\n\n{e}", parent=self.root)
+                return
             self.toast(f"Exported {os.path.basename(p)}", "success")
 
     def import_project_sheets(self):
@@ -2609,10 +2619,18 @@ def main(argv=None):
                 pass
     root = tk.Tk(className="OpenSchematix")
     root.withdraw()
+    from . import errors
+    errors.install(root)       # the windowed build has no console: never let an error vanish
     splash = _startup_splash(root)
     started_at = time.monotonic()
     try:
         app = App(root, argv[0] if argv else None)
+    except Exception:
+        info = sys.exc_info()
+        splash.destroy()
+        root.destroy()
+        errors.report_startup_failure(*info)
+        return 1
     except BaseException:
         splash.destroy()
         root.destroy()
