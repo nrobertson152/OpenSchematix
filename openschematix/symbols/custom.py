@@ -4,20 +4,20 @@ A custom symbol is stored as a small JSON document (``.osym``):
 
     {
       "format": "OpenSchematix Symbol", "version": 1,
-      "id": "user:3f2a9c1e5b7d4e10",          # stable identifier, never reused
-      "revision": 3,                           # incremented on every save
+      "id": "user:3f2a9c1e5b7d4e10",
+      "revision": 3,
       "name": "Proximity sensor, PNP", "description": "...",
       "category": "Electrical", "group": "Sensors", "tags": ["sensor", "pnp"],
       "prefix": "B", "convention": "Custom",
-      "properties": {"manufacturer": "...", ...},   # default component properties
+      "properties": {"manufacturer": "...", ...},
       "prims": [ {"k": "line", "pts": [[x, y], ...], "w": "normal", "dash": false},
                  {"k": "poly", ...}, {"k": "circle", "c": [x, y], "r": r, "fill": false},
                  {"k": "arc", "c": [x, y], "r": r, "start": deg, "extent": deg},
                  {"k": "text", "p": [x, y], "s": "M", "size": 8, "anchor": "c"} ],
       "pins": [ {"id": "p1", "name": "1", "x": -20, "y": 0, "dir": "l",
                  "type": "elec.passive", "show": true} ],
-      "derived_from": {"id": "el.relay.coil", "name": "...", "revision": "2"},  # optional
-      "aliases": ["PNP-PROX", "B.prox"]        # optional extra identifiers
+      "derived_from": {"id": "el.relay.coil", "name": "...", "revision": "2"},
+      "aliases": ["PNP-PROX", "B.prox"]
     }
 
 Coordinates are symbol-local drawing units (0.25 mm) relative to the
@@ -138,8 +138,17 @@ def normalise(data) -> dict:
             "custom symbol ids must start with 'user:' followed by a unique suffix "
             f"(got {sid!r})"
         )
+    rev_raw = data.get("revision", 0)
+    if rev_raw is None or rev_raw == "":
+        rev_raw = 0
+    if isinstance(rev_raw, bool) or not isinstance(rev_raw, int):
+        raise SymbolFormatError(
+            f"revision must be a non-negative integer, got {type(rev_raw).__name__}"
+        )
+    if rev_raw < 0:
+        raise SymbolFormatError(f"revision must be non-negative, got {rev_raw}")
     out = {"format": SYMBOL_FORMAT, "version": SYMBOL_VERSION, "id": sid,
-           "revision": int(data.get("revision", 0) or 0),
+           "revision": rev_raw,
            "name": str(data.get("name") or "Unnamed symbol")[:120],
            "description": str(data.get("description", ""))[:2000],
            "category": str(data.get("category") or "General"),
@@ -149,15 +158,11 @@ def normalise(data) -> dict:
            "convention": str(data.get("convention") or "Custom")[:60],
            "properties": {str(k): str(v) for k, v in (data.get("properties") or {}).items()},
            "prims": [], "pins": []}
-    # Optional provenance of a symbol derived from another one (symbol editor
-    # "open a copy"). Informational only; older versions ignore it.
     src = data.get("derived_from")
     if isinstance(src, dict):
         src = {k: str(src[k])[:120] for k in ("id", "name", "revision") if src.get(k) not in (None, "")}
         if src.get("id"):
             out["derived_from"] = src
-    # Optional aliases. Lenient on load (a library file never fails over one): invalid entries, the symbol's
-    # own id and case-insensitive repeats are dropped. Uniqueness across symbols: alias_problems().
     aliases = clean_aliases(data.get("aliases"), sid)
     if aliases:
         out["aliases"] = aliases
@@ -240,12 +245,7 @@ def clean_aliases(values, own_id: str = "") -> list[str]:
 
 
 def alias_problems(aliases, own_id: str, others) -> list[str]:
-    """Problems with assigning `aliases` to symbol `own_id` (empty list if none).
-
-    `others`: iterable of (symbol id, aliases[, name]) for every other known symbol (built-in and custom);
-    entries with `own_id` itself are ignored, so other copies of the same symbol never conflict. An alias may
-    not equal another symbol's name either: INSERT matches exact names before aliases, so such an alias could
-    never be used and would only look ambiguous."""
+    """Problems with assigning `aliases` to symbol `own_id` (empty list if none)."""
     problems, seen = [], set()
     ids, owners, names = {}, {}, {}
     for sid, als, *rest in others:
@@ -303,10 +303,6 @@ def build_geometry(doc: dict) -> Geometry:
                         arrows.append({"k": "poly", "pts": triangle, "fill": True, "w": p.get("w", "normal")})
                     break
     prims.extend(arrows)
-    # Pin designations are not part of the artwork: like built-in symbols they
-    # are drawn once by the renderer (render.terminal_label_prims) according to
-    # the project's "show terminal designations" setting. Baking them into the
-    # prims here drew them regardless of that setting and twice when it was on.
     terms = [Terminal(p["id"], p["x"], p["y"], p["dir"], label=p["name"], ptype=p.get("type", ""),
                       show=bool(p.get("show", True)))
              for p in doc["pins"]]
@@ -322,13 +318,11 @@ def to_symdef(doc: dict) -> SymbolDef:
     sd = SymbolDef(doc["id"], doc["name"], doc["category"], doc["group"], doc["convention"] or GENERIC,
                    doc["description"], doc["prefix"], g, keywords=tuple(doc["tags"]),
                    aliases=tuple(doc.get("aliases", ())))
-    sd.custom = doc          # keep the source document (embedded in projects)
+    sd.custom = doc
     return sd
 
 
 def default_ptype(category: str, terminal_name: str) -> str:
-    """Port type for built-in symbol terminals, derived from the category and
-    the conventional port letters/numbers (ISO 1219 / ISO 5599)."""
     dom = CATEGORY_DOMAIN.get(category)
     n = terminal_name.upper()
     if dom == "hyd":
