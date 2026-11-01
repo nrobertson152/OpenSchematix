@@ -64,6 +64,11 @@ def digest(obj):
     return hashlib.sha256(json.dumps(obj, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
 
+def same_symbol(actual, expected):
+    """A JSON round trip converts tuples to lists without changing geometry."""
+    return digest(actual) == digest(expected)
+
+
 def test_nested_scopes_restore_every_layer_and_cache_after_inner_exception():
     a, *_ = make("Nested A", 20)
     b, *_ = make("Nested B", 40)
@@ -93,11 +98,11 @@ def test_repeated_nonactive_save_preserves_exact_embedded_document_and_reopen(tm
     for i in range(4):
         target = tmp_path / ("iteration_%s.schematix" % i)
         projectio.save_project(a, str(target), snapshot=False)
-        assert a.symbols[SID] == original
+        assert same_symbol(a.symbols[SID], original)
         assert digest(a.symbols[SID]) == original_hash
         assert symbols.project_owner() is b
         reopened = projectio.open_any(str(target), activate=False).project
-        assert reopened.symbols[SID] == original
+        assert same_symbol(reopened.symbols[SID], original)
         assert digest(reopened.symbols[SID]) == original_hash
         assert signature(reopened, ac, ar, aw) == baseline
         assert symbols.project_owner() is b
@@ -119,13 +124,13 @@ def test_approved_revision_restores_original_geometry_after_foreign_activation(t
     saved = tmp_path / "revisions.schematix"
     projectio.save_project(a, str(saved), snapshot=False)
     q = projectio.open_any(str(saved), activate=False).project
-    assert q.symbols[SID] == original
+    assert same_symbol(q.symbols[SID], original)
     for n in (first["n"], second["n"]):
         old = q.revisions.load(n)
-        assert old.symbols[SID] == original
+        assert same_symbol(old.symbols[SID], original)
         assert signature(old, ac, ar, aw)[0] == signature(a, ac, ar, aw)[0]
     restored = revisions.restore(q, q.revisions, first["n"])
-    assert restored.symbols[SID] == original
+    assert same_symbol(restored.symbols[SID], original)
     assert restored.sheets[0].components[ac].label != "changed after approval"
     assert symbols.project_owner() is b
 
@@ -159,7 +164,7 @@ def test_user_library_conflict_never_overrides_embedded_source_on_save(tmp_path)
     filename = tmp_path / "isolated.schematix"
     projectio.save_project(a, str(filename), snapshot=False)
     q = projectio.open_any(str(filename), activate=False).project
-    assert q.symbols[SID] == original
+    assert same_symbol(q.symbols[SID], original)
     assert signature(q, ac, ar, aw) == signature(a, ac, ar, aw)
     assert symbols.project_owner() is b
 
