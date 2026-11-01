@@ -112,6 +112,26 @@ Each object is the canonical JSON (sorted keys, no whitespace) of the project he
 compressed with zlib and named by the SHA-256 of the uncompressed JSON. Unchanged sheets are therefore
 stored only once across all revisions.
 
+When a project is opened, every object a revision uses is verified: its size (at most 64 MB uncompressed),
+its zlib stream, its SHA-256 against its name, and its content (strict JSON with a valid sheet or project
+header). A revision whose entry or objects are damaged is left out on its own; the others, and the drawing
+itself, open normally. The application then lists what was left out and asks for a new name on the next
+save, so the damaged original is never overwritten.
+
+## Reading rules
+
+Readers reject, as a damaged file:
+- JSON that is not standard: `NaN`, `Infinity`, numbers that overflow (`1e999`), integers longer than 18
+  digits, and nesting deeper than 64 levels;
+- a member larger than 200 MB, or more than 1 GB in total;
+- wrong value types: an object or list where text or a number is expected, a missing required field
+  (`id`, `symbol`, `x`, `y` of a component; `id`, `points` of a wire; the geometry of a shape), a
+  non-integer object id, and parameters of built-in symbols whose type differs from the default's.
+
+As before, page-setup fields, rotations, wire styles and other presentation values that cannot be used
+fall back to their defaults. A damaged embedded custom symbol is left out with a warning (its components
+are shown as placeholders), like a damaged revision.
+
 ## Saving
 
 Files are written to a temporary file in the destination folder, flushed to disk, read back and verified,

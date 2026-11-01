@@ -52,6 +52,18 @@ All notable changes to this project are documented here. Versions follow [Semant
   component whose symbol is not available at all stay attached and work again once the symbol is installed.
   File formats are unchanged. *Import sheets* no longer replaces the open project's symbols while reading the
   other file, and reports imported symbols that differ from the project's version.
+- Project files: damaged or malformed files are always reported as damaged, naming the part and the
+  problem (never quoting file content), instead of failing with an internal error. Non-standard numbers
+  (`NaN`, `Infinity`, `1e999`), oversized integers, excessive nesting and wrong value types are rejected,
+  so they can no longer open and then break Check, the netlist or exports; a project containing a
+  non-finite value is refused on save, leaving the previous file intact.
+- Revision history: a damaged revision (index entry or snapshot object) no longer blocks opening the
+  project or resets the whole history. Only the damaged revisions are left out, and the project must be
+  saved under a new name so the original file is kept. Snapshot objects are size-limited and checked
+  against their SHA-256 when the project is opened.
+- Unexpected errors are no longer invisible in the Windows application (which has no console): they are
+  written to `logs/openschematix-errors.log` in the settings folder and shown in an error dialog. A failure
+  during start-up is reported the same way.
 - Symbol editor: clearing "Number this point on drawings" (and changing a connection point's port type or lead
   direction) took effect only after pressing Apply, and was lost if the symbol was saved first; it now applies
   immediately, and pending edits are applied when saving. A point that is not numbered no longer shows its number
