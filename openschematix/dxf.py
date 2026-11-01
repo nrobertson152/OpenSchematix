@@ -575,7 +575,7 @@ def import_dxf(raw: bytes, units: str | None = None, scale: float = 1.0, origin=
     header, layer_tab, blocks, entities = _parse(text)
     rep = ImportReport()
     rep.version = (header.get("$ACADVER") or [(1, "")])[0][1]
-    if units:
+    if units is not None:
         if not isinstance(units, str) or units not in UNIT_NAMES:
             raise DxfError("unsupported DXF units override")
         rep.units_mm = UNIT_NAMES[units]
