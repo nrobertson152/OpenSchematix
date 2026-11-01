@@ -60,6 +60,8 @@ class Net:
         return sorted({w[0] for w in self.wires} | {t[0] for t in self.terminals})
 
 
+
+
 def pin_ref_connects(doc, ref) -> bool:
     """True if *ref* is a wire end that should join the electrical netlist.
 
