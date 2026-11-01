@@ -156,7 +156,7 @@ def test_align_submenu_commands_and_disabled_items_survive(app, capture_menus, m
         submenu.invoke(0)
         assert called == [editing.ALIGN_MODES[0]]
     finally:
-        app.root.tk.call("tk::MenuEscape", str(menu))
+        app.root.tk.call("tk::MenuEscape", str(main_menu))
         app.root.update()
         app.selection = old_selection
         for c in placed:
