@@ -45,6 +45,16 @@
   only; older versions ignore it. A copy keeps the source's connection-point ids (for built-in symbols, the
   terminal names such as `1`, `A1`, `P`), so it connects the same way and can replace the original on a drawing
   without losing wires.
+* Optional `aliases` (list of strings) are extra identifiers for the symbol: letters, digits and `. _ + - /`, no
+  spaces, at most 60 characters, at most 20 per symbol, compared case-insensitively. The library search, the
+  symbol pickers and `INSERT <alias>` find the symbol by them; placed components always store the symbol's `id`,
+  so drawings never depend on an alias. `INSERT` matches an exact id, then an exact name, then an alias. An alias
+  must not equal any symbol id (built-in or custom), another symbol's alias or another symbol's name: the symbol editor and the library refuse to save one that does, importing drops colliding
+  aliases, and copies (*Save as new symbol*, *Edit a copy*, library copy, duplicate on import) start without
+  aliases. Invalid entries are dropped when a file is read; older versions ignore the field.
+* `pins[].show` (default `true`): `false` means the connection point is never numbered on drawings (it is
+  numbered only where a component overrides its designation). The symbol editor shows such a point's name only
+  while it is selected, in parentheses.
 
 ## A library package: `.osymlib` (version 1)
 

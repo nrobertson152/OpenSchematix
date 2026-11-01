@@ -249,6 +249,27 @@ rejected intersections and holes, fills stored as plain polygons, a failing test
 - Tests: `tests/test_bom_devices.py` (20; 11 fail on main, the 4 clash tests fail on the first PR head).
   Full pytest 620 passed / 3 skipped (ezdxf), GUI smoke 168/168.
 
+### v1.1.0 cycle 2 — symbol editor and symbol aliases (branch `feature/symbol-editor-aliases`)
+
+- Pin numbers: the renderer and the PDF/SVG/DXF exports already honoured `pins[].show` (Phase 1). The defects
+  were in the editor: the "Number this point" checkbox (and type/direction) only took effect on Apply and was
+  lost when saving first; the editor canvas drew every pin name. Now: form changes apply immediately (Enter in
+  the name field), save applies pending form edits (only when the form holds the selected point), hidden
+  numbers are not drawn on the editor canvas (muted "(n)" while selected) and are listed as "(n)".
+- Keyboard (editor, matching the main window's keymap defaults): Ctrl+A, arrow-key nudge (2.5 mm grid when
+  connection points are selected so they stay on the grid; else the snap step), Ctrl+Shift+Z, Caps-Lock-safe
+  Ctrl shortcuts. Space behaviour (Phase 1) unchanged.
+- Aliases: optional `aliases` list in `.osym` docs (`symbols/custom.py`: `clean_aliases`, `alias_problems`;
+  `SymbolDef.aliases`; `symbols.resolve()`; search text; `userlib` search, save check, import drops colliding
+  ones; every copy path drops them; library details panel; `INSERT <alias>`). Drawings store canonical ids.
+  Built-in symbols have no aliases (not editable).
+- Review (integration prep): `symbols.resolve()` also compares ids case-insensitively and returns nothing unless
+  exactly one symbol matches; aliases may not equal another symbol's name; INSERT order is exact id, exact name,
+  alias, search (keeps pre-alias behaviour for names). Real 1.0.0 reader verified (tag v1.0.0) for `.osym` and
+  projects with aliases. PR #30 overlap: on merge, `doc.pop("aliases", None)` belongs in its `_as_copy()`.
+- Tests: `tests/test_symbol_aliases.py` (16), `tests/test_symbol_editor_pins.py` (11, Tk). Full pytest 661 passed /
+  3 skipped (ezdxf), GUI smoke 168/168.
+
 ## Status summary
 
 **Version 1.0.1 (originally developed internally as "3.0") is implemented and tested on Linux** (engine + GUI). All 25 sections of the brief are
