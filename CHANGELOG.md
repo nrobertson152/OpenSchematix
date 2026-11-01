@@ -6,6 +6,14 @@ All notable changes to this project are documented here. Versions follow [Semant
 
 ### Added
 
+- Symbol aliases: a custom symbol can have extra identifiers (symbol editor, *Symbol* tab, "Aliases"). The library
+  search, the symbol pickers and `INSERT <alias>` find it by them; drawings always store the symbol itself.
+  Aliases are unique among all symbols (collisions with symbol ids, other aliases or other symbols' names are
+  refused; `INSERT` matches an exact id, then an exact name, then an alias) and are not copied to derived symbols. Stored as an optional `aliases` list in `.osym` documents (format version unchanged).
+- Symbol editor: Ctrl+A selects everything, arrow keys move the selection (by the 2.5 mm grid when it contains
+  connection points, otherwise by the snap step), Ctrl+Shift+Z redoes, and the shortcuts also work with Caps Lock;
+  Enter in a connection point's name field applies it.
+
 - Boundary fill: `FILL` (aliases `HATCH`, `H`, *Draw ▸ Fill (hatch)*, toolbar button). Click inside areas
   enclosed by lines, polylines, polygons, rectangles, circles and arcs to fill them solid — boundaries may be
   made of separate, crossing, overshooting, overlapping or partial segments and tangent curves. Islands inside
@@ -35,6 +43,11 @@ All notable changes to this project are documented here. Versions follow [Semant
 
 
 ### Fixed
+
+- Symbol editor: clearing "Number this point on drawings" (and changing a connection point's port type or lead
+  direction) took effect only after pressing Apply, and was lost if the symbol was saved first; it now applies
+  immediately, and pending edits are applied when saving. A point that is not numbered no longer shows its number
+  on the editor canvas (only while selected, in parentheses) and is listed as "(1)".
 
 - Bill of materials: a device drawn with several symbols that share one identifier (relay coil K1 and its
   contacts) is counted once instead of once per symbol. Symbols without purchasing data are absorbed into

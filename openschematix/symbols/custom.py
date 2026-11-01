@@ -16,18 +16,27 @@ A custom symbol is stored as a small JSON document (``.osym``):
                  {"k": "text", "p": [x, y], "s": "M", "size": 8, "anchor": "c"} ],
       "pins": [ {"id": "p1", "name": "1", "x": -20, "y": 0, "dir": "l",
                  "type": "elec.passive", "show": true} ],
-      "derived_from": {"id": "el.relay.coil", "name": "...", "revision": "2"}   # optional
+      "derived_from": {"id": "el.relay.coil", "name": "...", "revision": "2"},  # optional
+      "aliases": ["PNP-PROX", "B.prox"]        # optional extra identifiers
     }
 
 Coordinates are symbol-local drawing units (0.25 mm) relative to the
 insertion point (the origin). Pins must lie on the 10-unit grid. A pin's
 ``id`` is its permanent key: wires reference pins by id, so renaming or
 renumbering a pin never disconnects existing drawings.
+
+``aliases`` are extra identifiers for the same symbol (letters, digits and
+``. _ + - /``; case-insensitive). They are found by the library search and
+INSERT and resolve to the symbol (``symbols.resolve``); drawings always
+store the canonical ``id``. Aliases must not equal any symbol id, another
+symbol's alias or another symbol's name (``alias_problems``). Older versions
+ignore the field.
 """
 from __future__ import annotations
 
 import copy
 import math
+import re
 import uuid
 
 from ..geometry import GRID
@@ -39,6 +48,8 @@ SYMBOL_VERSION = 1
 USER_PREFIX = "user:"
 CATEGORIES = ("Electrical", "Electronic", "Hydraulic", "Pneumatic", "General")
 PRIM_KINDS = ("line", "poly", "circle", "arc", "text")
+ALIAS_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._+\-/]{0,59}")
+MAX_ALIASES = 20
 
 
 class SymbolFormatError(ValueError):
@@ -99,6 +110,11 @@ def normalise(data) -> dict:
         src = {k: str(src[k])[:120] for k in ("id", "name", "revision") if src.get(k) not in (None, "")}
         if src.get("id"):
             out["derived_from"] = src
+    # Optional aliases. Lenient on load (a library file never fails over one): invalid entries, the symbol's
+    # own id and case-insensitive repeats are dropped. Uniqueness across symbols: alias_problems().
+    aliases = clean_aliases(data.get("aliases"), sid)
+    if aliases:
+        out["aliases"] = aliases
     for i, p in enumerate(data.get("prims") or []):
         if not isinstance(p, dict) or p.get("k") not in PRIM_KINDS:
             raise SymbolFormatError(f"primitive {i}: unknown kind")
@@ -164,6 +180,57 @@ def normalise(data) -> dict:
     return out
 
 
+def clean_aliases(values, own_id: str = "") -> list[str]:
+    """Valid, distinct (case-insensitive) aliases in their given order."""
+    if not isinstance(values, (list, tuple)):
+        return []
+    out, seen = [], {own_id.lower()} if own_id else set()
+    for v in values:
+        a = str(v).strip() if isinstance(v, (str, int)) and not isinstance(v, bool) else ""
+        if a and ALIAS_RE.fullmatch(a) and a.lower() not in seen:
+            seen.add(a.lower())
+            out.append(a)
+    return out[:MAX_ALIASES]
+
+
+def alias_problems(aliases, own_id: str, others) -> list[str]:
+    """Problems with assigning `aliases` to symbol `own_id` (empty list if none).
+
+    `others`: iterable of (symbol id, aliases[, name]) for every other known symbol (built-in and custom);
+    entries with `own_id` itself are ignored, so other copies of the same symbol never conflict. An alias may
+    not equal another symbol's name either: INSERT matches exact names before aliases, so such an alias could
+    never be used and would only look ambiguous."""
+    problems, seen = [], set()
+    ids, owners, names = {}, {}, {}
+    for sid, als, *rest in others:
+        if sid == own_id:
+            continue
+        ids[sid.lower()] = sid
+        for a in als or ():
+            owners.setdefault(str(a).lower(), sid)
+        if rest and rest[0]:
+            names.setdefault(str(rest[0]).strip().lower(), rest[0])
+    if len(aliases) > MAX_ALIASES:
+        problems.append(f"at most {MAX_ALIASES} aliases are allowed")
+    for a in aliases:
+        low = a.lower()
+        if low in seen:
+            problems.append(f"“{a}” is listed twice")
+        elif low == own_id.lower():
+            problems.append(f"“{a}” is this symbol's own identifier")
+        elif low in ids:
+            problems.append(f"“{a}” is the identifier of another symbol ({ids[low]})")
+        elif low in owners:
+            problems.append(f"“{a}” is already an alias of another symbol ({owners[low]})")
+        elif low in names:
+            problems.append(f"“{a}” is the name of another symbol (“{names[low]}”)")
+        elif not ALIAS_RE.fullmatch(a):
+            problems.append(f"“{a}” is not a valid alias (use letters, digits and . _ + - /, no spaces, "
+                            f"at most 60 characters)")
+        seen.add(low)
+    return problems
+
+
 def build_geometry(doc: dict) -> Geometry:
     prims = [copy.deepcopy(p) for p in doc["prims"]]
     for p in prims:
@@ -207,7 +274,8 @@ def to_symdef(doc: dict) -> SymbolDef:
     if problems:
         raise SymbolFormatError("; ".join(problems))
     sd = SymbolDef(doc["id"], doc["name"], doc["category"], doc["group"], doc["convention"] or GENERIC,
-                   doc["description"], doc["prefix"], g, keywords=tuple(doc["tags"]))
+                   doc["description"], doc["prefix"], g, keywords=tuple(doc["tags"]),
+                   aliases=tuple(doc.get("aliases", ())))
     sd.custom = doc          # keep the source document (embedded in projects)
     return sd
 
