@@ -127,12 +127,31 @@ def test_unresolved_custom_symbol_keeps_named_pin_ref():
     d = p.sheets[0]
     c = editing.place(d, sid, 100, 100)
     editing.add_wire(d, [c.terminals()["pA"], (50, 100)])
+    # Genuinely unresolved: neither this project, the registry nor a user library defines the symbol
+    # (e.g. a damaged embedded definition, or a file opened where its library is missing).
+    del p.symbols[sid]
     symbols.set_project_symbols([])
-    assert symbols.get(sid) is None
+    assert symbols.get(sid) is None and p.symbol_resolver()(sid) is None
+    # Its pins are unknown here, so named attachments are kept rather than discarded.
     assert netlist.pin_ref_connects(d, [c.id, "pA"])
     assert netlist.pin_ref_connects(d, [c.id, "ghost"])
     assert any((c.id, "pA") in [(t[1], t[2]) for t in n.terminals]
                for n in netlist.compute_nets(p))
+
+
+def test_clearing_registry_does_not_hide_projects_own_symbol():
+    """The owning project's embedded definition validates its pins even when the process-wide
+    registry no longer holds it (it is not "unresolved")."""
+    doc = _custom_symbol()
+    sid = doc["id"]
+    p = new_project("own")
+    p.symbols[sid] = doc
+    p.activate_symbols()
+    d = p.sheets[0]
+    c = editing.place(d, sid, 100, 100)
+    symbols.set_project_symbols([])
+    assert netlist.pin_ref_connects(d, [c.id, "pA"])
+    assert not netlist.pin_ref_connects(d, [c.id, "ghost"])
 
 
 def test_save_load_roundtrip_preserves_valid_nets(tmp_path):

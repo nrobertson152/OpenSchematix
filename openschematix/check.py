@@ -12,7 +12,8 @@ from dataclasses import dataclass
 from . import symbols
 from .connectivity import analyse
 from .geometry import point_on_segment, same
-from .netlist import compute_nets, link_label, pin_ref_connects
+from .netlist import (REF_BLANK_PIN, REF_MALFORMED, REF_MISSING_COMPONENT, REF_UNKNOWN_PIN, classify_pin_ref,
+                      compute_nets, link_label, symbol_resolver_for)
 from .project import is_terminal_symbol
 from .symbols.general import OFFPAGE_IDS, UNKNOWN_ID
 
@@ -127,26 +128,7 @@ def check(project, rules=None, require_part_numbers: bool = False) -> list[Issue
                 issue(WARNING, "dangling-wire", "Wire end is not connected to a terminal or another wire.",
                       doc.uid, wid, p, "Extend the wire to a terminal or wire, or delete the loose piece.")
         if "invalid-wire-ref" in rules:
-            for w in doc.wires.values():
-                for attr in ("start", "end"):
-                    ref = getattr(w, attr)
-                    if not ref:
-                        continue
-                    if pin_ref_connects(doc, ref):
-                        continue
-                    cid = ref[0] if isinstance(ref, (list, tuple)) and ref else None
-                    pin = ref[1] if isinstance(ref, (list, tuple)) and len(ref) > 1 else ref
-                    if cid not in doc.components:
-                        issue(WARNING, "invalid-wire-ref",
-                              f"Wire end references missing component #{cid}.",
-                              doc.uid, w.id, w.points[0 if attr == "start" else -1],
-                              "Clear the attachment or restore the component.")
-                    else:
-                        issue(WARNING, "invalid-wire-ref",
-                              f"Wire end references unknown pin {pin!r} on component "
-                              f"{doc.components[cid].tag()}.",
-                              doc.uid, w.id, w.points[0 if attr == "start" else -1],
-                              "Attach the wire to a real pin, or update the pin name.")
+            _invalid_ref_rules(doc, issue)
         if "junction" in rules:
             _junction_rules(doc, issue)
 
@@ -332,6 +314,32 @@ def check(project, rules=None, require_part_numbers: bool = False) -> list[Issue
     out.sort(key=Issue.sort_key)
     return out
 
+
+
+def _invalid_ref_rules(doc, issue):
+    """Wire ends attached to a terminal that does not exist (missing component, blank pin, or a pin the
+    sheet's own project's symbol does not define). Such ends are not connected by the netlist, so a
+    drawing that looks attached is reported instead of silently joined. References to a component
+    whose symbol is temporarily unavailable are kept (the "symbol" rule reports the symbol)."""
+    resolve, cache = symbol_resolver_for(doc), {}
+    for w in doc.wires.values():
+        for attr, idx in (("start", 0), ("end", -1)):
+            ref = getattr(w, attr)
+            if not ref:
+                continue
+            kind = classify_pin_ref(doc, ref, resolve, cache)
+            where = w.points[idx]
+            if kind == REF_MISSING_COMPONENT:
+                issue(WARNING, "invalid-wire-ref", f"Wire {attr} references missing component #{ref[0]}.",
+                      doc.uid, w.id, where, "Reattach the wire to a terminal, or restore the component.")
+            elif kind in (REF_BLANK_PIN, REF_UNKNOWN_PIN):
+                c = doc.components[ref[0]]
+                what = "a blank terminal name" if kind == REF_BLANK_PIN else f"unknown terminal {str(ref[1])!r}"
+                issue(WARNING, "invalid-wire-ref", f"Wire {attr} references {what} on {c.tag() if c.designator else c.symbol}.",
+                      doc.uid, w.id, where, "Attach the wire to a real terminal, or update the terminal name.")
+            elif kind == REF_MALFORMED:
+                issue(WARNING, "invalid-wire-ref", f"Wire {attr} has a malformed terminal reference.",
+                      doc.uid, w.id, where, "Reattach the wire to a terminal.")
 
 def _junction_rules(doc, issue):
     wires = list(doc.wires.values())
