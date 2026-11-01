@@ -99,6 +99,22 @@ def _recover_interrupted_package_import(root: str):
         os.replace(backup, root)
 
 
+def _assert_no_library_symlinks(root: str) -> None:
+    """Reject symlinks before copying an untrusted library into staging.
+
+    Reject a symlinked library root and any linked directory/file anywhere in
+    the source tree. Avoid following links; never traverse linked directories.
+    """
+    if os.path.islink(root):
+        raise ValueError("library import cannot stage a symbolic-link library root")
+    if not os.path.isdir(root):
+        return
+    for directory, dirs, files in os.walk(root, topdown=True, followlinks=False):
+        for name in dirs + files:
+            if os.path.islink(os.path.join(directory, name)):
+                raise ValueError("library import cannot stage symbolic links")
+
+
 def _read_symbol_file(path: str) -> dict:
     """Read one .osym with a hard byte budget before JSON decoding."""
     with open(path, "rb") as f:
@@ -638,6 +654,10 @@ def import_package(info: PackageInfo, lib: UserLibrary, mode: str = "separate", 
 
     original_root = os.path.abspath(lib.root)
     parent = os.path.dirname(original_root)
+    # Do not stage an existing library if any component is a symbolic link.
+    # The import must neither copy files from outside the library nor follow
+    # symlink destinations while creating staged output.
+    _assert_no_library_symlinks(original_root)
     os.makedirs(parent, exist_ok=True)
     workdir = tempfile.mkdtemp(prefix=".osymlib-import-", dir=parent)
     staged_root = os.path.join(workdir, "staged")
@@ -652,7 +672,8 @@ def import_package(info: PackageInfo, lib: UserLibrary, mode: str = "separate", 
             f.flush()
             os.fsync(f.fileno())
         if original_exists:
-            shutil.copytree(original_root, staged_root)
+            _assert_no_library_symlinks(original_root)
+            shutil.copytree(original_root, staged_root, symlinks=True)
         else:
             os.makedirs(staged_root)
         staged = UserLibrary(staged_root)
@@ -698,11 +719,18 @@ def import_package(info: PackageInfo, lib: UserLibrary, mode: str = "separate", 
         # Neither staged writes nor a partially completed swap may alter
         # the existing user's library. Keep all backup bytes until restored.
         if moved_new:
-            os.replace(original_root, failed_root)
-        if moved_old:
+            try:
+                os.replace(original_root, failed_root)
+            except OSError:
+                # Keep the previous library in the backup rather than
+                # overwriting an occupied destination or deleting its data.
+                # A later recovery can use the matching target marker.
+                pass
+        if moved_old and not os.path.exists(original_root):
             os.replace(backup_root, original_root)
         if moved_new or moved_old:
-            lib.scan()
+            if os.path.isdir(original_root):
+                lib.scan()
         else:
             symbols.set_user_symbols(user_registry.values())
         raise
