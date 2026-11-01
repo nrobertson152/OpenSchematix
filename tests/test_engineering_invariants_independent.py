@@ -6,6 +6,7 @@ they do not compare against a copy of an implementation algorithm.
 import pytest
 
 from openschematix import bom, check, editing, netlist
+from openschematix.model import Wire
 from openschematix.project import new_project
 
 
@@ -157,3 +158,97 @@ def test_bom_is_invariant_under_wire_changes_and_agrees_with_connection_rows():
     assert wire2.id != w.id
     assert set(_net_for(project, sheet, a, "2").terminals) == expected
     assert [(r.quantity, r.description, tuple(r.designators)) for r in bom.generate(project)] == baseline
+
+
+# ---------------------------------------------------------------------------
+# Invariants made testable by PR #43 (validated wire terminal references).
+# Expected values come from the drawn topology only: a wire end that names a
+# terminal which does not exist is not an electrical connection, whatever the
+# stored reference says.
+
+def _snapshot(project):
+    """Every engineering output that depends on connectivity, in comparable form."""
+    nets = netlist.compute_nets(project)
+    return {
+        "terminal_sets": sorted(sorted(n.terminals) for n in nets if n.terminals),
+        "connections": sorted((r["from"], r["to"]) for r in netlist.connection_rows(project, nets)),
+        "terminal_report": [(r["strip"], r["terminal"], r["side1"], r["side2"])
+                            for r in netlist.terminal_rows(project, nets)],
+        "bom": [(r.quantity, r.description, tuple(r.designators)) for r in bom.generate(project)],
+    }
+
+
+@pytest.mark.parametrize("bad_ref", ["missing-component", "unknown-pin", "blank-pin", "whitespace-pin"])
+def test_invalid_terminal_references_are_electrically_inert(bad_ref):
+    project = new_project("Inert references")
+    sheet = project.sheets[0]
+    a = editing.place(sheet, "el.resistor.iec", 100, 100)
+    b = editing.place(sheet, "el.resistor.iec", 400, 100)
+    x = editing.place(sheet, "el.terminal", 700, 100)
+    _between(sheet, a, "2", b, "1")
+    _between(sheet, b, "2", x, "1", via_y=40)
+    before = _snapshot(project)
+    assert not [i for i in check.check(project) if i.code == "invalid-wire-ref"]
+
+    ref = {"missing-component": [987654, "1"], "unknown-pin": [a.id, "NO_SUCH_PIN"],
+           "blank-pin": [b.id, ""], "whitespace-pin": [x.id, "   "]}[bad_ref]
+    # Drawn well away from every terminal and wire: only the stored reference
+    # could connect it, and that reference names no real terminal.
+    stray = Wire(sheet.new_id(), [(100, 500), (300, 500)], ref, [a.id, "1"])
+    sheet.add_wire(stray)
+
+    after = _snapshot(project)
+    # The valid end (A:1) gains a wire; nothing else changes.
+    a1 = (sheet.uid, a.id, "1")
+    assert [t for t in after["terminal_sets"] if a1 not in t] == before["terminal_sets"]
+    assert [a1] in after["terminal_sets"]
+    assert after["terminal_report"] == before["terminal_report"]
+    assert after["bom"] == before["bom"]
+    assert after["connections"] == sorted(before["connections"]
+                                          + [(netlist.terminal_tag(project, *a1), "(not connected)")])
+    # the wire list shows the invalid end as unattached, never as a terminal
+    stray_rows = [r for r in netlist.wire_rows(project) if r["to"] == netlist.terminal_tag(project, *a1)]
+    assert [r["from"] for r in stray_rows] == ["junction"]
+    issues = [i for i in check.check(project) if i.code == "invalid-wire-ref"]
+    assert [(i.obj_id, i.severity) for i in issues] == [(stray.id, "warning")]
+
+
+def test_connection_wire_and_terminal_reports_agree_with_the_netlist():
+    project = new_project("Report agreement")
+    sheet = project.sheets[0]
+    r1 = editing.place(sheet, "el.resistor.iec", 100, 100)
+    r2 = editing.place(sheet, "el.resistor.iec", 400, 100)
+    lamp = editing.place(sheet, "el.lamp.iec", 700, 100)
+    x1 = editing.place(sheet, "el.terminal", 400, 300)
+    _between(sheet, r1, "2", r2, "1")
+    _between(sheet, r2, "2", lamp, "1", via_y=40)
+    _between(sheet, r2, "2", x1, "1", via_y=200)        # second branch of the same net
+    netlist.assign_wire_numbers(project)
+    nets = netlist.compute_nets(project)
+
+    def tag(t):
+        return netlist.terminal_tag(project, *t)
+
+    by_tag = {tag(t): n for n in nets for t in n.terminals}
+    # every connection-list edge lies inside one net and carries that net's wire number
+    for row in netlist.connection_rows(project, nets):
+        if row["to"] == "(not connected)":
+            continue
+        assert by_tag[row["from"]] is by_tag[row["to"]]
+        assert row["wire"] == by_tag[row["from"]].number
+    # every drawn wire's ends are terminals of the net that contains the wire
+    wire_net = {w[1]: n for n in nets for w in n.wires}
+    for w in sheet.wires.values():
+        for ref in (w.start, w.end):
+            assert ref is not None
+            assert by_tag[tag((sheet.uid, *ref))] is wire_net[w.id]
+            assert w.number == wire_net[w.id].number
+    assert sorted((r["from"], r["to"]) for r in netlist.wire_rows(project)) == sorted(
+        (tag((sheet.uid, *w.start)), tag((sheet.uid, *w.end))) for w in sheet.wires.values())
+    # the terminal-strip report lists exactly the other members of each side's net
+    (strip,) = netlist.terminal_rows(project, nets)
+    side1 = by_tag[tag((sheet.uid, x1.id, "1"))]
+    expected = {tag(t) for t in side1.terminals if t[1] != x1.id}
+    assert set(filter(None, strip["side1"].split(", "))) == expected == {tag((sheet.uid, r2.id, "2")),
+                                                                        tag((sheet.uid, lamp.id, "1"))}
+    assert strip["wire1"] == side1.number and strip["side2"] == ""
