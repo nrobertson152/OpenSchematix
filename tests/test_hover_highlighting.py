@@ -269,7 +269,10 @@ def test_edit_undo_tool_and_theme_changes_rebuild_hover_state(scene):
     assert inc == snapshot(cv)
     # undo
     app.undo()
-    settle(root)
+    # Windows Tk can finish sizing a withdrawn test window after the undo redraw.
+    # Establish a full-redraw baseline at the final canvas dimensions before
+    # comparing incremental hover painting with the reference redraw.
+    full_redraw(root, app)
     move_to(app, target_point(app, "red", ids))
     inc = snapshot(cv)
     reference_redraw(app)
