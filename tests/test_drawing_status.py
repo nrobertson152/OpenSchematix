@@ -1,6 +1,8 @@
 """Sheet drawing status and non-interactive watermark regression tests."""
 import io
 import zipfile
+import re
+import zlib
 
 from openschematix.model import Document, Sheet
 from openschematix.project import new_project
@@ -64,3 +66,39 @@ def test_multisheet_project_pdf_export():
     project.add_sheet("Released")
     pdf = project_pdf(project)
     assert pdf.startswith(b"%PDF")
+
+
+def _pdf_page_streams(pdf):
+    """Decode Flate page streams so the assertions inspect drawing commands."""
+    return [zlib.decompress(data) for data in re.findall(
+        rb"stream\\n(.*?)\\nendstream", pdf, flags=re.DOTALL
+    )]
+
+
+def test_frameless_exports_keep_preliminary_designation():
+    doc = Document()
+    doc.sheet.drawing_status = "Preliminary"
+    for use_sheet in (True, False):
+        svg = to_svg(doc, use_sheet=use_sheet)
+        assert "PRELIMINARY" in svg and "NOT FOR PRODUCTION" in svg
+        assert 'fill="#b8b8b8"' in svg
+        content = b"\\n".join(_pdf_page_streams(to_pdf(doc, use_sheet=use_sheet)))
+        assert b"(PRELIMINARY) Tj" in content
+        assert b"(NOT FOR PRODUCTION) Tj" in content
+        assert b"0.72 0.72 0.72 rg" in content
+    doc.sheet.drawing_status = "Released"
+    for use_sheet in (True, False):
+        assert "PRELIMINARY" not in to_svg(doc, use_sheet=use_sheet)
+        assert b"(PRELIMINARY) Tj" not in b"\\n".join(
+            _pdf_page_streams(to_pdf(doc, use_sheet=use_sheet))
+        )
+
+
+def test_multisheet_pdf_designation_is_per_sheet():
+    project = new_project()
+    project.sheets[0].sheet.drawing_status = "Preliminary"
+    project.add_sheet("Released")
+    streams = _pdf_page_streams(project_pdf(project))
+    assert len(streams) == 2
+    assert b"(PRELIMINARY) Tj" in streams[0]
+    assert b"(PRELIMINARY) Tj" not in streams[1]
