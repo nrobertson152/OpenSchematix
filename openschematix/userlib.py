@@ -48,6 +48,7 @@ MAX_PACKAGE_ENTRIES = 2048
 MAX_PACKAGE_SYMBOLS = 1000
 MAX_PACKAGE_UNCOMPRESSED = 64 * 1024 * 1024
 MAX_PACKAGE_ARCHIVE_BYTES = 80 * 1024 * 1024
+MAX_PACKAGE_DIRECTORY_BYTES = 512 * 1024
 MAX_MANIFEST_BYTES = MAX_SYMBOL_BYTES
 _BAD = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
 
@@ -129,6 +130,8 @@ def _zip_preflight(path: str):
         "<HHHHIIH", tail, pos + 4)
     if disk or cd_disk or local_count != total_count:
         raise ValueError("multi-disk ZIP packages are not supported")
+    if _cd_size > MAX_PACKAGE_DIRECTORY_BYTES:
+        raise ValueError(f"ZIP directory exceeds {MAX_PACKAGE_DIRECTORY_BYTES} bytes")
     if total_count > MAX_PACKAGE_ENTRIES:
         raise ValueError(f"package has more than {MAX_PACKAGE_ENTRIES} ZIP entries")
 
@@ -541,6 +544,7 @@ def read_package(path: str, lib: UserLibrary | None = None) -> PackageInfo:
                 info.folders.append(folder)
             else:
                 info.problems.append(f"unsafe or malformed folder skipped: {folder!r}")
+        seen_files = set()
         for index, item in enumerate(listed):
             if not isinstance(item, dict):
                 info.problems.append(f"symbol entry {index}: expected an object")
@@ -551,6 +555,10 @@ def read_package(path: str, lib: UserLibrary | None = None) -> PackageInfo:
                     folder and not _rel_ok(folder)):
                 info.problems.append(f"unsafe or malformed symbol path skipped: {f!r}")
                 continue
+            if f in seen_files:
+                info.problems.append(f"duplicate symbol member skipped: {f!r}")
+                continue
+            seen_files.add(f)
             try:
                 doc = load_symbol_json(_zip_member(z, f, MAX_SYMBOL_BYTES), source=f)
             except (SymbolFormatError, ValueError) as e:
