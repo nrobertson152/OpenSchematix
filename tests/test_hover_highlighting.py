@@ -24,6 +24,7 @@ def env():
     try:
         import tkinter as tk
         root = tk.Tk()
+        root.geometry("1200x800")
         root.withdraw()
     except Exception as e:  # noqa: BLE001
         pytest.skip(f"Tk GUI display not available: {e}")
@@ -59,21 +60,30 @@ def scene(env):
     d.add_shape(s_fill)
     app.selection = set()
     app.canvas.set_tool("select")
+    settle(root)
     app.canvas.center_on((330, 200), zoom=2.0)
     full_redraw(root, app)
     ids = dict(r=r.id, w=w.id, w2=w2.id, red=s_red.id, txt=s_txt.id, circ=s_circ.id, fill=s_fill.id)
     return root, app, ids
 
 
-def full_redraw(root, app):
+def settle(root):
+    """Process all pending events, including geometry (<Configure>) changes. On Windows a withdrawn
+    window's geometry can be computed late, which changes the canvas size and therefore the grid."""
     root.update_idletasks()
+    root.update()
+
+
+def full_redraw(root, app):
+    settle(root)
     app.canvas._redraw_pending = True
     app.canvas._redraw_now()
 
 
 def snapshot(cv):
-    """Every canvas item in stacking order: type, coordinates and drawing options (ids excluded)."""
-    out = []
+    """Canvas size and every canvas item in stacking order: type, coordinates and drawing options
+    (ids excluded)."""
+    out = [("canvas size", cv.winfo_width(), cv.winfo_height())]
     for cid in cv.find_all():
         opts = cv.itemconfigure(cid)
         out.append((cv.type(cid), tuple(round(v, 3) for v in cv.coords(cid)),
@@ -84,7 +94,9 @@ def snapshot(cv):
 def move_to(app, world):
     cv = app.canvas
     x, y = cv.to_screen(world)
+    pending = cv._redraw_pending
     cv._on_motion(type("E", (), {"x": x, "y": y, "state": 0})())
+    assert cv._redraw_pending == pending          # a hover change never requests a redraw
 
 
 def target_point(app, key, ids):
@@ -142,7 +154,7 @@ def test_enter_switch_leave_recolor_without_rebuilding(scene, counting):
     cv._on_leave(None)                                         # pointer leaves the canvas
     assert cv.hover is None and snapshot(cv) == before
 
-    root.update_idletasks()
+    settle(root)
     assert cv.find_all() == canvas_ids                         # nothing was recreated
     assert counting == {"analyse": 0, "scene": 0}
 
@@ -202,7 +214,7 @@ def test_hover_while_redraw_pending_is_drawn_by_the_redraw(scene):
     assert cv._redraw_pending
     move_to(app, target_point(app, "w", ids))
     assert cv.hover == ids["w"]
-    root.update_idletasks()                      # the pending redraw runs
+    settle(root)                      # the pending redraw runs
     assert not cv._redraw_pending
     drawn = snapshot(cv)
     full_redraw(root, app)
@@ -217,7 +229,8 @@ def test_deleting_hovered_object_leaves_no_highlight(scene):
     move_to(app, target_point(app, "w", ids))
     app.selection = {ids["w"]}
     app.delete()
-    root.update_idletasks()
+    settle(root)
+    assert not cv._redraw_pending
     assert ids["w"] not in app.doc.wires
     colors = {cv.itemcget(c, o) for c in cv.find_withtag("scene") for o in ("fill", "outline")
               if o in cv.itemconfigure(c)}
@@ -236,7 +249,7 @@ def test_edit_undo_tool_and_theme_changes_rebuild_hover_state(scene):
     s = app.begin_change()
     editing.move_items(app.doc, [ids["r"]], [], 0, 40)
     app.commit_change(s, "moved")
-    root.update_idletasks()
+    settle(root)
     move_to(app, (214, 238))
     assert cv.hover == ids["r"]
     inc = snapshot(cv)
@@ -244,18 +257,18 @@ def test_edit_undo_tool_and_theme_changes_rebuild_hover_state(scene):
     assert inc == snapshot(cv)
     # undo
     app.undo()
-    root.update_idletasks()
+    settle(root)
     move_to(app, target_point(app, "red", ids))
     inc = snapshot(cv)
     full_redraw(root, app)
     assert inc == snapshot(cv)
     # another tool: no hover highlight drawn; back to select
     cv.set_tool("wire")
-    root.update_idletasks()
+    settle(root)
     assert cv._hover_shown is None
     cv._on_leave(None)
     cv.set_tool("select")
-    root.update_idletasks()
+    settle(root)
     move_to(app, target_point(app, "circ", ids))
     inc = snapshot(cv)
     full_redraw(root, app)
@@ -265,7 +278,7 @@ def test_edit_undo_tool_and_theme_changes_rebuild_hover_state(scene):
     other = "dark" if old != "dark" else "light"
     try:
         app.set_theme(other)
-        root.update_idletasks()
+        settle(root)
         move_to(app, (700, 700))
         move_to(app, target_point(app, "fill", ids))
         assert all(cv.itemcget(c, "fill") == app.theme["hover"] for c in hover_items(cv, ids["fill"]))
@@ -274,7 +287,7 @@ def test_edit_undo_tool_and_theme_changes_rebuild_hover_state(scene):
         assert inc == snapshot(cv)
     finally:
         app.set_theme(old)
-        root.update_idletasks()
+        settle(root)
 
 
 def test_sheet_switch_and_new_project_reset_hover(scene):
@@ -284,7 +297,7 @@ def test_sheet_switch_and_new_project_reset_hover(scene):
     d2 = app.project.add_sheet("Two")
     app.doc = d2
     app.refresh(full=True)
-    root.update_idletasks()
+    settle(root)
     assert not cv._hover_index.canvas_ids(ids["w"])
     hov = app.theme["hover"]
     assert all(cv.itemcget(c, "fill") != hov for c in cv.find_withtag("scene"))
