@@ -88,3 +88,26 @@ def test_dxf_rejects_transformed_coordinate_overflow():
     data = _entity("LINE", [(10, "1e300"), (20, 0), (11, 0), (21, 0)])
     with pytest.raises(dxf.DxfError, match="finite coordinate range"):
         dxf.import_dxf(data, scale="1e300")
+
+
+@pytest.mark.parametrize("kind,fields", [
+    ("CIRCLE", [(10, 0), (20, 0), (40, "1e308")]),
+    ("ARC", [(10, 0), (20, 0), (40, "1e308"), (50, 0), (51, 90)]),
+    ("TEXT", [(10, 0), (20, 0), (40, "1e308"), (1, "X")]),
+    ("MTEXT", [(10, 0), (20, 0), (40, "1e308"), (1, "X")]),
+])
+def test_dxf_rejects_nonfinite_derived_size(kind, fields):
+    with pytest.raises(dxf.DxfError, match="finite range"):
+        dxf.import_dxf(_entity(kind, fields))
+
+
+def test_dxf_rejects_mtext_output_shape_amplification():
+    data = _entity("MTEXT", [(10, 0), (20, 0), (40, 2.5),
+                              (1, r"X\PX\PX\PX\PX\PX")])
+    with pytest.raises(dxf.DxfError, match="emits more than 3 shapes"):
+        dxf.import_dxf(data, max_entities=3)
+
+
+def test_dxf_accepts_mtext_below_output_budget():
+    data = _entity("MTEXT", [(10, 0), (20, 0), (40, 2.5), (1, r"X\PY")])
+    assert len(dxf.import_dxf(data, max_entities=2).shapes) == 2
