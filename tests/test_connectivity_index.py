@@ -17,7 +17,7 @@ from openschematix.model import Document, Wire
 
 
 def reference_analyse(doc) -> Connectivity:
-    """The original O(points x wires) algorithm (main @ dc163ea), unchanged."""
+    """The full scan O(points x wires) oracle matching analyse() semantics without spatial indexing."""
     res = Connectivity()
     wires = list(doc.wires.values())
     terminals = []
@@ -45,11 +45,36 @@ def reference_analyse(doc) -> Connectivity:
     for cid, name, p in terminals:
         term_at.setdefault(_key(p), []).append((cid, name))
     for k, p in candidates.items():
-        ends, through = counts_at(p)
         terms = len(term_at.get(k, []))
-        n = ends + terms + (2 * through if ends else 0)
-        if n >= 3:
-            res.junctions.append(p)
+        ending_wires = []
+        touching_wires = []
+        for w in wires:
+            pts = w.points
+            is_end = same(pts[0], p) or same(pts[-1], p)
+            is_touch = is_end or any(point_on_segment(p, a, b) for a, b in zip(pts, pts[1:]))
+            if is_end:
+                ending_wires.append(w)
+            if is_touch:
+                touching_wires.append(w)
+
+        has_wire_conn = len(ending_wires) >= 1 and len(touching_wires) >= 2
+        has_term_conn = terms >= 1 and len(ending_wires) >= 1
+        has_multi_term = terms >= 2
+
+        if has_wire_conn or has_term_conn or has_multi_term:
+            distinct_dirs = []
+            for w in touching_wires:
+                pts = w.points
+                for a, b in zip(pts, pts[1:]):
+                    if point_on_segment(p, a, b):
+                        d1 = connectivity._unit_heading(p, a)
+                        d2 = connectivity._unit_heading(p, b)
+                        connectivity._add_distinct_direction(distinct_dirs, d1)
+                        connectivity._add_distinct_direction(distinct_dirs, d2)
+            n_branches = len(distinct_dirs) + terms
+            if n_branches >= 3:
+                res.junctions.append(p)
+
     for w in wires:
         for idx in (0, -1):
             p = w.points[idx]

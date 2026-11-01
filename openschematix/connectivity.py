@@ -121,6 +121,25 @@ class _WireIndex:
         return near + self.always if self.always else near
 
 
+def _unit_heading(p, q):
+    """Normalized direction heading from p towards q, or None if p == q."""
+    dx = q[0] - p[0]
+    dy = q[1] - p[1]
+    dist = math.hypot(dx, dy)
+    if dist < 1e-6:
+        return None
+    return (dx / dist, dy / dist)
+
+
+def _add_distinct_direction(dirs: list[tuple[float, float]], d: tuple[float, float] | None, tol: float = 0.01):
+    if d is None:
+        return
+    for existing in dirs:
+        if math.hypot(d[0] - existing[0], d[1] - existing[1]) <= tol:
+            return
+    dirs.append(d)
+
+
 def analyse(doc: Document) -> Connectivity:
     res = Connectivity()
     wires = list(doc.wires.values())
@@ -154,14 +173,41 @@ def analyse(doc: Document) -> Connectivity:
         term_at.setdefault(_key(p), []).append((cid, name))
 
     for k, p in candidates.items():
-        ends, through = counts_at(p)
         terms = len(term_at.get(k, []))
-        # A wire that merely passes over a point connects there only if some
-        # wire *ends* at that point (T-junction). Terminals connect only to
-        # wire end points.
-        n = ends + terms + (2 * through if ends else 0)
-        if n >= 3:
-            res.junctions.append(p)
+        # Find wires ending at or touching p
+        ending_wires = []
+        touching_wires = []
+        for w in index.candidates(p, wires):
+            pts = w.points
+            is_end = same(pts[0], p) or same(pts[-1], p)
+            is_touch = is_end or any(point_on_segment(p, a, b) for a, b in zip(pts, pts[1:]))
+            if is_end:
+                ending_wires.append(w)
+            if is_touch:
+                touching_wires.append(w)
+
+        # An electrical connection at p exists when:
+        # 1. At least one wire ends at p and at least one other wire touches p (ends or passes through); or
+        # 2. At least two wires end at p; or
+        # 3. A wire ends at p and connects to a terminal, or multiple terminals meet at p.
+        # Wires that merely pass through without an endpoint ending there do NOT connect.
+        has_wire_conn = len(ending_wires) >= 1 and len(touching_wires) >= 2
+        has_term_conn = terms >= 1 and len(ending_wires) >= 1
+        has_multi_term = terms >= 2
+
+        if has_wire_conn or has_term_conn or has_multi_term:
+            distinct_dirs = []
+            for w in touching_wires:
+                pts = w.points
+                for a, b in zip(pts, pts[1:]):
+                    if point_on_segment(p, a, b):
+                        d1 = _unit_heading(p, a)
+                        d2 = _unit_heading(p, b)
+                        _add_distinct_direction(distinct_dirs, d1)
+                        _add_distinct_direction(distinct_dirs, d2)
+            n_branches = len(distinct_dirs) + terms
+            if n_branches >= 3:
+                res.junctions.append(p)
 
     for w in wires:
         for idx in (0, -1):
