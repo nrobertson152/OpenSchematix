@@ -42,3 +42,6 @@ NEXT OWNER / REQUESTED DECISION:
 Release decisions are: AWAITING VERIFICATION, CHANGES REQUIRED, READY FOR REVIEW, READY TO MERGE, DEFERRED.
 Only the project director can authorize a merge or release.
 OpenSchematix application remains GPLv3, free/open-source, offline-first, without telemetry or account requirements.
+
+## Active-session task continuity
+Read [the standing autonomous engineering protocol](.agents/AGENT_PROTOCOL.md) at session start. After a verified task handoff, check GitHub for your next explicitly assigned task and continue during the active session. This is not background execution; no agent can act when disconnected. The project director retains merge and release authority.
