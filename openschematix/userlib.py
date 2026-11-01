@@ -64,6 +64,30 @@ def _rel_ok(p: str) -> bool:
     return bool(p) and not p.startswith("/") and ".." not in parts and ":" not in p
 
 
+def _recover_interrupted_package_import(root: str):
+    """Restore a prior library directory left in staging by an interrupted swap.
+
+    The normal successful commit always leaves root present. A missing root
+    with a sibling staging backup indicates the operation stopped after the
+    old directory was moved but before the replacement was installed.
+    """
+    root = os.path.abspath(root)
+    if os.path.exists(root):
+        return
+    parent = os.path.dirname(root)
+    if not os.path.isdir(parent):
+        return
+    candidates = []
+    for name in os.listdir(parent):
+        if name.startswith(".osymlib-import-"):
+            backup = os.path.join(parent, name, "previous")
+            if os.path.isdir(backup):
+                candidates.append(backup)
+    if candidates:
+        backup = max(candidates, key=os.path.getmtime)
+        os.replace(backup, root)
+
+
 def _read_symbol_file(path: str) -> dict:
     """Read one .osym with a hard byte budget before JSON decoding."""
     with open(path, "rb") as f:
@@ -160,6 +184,7 @@ class UserLibrary:
 
     # ---------------------------------------------------------------- scanning
     def scan(self):
+        _recover_interrupted_package_import(self.root)
         self.entries.clear()
         self.problems.clear()
         if not os.path.isdir(self.root):
@@ -568,7 +593,7 @@ def import_package(info: PackageInfo, lib: UserLibrary, mode: str = "separate", 
     failed_root = os.path.join(workdir, "failed")
     original_exists = os.path.isdir(original_root)
     user_registry = symbols.user_symbols()
-    moved_old = moved_new = False
+    moved_old = moved_new = committed = False
     try:
         if original_exists:
             shutil.copytree(original_root, staged_root)
@@ -611,6 +636,7 @@ def import_package(info: PackageInfo, lib: UserLibrary, mode: str = "separate", 
         os.replace(staged_root, original_root)
         moved_new = True
         lib.scan()
+        committed = True
         return counts
     except BaseException:
         # Neither staged writes nor a partially completed swap may alter
@@ -625,7 +651,10 @@ def import_package(info: PackageInfo, lib: UserLibrary, mode: str = "separate", 
             symbols.set_user_symbols(user_registry.values())
         raise
     finally:
-        shutil.rmtree(workdir, ignore_errors=True)
+        # If rollback itself fails, retain the complete previous library for
+        # manual recovery rather than deleting it during temporary cleanup.
+        if committed or not os.path.exists(backup_root):
+            shutil.rmtree(workdir, ignore_errors=True)
 
 
 
