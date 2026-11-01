@@ -27,6 +27,7 @@ renumbering a pin never disconnects existing drawings.
 from __future__ import annotations
 
 import copy
+import json
 import math
 import uuid
 
@@ -42,7 +43,32 @@ PRIM_KINDS = ("line", "poly", "circle", "arc", "text")
 
 
 class SymbolFormatError(ValueError):
+    """Raised when a custom symbol document is malformed or unsupported."""
     pass
+
+
+def load_symbol_json(text: str, *, source: str = "") -> dict:
+    """Parse and normalise a symbol document from a JSON string.
+
+    Raises SymbolFormatError with clear, actionable messages for empty or
+    truncated content, invalid JSON, wrong format, unsupported versions, and
+    structural problems. Does not silently repair data beyond the documented
+    normalisation rules.
+    """
+    if text is None or not str(text).strip():
+        where = f" in {source}" if source else ""
+        raise SymbolFormatError(f"symbol file is empty or truncated{where}")
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError as e:
+        where = f" in {source}" if source else ""
+        raise SymbolFormatError(
+            f"invalid JSON{where}: {e.msg} (line {e.lineno}, column {e.colno})"
+        ) from e
+    if not isinstance(data, dict):
+        where = f" in {source}" if source else ""
+        raise SymbolFormatError(f"symbol document must be a JSON object{where}")
+    return normalise(data)
 
 
 def new_symbol_id() -> str:
@@ -73,14 +99,34 @@ def _pt(v, what):
 
 def normalise(data) -> dict:
     """Validate and clean a symbol document. Raises SymbolFormatError."""
-    if not isinstance(data, dict) or data.get("format") != SYMBOL_FORMAT:
-        raise SymbolFormatError("not an OpenSchematix symbol")
+    if not isinstance(data, dict):
+        raise SymbolFormatError(
+            "not an OpenSchematix symbol: document must be a JSON object with "
+            f"format={SYMBOL_FORMAT!r}"
+        )
+    if data.get("format") != SYMBOL_FORMAT:
+        got = data.get("format")
+        raise SymbolFormatError(
+            f"not an OpenSchematix symbol: expected format {SYMBOL_FORMAT!r}, got {got!r}"
+        )
     ver = data.get("version", 1)
-    if not isinstance(ver, int) or ver > SYMBOL_VERSION:
-        raise SymbolFormatError(f"symbol format version {ver} is newer than this program supports")
+    if not isinstance(ver, int):
+        raise SymbolFormatError(
+            f"symbol format version must be an integer, got {type(ver).__name__}"
+        )
+    if ver < 1:
+        raise SymbolFormatError(f"unsupported schema version {ver} (minimum is 1)")
+    if ver > SYMBOL_VERSION:
+        raise SymbolFormatError(
+            f"symbol format version {ver} is newer than this program supports "
+            f"(supports up to {SYMBOL_VERSION})"
+        )
     sid = str(data.get("id", ""))
     if not sid.startswith(USER_PREFIX) or len(sid) <= len(USER_PREFIX):
-        raise SymbolFormatError("custom symbol ids must start with 'user:'")
+        raise SymbolFormatError(
+            "custom symbol ids must start with 'user:' followed by a unique suffix "
+            f"(got {sid!r})"
+        )
     out = {"format": SYMBOL_FORMAT, "version": SYMBOL_VERSION, "id": sid,
            "revision": int(data.get("revision", 0) or 0),
            "name": str(data.get("name") or "Unnamed symbol")[:120],
@@ -92,8 +138,6 @@ def normalise(data) -> dict:
            "convention": str(data.get("convention") or "Custom")[:60],
            "properties": {str(k): str(v) for k, v in (data.get("properties") or {}).items()},
            "prims": [], "pins": []}
-    # Optional provenance of a symbol derived from another one (symbol editor
-    # "open a copy"). Informational only; older versions ignore it.
     src = data.get("derived_from")
     if isinstance(src, dict):
         src = {k: str(src[k])[:120] for k in ("id", "name", "revision") if src.get(k) not in (None, "")}
@@ -190,10 +234,6 @@ def build_geometry(doc: dict) -> Geometry:
                         arrows.append({"k": "poly", "pts": triangle, "fill": True, "w": p.get("w", "normal")})
                     break
     prims.extend(arrows)
-    # Pin designations are not part of the artwork: like built-in symbols they
-    # are drawn once by the renderer (render.terminal_label_prims) according to
-    # the project's "show terminal designations" setting. Baking them into the
-    # prims here drew them regardless of that setting and twice when it was on.
     terms = [Terminal(p["id"], p["x"], p["y"], p["dir"], label=p["name"], ptype=p.get("type", ""),
                       show=bool(p.get("show", True)))
              for p in doc["pins"]]
@@ -208,13 +248,11 @@ def to_symdef(doc: dict) -> SymbolDef:
         raise SymbolFormatError("; ".join(problems))
     sd = SymbolDef(doc["id"], doc["name"], doc["category"], doc["group"], doc["convention"] or GENERIC,
                    doc["description"], doc["prefix"], g, keywords=tuple(doc["tags"]))
-    sd.custom = doc          # keep the source document (embedded in projects)
+    sd.custom = doc
     return sd
 
 
 def default_ptype(category: str, terminal_name: str) -> str:
-    """Port type for built-in symbol terminals, derived from the category and
-    the conventional port letters/numbers (ISO 1219 / ISO 5599)."""
     dom = CATEGORY_DOMAIN.get(category)
     n = terminal_name.upper()
     if dom == "hyd":
