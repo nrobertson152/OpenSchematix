@@ -654,9 +654,12 @@ n_win = len(app.windows)
 check(app.edit_symbol_file_copy(bad_osym) is None and len(app.windows) == n_win
       and _errors and "'rotation'" in _errors[-1][1], "lossy .osym file: clear error, no editor")
 from openschematix.symbols.base import Geometry as _G, SymbolDef as _SD, Terminal as _T  # noqa: E402
-symreg.add_project_symbol(_SD("proj.unsupported", "Unsupported", "Electrical", "Test", "Generic", "", "X",
-                              _G([{"k": "region", "rings": [[(0, 0), (10, 0), (10, 10)]]}],
-                                 [_T("1", 0, 0, "l")])))
+# Only built-in (Python-defined) symbols can carry geometry the editor cannot convert: custom symbols
+# are stored in the editor's own format. The editor resolves symbols through the open project
+# (built-in -> embedded -> library), not the ambient registry, so register it as a built-in.
+symreg._REGISTRY["proj.unsupported"] = _SD("proj.unsupported", "Unsupported", "Electrical", "Test", "Generic", "",
+                                           "X", _G([{"k": "region", "rings": [[(0, 0), (10, 0), (10, 10)]]}],
+                                                   [_T("1", 0, 0, "l")]))
 check(app.edit_symbol_copy("proj.unsupported") is None and len(app.windows) == n_win
       and "'region'" in _errors[-1][1], "unsupported geometry: clear error, no editor")
 
@@ -669,6 +672,7 @@ check(ed_test.open_existing("proj.unsupported") is None and ed_test.dirty is Tru
       "symbol editor open_existing error: clear error, editor and unsaved work preserved")
 ed_test.dirty = False
 ed_test.destroy()
+del symreg._REGISTRY["proj.unsupported"]
 symreg.set_project_symbols([])
 app.project.activate_symbols()
 messagebox.showerror = _showerror
