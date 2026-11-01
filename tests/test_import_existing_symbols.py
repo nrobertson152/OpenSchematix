@@ -468,7 +468,7 @@ def test_symbol_editor_open_existing_error_handling(monkeypatch):
         # Attempt to open an unsupported symbol with lossy geometry
         bad_prim = {**circle(0, 0, 5), "fill": "maybe"}
         bad_sd = fake_builtin([line(-20, 0, 20, 0), bad_prim])
-        symbols.register(bad_sd)
+        symbols.add_project_symbol(bad_sd)
 
         result_bad = ed.open_existing(sid=bad_sd.id)
         assert result_bad is None
