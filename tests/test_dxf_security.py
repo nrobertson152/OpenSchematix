@@ -124,7 +124,7 @@ def test_dxf_rejects_mtext_nonfinite_line_spacing(attachment):
 def test_dxf_rejects_mtext_nonfinite_derived_line_position():
     data = _entity("MTEXT", [(10, "1e308"), (20, 0), (40, "1e307"),
                               (71, 1), (1, r"First\PSecond")])
-    with pytest.raises(dxf.DxfError, match="finite range"):
+    with pytest.raises(dxf.DxfError, match="finite range|finite coordinate range"):
         dxf.import_dxf(data)
 
 
