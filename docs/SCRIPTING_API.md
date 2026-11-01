@@ -13,7 +13,9 @@ script is identical to one drawn by hand and opens normally in the application.
 - **Local only.** There is no networking, telemetry or account. The API reads and writes only the
   files you name.
 - **Strict.** Invalid input raises an exception and changes nothing. Nothing is silently snapped,
-  clamped or replaced.
+  clamped or replaced. Edits that create objects (`place`, `add_wire`, `connect`) are also atomic: if
+  the engine fails part-way, the sheet is restored (no partial wire, no used-up object id) before the
+  exception propagates.
 
 API version: `api.API_VERSION == 1` (phase 1).
 
@@ -61,6 +63,11 @@ project.save("pump_control.schematix")
 
 - **Units.** Coordinates are drawing units: 1 unit = 0.25 mm (`api.UNIT_MM`). X grows to the right
   and **Y grows downwards**.
+- **Numbers.** Any real number type is accepted (`int`, `float`, `fractions.Fraction`, NumPy scalars);
+  `bool`, strings, `Decimal`, complex numbers, NaN and infinity raise `InvalidOperationError`.
+- **Range.** Coordinates must lie within ±1,000,000 units (250 m): far beyond any sheet, and small
+  enough that grid arithmetic stays exact. Larger values, including integers too large for a float,
+  raise `InvalidOperationError`.
 - **Insertion points.** A component's `position` is its symbol's insertion point. It must be a
   multiple of the 10-unit grid (`api.GRID`). Every terminal then also lies on the grid, so wires
   connect exactly. Off-grid positions raise `InvalidOperationError`; they are not snapped.
@@ -134,7 +141,7 @@ and may change.
 | `wires()`, `wire(id)` | Wires on the sheet. |
 | `place(symbol_id, x, y, *, rotation=0, mirror=False, params=None, designator=None, label="", properties=None)` | Place a symbol; returns a `Component` (details below). |
 | `add_wire(points, style="solid")` | Draw a wire through `points` (see Coordinates). Ends on terminals attach to them. Returns a `Wire`. |
-| `connect(a, a_terminal, b, b_terminal, style="solid")` | Wire two terminals with the application's router. Returns a `Wire`. |
+| `connect(a, a_terminal, b, b_terminal, style="solid")` | Wire two terminals with the application's router. Returns a `Wire`. Atomic: a failed route adds nothing. |
 | `remove(obj)` | Remove a component or wire. |
 | `connectivity()` | `SheetConnectivity`: junction points, open wire ends, open and connected terminals. |
 
@@ -164,7 +171,14 @@ Returned dicts (`params`, `properties`, `terminals`) are copies. Change the comp
 setters and methods.
 
 **Locking.** Components and wires that are locked, or on a locked layer, cannot be changed: every
-change raises `InvalidOperationError`, matching the application, where they cannot be selected.
+change raises `InvalidOperationError`, matching the application, where they cannot be selected. The
+creating edits follow the same rule:
+- `place` raises if the *Components* layer is locked, and if the new terminals would attach the free
+  end of a locked wire (attaching changes that wire);
+- `add_wire` and `connect` raise if the *Wires* layer is locked.
+
+A wire may still be attached to a terminal of a locked component (as with the application's wire
+tool): that does not change the component.
 
 ### `Wire`
 
@@ -209,10 +223,14 @@ Every error derives from `api.ApiError`. Each also derives from the matching bui
 
 | Exception | Base | Raised when |
 |---|---|---|
-| `SymbolNotFoundError` | `KeyError` | Unknown symbol id. |
-| `ObjectNotFoundError` | `KeyError` | Unknown sheet, component, wire or terminal, or a handle to a removed object. |
+| `SymbolNotFoundError` | `KeyError` | Unknown symbol id. Symbol aliases are not accepted; the message names the canonical id an alias resolves to. |
+| `ObjectNotFoundError` | `KeyError` | Unknown sheet, component, wire or terminal (including a key of the wrong type), or a handle to a removed object. |
 | `InvalidOperationError` | `ValueError` | The input would give invalid engineering data: off grid, bad rotation, diagonal wire, invalid parameter, locked object, removing the last sheet, … |
-| `ProjectFileError` | `ValueError` | A project cannot be opened or saved. |
+| `ProjectFileError` | `ValueError` | A project cannot be opened or saved, including damaged files. |
+
+No other exception types escape from invalid arguments or damaged files. An unexpected failure inside
+the drawing engine propagates unchanged (after the sheet has been restored), so it is not mistaken for
+invalid input.
 
 ```python
 from openschematix import api
@@ -309,7 +327,9 @@ wires leaving one terminal can run on top of each other, which Check Drawing rep
 
   These remain available through the application.
 - **Shared symbol registry.** The registry is process-wide. The API keeps open projects correct by
-  re-activating each project's embedded symbols when it is used. Code that mixes the API with
-  internal `openschematix` modules must do the same.
+  re-activating each project's embedded symbols when it is used, so projects with different custom
+  symbols of the same id never see each other's definitions. It also detects when internal
+  `openschematix` modules changed the registry in between and re-activates. Module-level
+  `list_symbols()` and `get_symbol()` describe the most recently used project.
 - **Not thread-safe.** Use one thread.
 - **Source checkout required.** The packaged Windows/Linux applications cannot run scripts.

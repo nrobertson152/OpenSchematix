@@ -12,6 +12,9 @@ All notable changes to this project are documented here. Versions follow [Semant
   terminals; nets; per-sheet connectivity; BOM; Check Drawing; wire numbering; native `.schematix` saving;
   and opening legacy drawings. Invalid input raises clear exceptions instead of being snapped or replaced.
   Guide and reference: `docs/SCRIPTING_API.md`; complete example: `docs/examples/motor_starter.py`.
+  Edits that create objects are atomic, respect locked layers and never leave a partial wire; projects
+  with identically named custom symbols stay independent; invalid numbers and arguments, and damaged
+  project files, raise the documented API exceptions.
 - Symbol aliases: a custom symbol can have extra identifiers (symbol editor, *Symbol* tab, "Aliases"). The library
   search, the symbol pickers and `INSERT <alias>` find it by them; drawings always store the symbol itself.
   Aliases are unique among all symbols (collisions with symbol ids, other aliases or other symbols' names are

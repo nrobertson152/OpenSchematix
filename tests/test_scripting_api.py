@@ -1,4 +1,5 @@
 """Python scripting API (openschematix.api), phase 1."""
+import copy
 import json
 import os
 import subprocess
@@ -549,3 +550,387 @@ def test_load_user_library_reports_problems(tmp_path):
     (tmp_path / "Bad" / "broken.osym").write_text("{", encoding="utf-8")
     problems = api.load_user_library(str(tmp_path))
     assert len(problems) == 1 and "broken.osym" in problems[0]
+
+
+# ================================================================ regression: PR #33 recovery
+# Transactional edits, locked layers, project isolation and numeric/argument
+# validation. Each test states the defect it guards against.
+from fractions import Fraction  # noqa: E402
+from decimal import Decimal  # noqa: E402
+
+from openschematix import editing  # noqa: E402
+
+
+def state(sheet: api.Sheet) -> tuple:
+    """Everything an edit could change on a sheet, plus the id counter."""
+    doc = sheet._doc()
+    return (doc.next_id,
+            sorted((c.id, c.symbol, c.x, c.y, c.designator, json.dumps(c.props, sort_keys=True))
+                   for c in doc.components.values()),
+            sorted((w.id, tuple(map(tuple, w.points)), repr(w.start), repr(w.end), w.auto, w.layer)
+                   for w in doc.wires.values()),
+            json.dumps(sheet.project._p.symbols, sort_keys=True))
+
+
+def boom(*_a, **_k):
+    raise RuntimeError("engine failure")
+
+
+# ---------------------------------------------------------------- A. transactional edits
+def test_connect_is_atomic_when_routing_fails(sheet, monkeypatch):
+    a = sheet.place("el.resistor.iec", 100, 100)
+    b = sheet.place("el.resistor.iec", 300, 100)
+    sheet.add_wire([(0, 300), (100, 300)])
+    before = state(sheet)
+    monkeypatch.setattr(editing, "reroute", boom)
+    with pytest.raises(RuntimeError, match="engine failure"):
+        sheet.connect(a, "2", b, "1")
+    assert state(sheet) == before                     # no partial wire, no consumed id
+    monkeypatch.undo()
+    w = sheet.connect(a, "2", b, "1")
+    assert w.id == before[0] and w.start == (a.id, "2") and w.end == (b.id, "1")
+
+
+def test_connect_rejects_an_unusable_route_and_changes_nothing(sheet, monkeypatch):
+    a = sheet.place("el.resistor.iec", 100, 100)
+    b = sheet.place("el.resistor.iec", 300, 100)
+    before = state(sheet)
+    monkeypatch.setattr(editing, "route", lambda *a_, **k: [(0.0, 0.0), (37.0, 52.0)])   # diagonal, off-terminal
+    with pytest.raises(api.InvalidOperationError, match="could not route"):
+        sheet.connect(a, "2", b, "1")
+    assert state(sheet) == before
+
+
+def test_place_is_atomic_and_restores_attached_wires(sheet, monkeypatch):
+    probe = sheet.place("el.terminal", 100, 100)
+    tp = probe.terminal(sorted(probe.terminals)[0]).position
+    probe.remove()
+    sheet.add_wire([(tp[0] - 50, tp[1]), tp])         # free end exactly on the new terminal
+    before = state(sheet)
+    monkeypatch.setattr(editing, "next_terminal", boom)    # fails after editing.place attached the wire
+    with pytest.raises(RuntimeError):
+        sheet.place("el.terminal", 100, 100, designator="X7")
+    assert state(sheet) == before
+    monkeypatch.undo()
+    t = sheet.place("el.terminal", 100, 100, designator="X7")
+    assert t.designator == "X7" and sheet.wires()[0].end is not None
+
+
+def test_failed_custom_placement_does_not_embed_the_symbol(tmp_path, monkeypatch):
+    lib = tmp_path / "lib" / "Mine"
+    lib.mkdir(parents=True)
+    s = sensor()
+    (lib / "sensor.osym").write_text(json.dumps(s), encoding="utf-8")
+    api.load_user_library(str(tmp_path / "lib"))
+    sh = api.new_project().sheets[0]
+    before = state(sh)
+    monkeypatch.setattr(_Project_type(), "embed_symbols", lambda self: (self.symbols.update({s["id"]: s}), boom())[1])
+    with pytest.raises(RuntimeError):
+        sh.place(s["id"], 100, 100)
+    assert state(sh) == before and sh.project._p.symbols == {}
+
+
+def _Project_type():
+    from openschematix.project import Project
+    return Project
+
+
+# ---------------------------------------------------------------- B. locked layers
+@pytest.mark.parametrize("layer, call", [
+    ("Components", lambda s, a, b: s.place("el.coil.iec", 500, 500)),
+    ("Wires", lambda s, a, b: s.add_wire([(0, 0), (50, 0)])),
+    ("Wires", lambda s, a, b: s.connect(a, "2", b, "1")),
+])
+def test_creating_objects_on_a_locked_layer_raises_and_changes_nothing(sheet, layer, call):
+    a = sheet.place("el.resistor.iec", 100, 100)
+    b = sheet.place("el.resistor.iec", 300, 100)
+    lay = sheet.project._p.layer(layer)
+    lay.locked = True
+    before = state(sheet)
+    with pytest.raises(api.InvalidOperationError, match=f"layer '{layer}' is locked"):
+        call(sheet, a, b)
+    assert state(sheet) == before
+    lay.locked = False
+    call(sheet, a, b)                                   # allowed again once unlocked
+    assert state(sheet) != before
+
+
+def test_other_locked_layers_do_not_block_creation(sheet):
+    p = sheet.project._p
+    for name in ("Drafting", "Notes", "Imported"):
+        p.layer(name).locked = True
+    a = sheet.place("el.resistor.iec", 100, 100)
+    b = sheet.place("el.resistor.iec", 300, 100)
+    sheet.connect(a, "2", b, "1")
+    sheet.add_wire([(0, 400), (50, 400)])
+
+
+@pytest.mark.parametrize("lock", ["object", "layer"])
+def test_placement_that_would_attach_a_locked_wire_is_refused(sheet, lock):
+    probe = sheet.place("el.resistor.iec", 100, 100)
+    tp = probe.terminal("1").position
+    probe.remove()
+    w = sheet.add_wire([(tp[0] - 50, tp[1]), tp])
+    if lock == "object":
+        sheet._doc().wires[w.id].locked = True
+    else:
+        sheet.project._p.layer("Wires").locked = True
+    before = state(sheet)
+    with pytest.raises(api.InvalidOperationError, match=f"would attach locked wire {w.id}"):
+        sheet.place("el.resistor.iec", 100, 100)
+    assert state(sheet) == before and w.end is None
+
+
+def test_unlocked_free_wires_are_still_attached_by_placement(sheet):
+    probe = sheet.place("el.resistor.iec", 100, 100)
+    tp = probe.terminal("1").position
+    probe.remove()
+    w = sheet.add_wire([(tp[0] - 50, tp[1]), tp])
+    r = sheet.place("el.resistor.iec", 100, 100)
+    assert w.end == (r.id, "1")
+
+
+def test_wires_can_be_attached_to_locked_components(sheet):
+    """Locks protect objects from change; attaching a wire does not change a
+    component (the application's wire tool also connects to them)."""
+    a = sheet.place("el.resistor.iec", 100, 100)
+    b = sheet.place("el.resistor.iec", 300, 100)
+    sheet.project._p.layer("Components").locked = True
+    w = sheet.connect(a, "2", b, "1")
+    w2 = sheet.add_wire([a.terminal("1").position, (a.terminal("1").position[0] - 50, 100)])
+    assert w.start == (a.id, "2") and w2.start == (a.id, "1") and a.position == (100, 100)
+
+
+# ---------------------------------------------------------------- C. project isolation
+def shared_symbol(reach: int, name: str) -> dict:
+    """Custom symbol `user:shared-test`; `reach` sets where its terminals are."""
+    d = blank_symbol(name)
+    d["id"] = "user:shared-test"
+    d["prims"] = [{"k": "circle", "c": [0, 0], "r": 10}]
+    d["pins"] = [{"id": "A", "name": "A", "x": -reach, "y": 0, "dir": "l"},
+                 {"id": "B", "name": "B", "x": reach, "y": 0, "dir": "r"}]
+    return normalise(d)
+
+
+def two_projects_with_clashing_symbols():
+    pa, pb = api.new_project("A"), api.new_project("B")
+    pa._p.symbols["user:shared-test"] = shared_symbol(20, "Short")
+    pb._p.symbols["user:shared-test"] = shared_symbol(40, "Long")
+    return pa, pb
+
+
+def test_identically_named_custom_symbols_stay_with_their_projects(tmp_path):
+    pa, pb = two_projects_with_clashing_symbols()
+    ca = pa.sheets[0].place("user:shared-test", 100, 100)
+    cb = pb.sheets[0].place("user:shared-test", 100, 100)
+    for _ in range(2):                                   # interleaved use, either order
+        assert ca.terminal("B").position == (120.0, 100.0)
+        assert cb.terminal("B").position == (140.0, 100.0)
+        assert api.get_symbol("user:shared-test").name == "Long"   # module level: most recently used project
+    wa = pa.sheets[0].add_wire([ca.terminal("B").position, (200, 100)])
+    wb = pb.sheets[0].add_wire([cb.terminal("B").position, (200, 100)])
+    assert wa.start == (ca.id, "B") and wb.start == (cb.id, "B")
+    fa, fb = pa.save(str(tmp_path / "a.schematix")), pb.save(str(tmp_path / "b.schematix"))
+    ra, rb = api.open_project(fb), api.open_project(fa)        # reopen in the other order
+    assert rb.components()[0].terminal("B").position == (120.0, 100.0)
+    assert ra.components()[0].terminal("B").position == (140.0, 100.0)
+    assert rb._p.symbols["user:shared-test"]["name"] == "Short"
+    assert ra._p.symbols["user:shared-test"]["name"] == "Long"
+
+
+@pytest.mark.parametrize("tamper", [
+    lambda pa, pb: pb._p.activate_symbols(),            # internal code activates another project
+    lambda pa, pb: symbols.set_project_symbols([]),     # or clears the registry
+])
+def test_registry_changes_behind_the_api_are_detected(tamper):
+    pa, pb = two_projects_with_clashing_symbols()
+    ca = pa.sheets[0].place("user:shared-test", 100, 100)
+    assert ca.terminal("B").position == (120.0, 100.0)
+    tamper(pa, pb)
+    assert ca.terminal("B").position == (120.0, 100.0)
+    assert pa.sheets[0].place("user:shared-test", 300, 100).terminal("B").position == (320.0, 100.0)
+
+
+def test_a_symbol_embedded_only_in_another_project_cannot_be_placed():
+    pa, _pb = two_projects_with_clashing_symbols()
+    pa.sheets[0].place("user:shared-test", 100, 100)
+    other = api.new_project("Other")
+    with pytest.raises(api.SymbolNotFoundError):
+        other.sheets[0].place("user:shared-test", 100, 100)
+    assert other.components() == []
+
+
+def test_changed_embedded_symbols_are_reactivated():
+    pa, _pb = two_projects_with_clashing_symbols()
+    c = pa.sheets[0].place("user:shared-test", 100, 100)
+    assert c.terminal("B").position == (120.0, 100.0)
+    pa._p.symbols["user:shared-test"] = shared_symbol(30, "Changed")     # replaced, as embed_symbols does
+    assert c.terminal("B").position == (130.0, 100.0)
+
+
+def test_symbol_aliases_are_not_accepted_and_name_the_canonical_id(tmp_path):
+    lib = tmp_path / "lib" / "Mine"
+    lib.mkdir(parents=True)
+    s = sensor()
+    s["aliases"] = ["prox"]
+    (lib / "sensor.osym").write_text(json.dumps(s), encoding="utf-8")
+    assert api.load_user_library(str(tmp_path / "lib")) == []
+    sh = api.new_project().sheets[0]
+    with pytest.raises(api.SymbolNotFoundError, match=s["id"]):
+        sh.place("prox", 100, 100)
+    assert sh.place(s["id"], 100, 100).symbol_id == s["id"]          # drawings store canonical ids
+
+
+# ---------------------------------------------------------------- D. numeric validation
+BAD_NUMBERS = [float("nan"), float("inf"), float("-inf"), 10 ** 400, -(10 ** 400), 1e300,
+               api_max := _core.MAX_COORD + 10, -(api_max + 200), "100", None, 1j, Decimal("100"), True, [100]]
+
+
+@pytest.mark.parametrize("bad", BAD_NUMBERS, ids=repr)
+def test_invalid_numbers_raise_api_errors_and_change_nothing(sheet, bad):
+    c = sheet.place("el.resistor.iec", 100, 100)
+    before = state(sheet)
+    calls = [
+        lambda: sheet.place("el.resistor.iec", bad, 0),
+        lambda: sheet.place("el.resistor.iec", 0, bad),
+        lambda: sheet.add_wire([(0, 0), (bad, 0)]),
+        lambda: sheet.add_wire([(0, bad), (0, 0)]),
+        lambda: setattr(c, "position", (bad, 100)),
+        lambda: c.move_by(bad, 0),
+        lambda: setattr(c, "rotation", bad),
+        lambda: sheet.place("el.resistor.iec", 0, 0, rotation=bad),
+    ]
+    for call in calls:
+        with pytest.raises(api.InvalidOperationError):
+            call()
+    assert state(sheet) == before
+
+
+def test_other_real_number_types_are_accepted(sheet):
+    c = sheet.place("el.resistor.iec", Fraction(100), 100.0, rotation=90.0)
+    assert c.position == (100.0, 100.0) and c.rotation == 90
+    w = sheet.add_wire([(Fraction(0), 0), (_core.MAX_COORD, 0)])          # the limit itself is allowed
+    assert w.points[-1] == (_core.MAX_COORD, 0.0)
+    c.move_by(-100, 0)
+    assert c.position == (0.0, 100.0)
+
+
+def test_numpy_scalars_are_accepted(sheet):
+    np = pytest.importorskip("numpy")
+    c = sheet.place("el.resistor.iec", np.int64(100), np.float64(200), rotation=np.int64(180))
+    assert c.position == (100.0, 200.0) and c.rotation == 180
+    with pytest.raises(api.InvalidOperationError):
+        sheet.place("el.resistor.iec", np.float64("nan"), 0)
+
+
+# ---------------------------------------------------------------- argument types and the exception contract
+def test_lookups_with_wrong_key_types_raise_object_not_found(sheet):
+    c = sheet.place("el.resistor.iec", 100, 100)
+    for call in (lambda: sheet.component([c.id]), lambda: sheet.component(True), lambda: sheet.component("1"),
+                 lambda: sheet.wire({}), lambda: c.terminal(["1"]), lambda: c.terminal(1),
+                 lambda: c.remove_property(["rating"])):
+        with pytest.raises(api.ObjectNotFoundError):
+            call()
+
+
+@pytest.mark.parametrize("rules", [5, "wire-ends", [["x"]], [None], ["no-such-rule"]], ids=repr)
+def test_invalid_check_rules_raise(sheet, rules):
+    with pytest.raises(api.InvalidOperationError):
+        sheet.project.check(rules)
+
+
+def test_check_accepts_any_collection_of_rule_ids(sheet):
+    rule = sorted(_core._check.RULES)[0]
+    assert sheet.project.check((rule,)) == sheet.project.check([rule]) == sheet.project.check({rule})
+
+
+@pytest.mark.parametrize("call", [
+    lambda: api.new_project("x", ["A3"]),
+    lambda: api.new_project("x", None),
+    lambda: api.open_project(0),            # would read standard input as a file descriptor
+    lambda: api.open_project(None),
+    lambda: api.open_project(""),
+    lambda: api.open_project(b"x.schematix"),
+], ids=["size-list", "size-none", "path-fd", "path-none", "path-empty", "path-bytes"])
+def test_invalid_entry_point_arguments_raise(call):
+    with pytest.raises(api.InvalidOperationError):
+        call()
+
+
+def test_open_project_accepts_path_objects(tmp_path):
+    import pathlib
+    path = api.new_project("P").save(str(tmp_path / "p.schematix"))
+    assert api.open_project(pathlib.Path(path)).title == "P"
+
+
+@pytest.mark.parametrize("params", [
+    {"type": ["4/2"]}, {"positions": [["closed"], ["parallel"]]}, {"left": [["spring"]]}, {"right": [{}]},
+], ids=repr)
+def test_unhashable_valve_parameters_are_rejected(sheet, params):
+    v = sheet.place("fl.hyd.dcv", 200, 200)
+    before = v.params
+    with pytest.raises(api.InvalidOperationError):
+        v.set_params(**params)
+    with pytest.raises(api.InvalidOperationError):
+        sheet.place("fl.hyd.dcv", 400, 400, params=params)
+    assert v.params == before and len(sheet.components()) == 1
+
+
+@pytest.mark.parametrize("damage", ["project-list", "manifest-sheets", "manifest-symbols", "meta-list",
+                                    "sheet-order", "sheet-list"])
+def test_damaged_project_files_raise_project_file_error(tmp_path, damage):
+    import io
+    src = api.new_project("x")
+    src.sheets[0].place("el.resistor.iec", 100, 100)
+    z = zipfile.ZipFile(io.BytesIO(projectio.project_bytes(src._p)))
+    files = {n: z.read(n) for n in z.namelist()}
+    man, head = json.loads(files["manifest.json"]), json.loads(files["project.json"])
+    sheet_name = next(n for n in files if n.startswith("sheets/"))
+    over = {"project-list": {"project.json": []},
+            "manifest-sheets": {"manifest.json": dict(man, sheets=["x"])},
+            "manifest-symbols": {"manifest.json": dict(man, symbols=["x"])},
+            "meta-list": {"project.json": dict(head, meta=[1])},
+            "sheet-order": {"project.json": dict(head, sheet_order=5)},
+            "sheet-list": {sheet_name: []}}[damage]
+    files.update({k: json.dumps(v).encode() for k, v in over.items()})
+    path = tmp_path / "damaged.schematix"
+    with zipfile.ZipFile(path, "w") as out:
+        for k, v in files.items():
+            out.writestr(k, v)
+    with pytest.raises(api.ProjectFileError, match="could not open"):
+        api.open_project(str(path))
+
+
+def test_caller_owned_arguments_are_not_modified(sheet):
+    params = {"type": "4/3", "left": ["solenoid"]}
+    props = {"rating": "24 V", "part_number": "ABC"}
+    pts = [(0, 500), [100, 500]]
+    saved = copy.deepcopy((params, props, pts))
+    v = sheet.place("fl.hyd.dcv", 200, 200, params=params, properties=props)
+    sheet.add_wire(pts)
+    v.set_params(**params)
+    with pytest.raises(api.InvalidOperationError):
+        sheet.place("fl.hyd.dcv", 205, 200, params=params, properties=props)
+    assert (params, props, pts) == saved
+    v.params["left"].append("pilot")                    # returned values are copies
+    v.properties["rating"] = "x"
+    assert v.params["left"] == ["solenoid"] and v.properties["rating"] == "24 V"
+
+
+def test_falsy_non_dict_params_and_properties_are_rejected(sheet):
+    for kw in ({"params": []}, {"properties": []}, {"params": 0}, {"properties": ""}):
+        with pytest.raises(api.InvalidOperationError):
+            sheet.place("el.resistor.iec", 100, 100, **kw)
+    assert sheet.components() == []
+
+
+# ---------------------------------------------------------------- compatibility with main
+def test_sheet_settings_outside_the_api_survive_editing_and_saving(tmp_path):
+    p = api.new_project("Status")
+    p.sheets[0]._doc().sheet.drawing_status = "Preliminary"
+    path = p.save(str(tmp_path / "s.schematix"))
+    q = api.open_project(path)
+    q.sheets[0].place("el.resistor.iec", 100, 100)
+    q.save()
+    r = api.open_project(path)
+    assert r.sheets[0]._doc().sheet.drawing_status == "Preliminary" and len(r.components()) == 1

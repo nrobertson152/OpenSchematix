@@ -417,7 +417,33 @@ and used via PYTHONPATH (bootloaders are in the repo). Standalone-Python builds 
     the registry untouched for a missing folder.
 - The example script lives in `docs/examples/`: tests in `test_connectivity_index.py` and
   `test_crossings_index.py` open every entry of `examples/` as a drawing.
-- Tests: `tests/test_scripting_api.py` (68), including a subprocess test with tkinter blocked and no
+- Tests: `tests/test_scripting_api.py` (129), including a subprocess test with tkinter blocked and no
   display.
 - Not covered yet (documented): drafting shapes, layers, page setup beyond paper size, manual wire
   numbers, terminal overrides, revisions, exports, undo.
+
+### PR #33 recovery and hardening (2026-11-01)
+- **Recovery:** commits `260157b`, `e41af13` and `16fbbb0` had replaced `api/_core.py` with
+  placeholders and a 72-line fragment. It was restored byte-for-byte from `b6e6ed6` (blob `263cead`)
+  and the fixes re-implemented on top; history was kept (no force-push). `main` merged in (aliases,
+  arrowheads, Preliminary status); CHANGELOG conflict resolved keeping both sides.
+- **Fixes (all in `api/_core.py`):**
+  - *Atomic edits:* `_Rollback` restores a sheet when `place`/`add_wire`/`connect` fail part-way
+    (added objects, `next_id`, existing wires' points and attachments, embedded symbols), then lets
+    the exception propagate. `connect` also rejects a route that is not orthogonal or misses a terminal.
+  - *Locked layers:* creating on a locked *Components*/*Wires* layer raises; `place` raises if it would
+    attach a locked wire. Wires may attach to locked components (the GUI wire tool does too; the
+    component is not changed).
+  - *Project isolation:* `_activate` skips re-activation only if the same project, the same embedded
+    documents (identity) and the same registered definitions are still in place; external registry
+    changes or replaced embedded symbols re-activate.
+  - *Numbers:* `_num` accepts `numbers.Real` (not bool), converts with overflow handling and rejects
+    NaN/inf; coordinates are limited to ±`MAX_COORD` (1,000,000 units).
+  - *Exception contract:* wrong-typed lookup keys raise `ObjectNotFoundError`; unhashable valve values,
+    bad `check(rules)`, bad `new_project` size and non-path `open_project` arguments (an int would have
+    been opened as a file descriptor) raise `InvalidOperationError`; damaged project files that make
+    the reader raise `TypeError`/`AttributeError` raise `ProjectFileError`.
+- **Known engine issues found, not changed here (outside this PR):** `projectio.read_zip` raises
+  `TypeError`/`AttributeError` for some damaged files (the GUI is affected too) and accepts infinite
+  coordinates from a file. Moving or rotating a component re-routes attached wires even when those
+  wires are locked, in the GUI and the API alike.

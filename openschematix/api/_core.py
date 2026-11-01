@@ -11,14 +11,17 @@ from __future__ import annotations
 
 import copy
 import math
+import numbers
+import os
 import weakref
 import zipfile
 from typing import Iterable, Optional, Union
 
 from .. import PROJECT_EXTENSION, bom as _bom, check as _check, editing, netlist, projectio, symbols as _symbols
 from ..connectivity import analyse
-from ..geometry import GRID, is_orthogonal
-from ..model import SHEET_SIZES_MM, WIRE_STYLES, Component as _Component, Document, Wire as _Wire
+from ..geometry import GRID, is_orthogonal, same
+from ..model import (DEFAULT_LAYER_COMPONENTS, DEFAULT_LAYER_WIRES, SHEET_SIZES_MM, WIRE_STYLES,
+                     Component as _Component, Document, Wire as _Wire)
 from ..project import Project as _Project, is_terminal_symbol, new_project as _new_project
 from ..symbols.base import SymbolDef, validate_geometry
 from ..symbols.general import UNKNOWN_ID
@@ -28,18 +31,39 @@ from .types import (BomItem, Issue, Net, Point, SheetConnectivity, SymbolInfo, S
 
 ROTATIONS = (0, 90, 180, 270)
 
+MAX_COORD = 1_000_000.0
+"""Largest absolute coordinate the API accepts (drawing units; 250 m). Far
+beyond any sheet, and small enough that grid arithmetic stays exact, so
+terminals keep landing on grid points."""
+
 # ---------------------------------------------------------------- symbol registry activation
 # The symbol registry is process-wide: opening a project registers the custom
 # symbols embedded in it. Every API entry point re-activates its own project
 # first, so scripts can work with several projects at once.
-_active: Optional[weakref.ref] = None
+#
+# Re-activation is skipped only while the registry provably still holds this
+# project's definitions: the same project, the same embedded symbol documents
+# (by identity: Project.embed_symbols replaces documents, it never edits them)
+# and the same definitions installed in the registry. Anything that changed
+# the registry behind the API's back (internal modules, the GUI, a failed
+# open) or changed the project's embedded symbols triggers a re-activation,
+# so identically named custom symbols of another project can never leak in.
+_active: Optional[tuple] = None     # (weakref to project, {id: embedded doc}, {id: registered SymbolDef})
+
+
+def _same_objects(a: dict, b: dict) -> bool:
+    return a.keys() == b.keys() and all(a[k] is b[k] for k in a)
 
 
 def _activate(p: _Project) -> None:
     global _active
-    if _active is None or _active() is not p:
-        p.activate_symbols()
-        _active = weakref.ref(p)
+    if _active is not None:
+        ref, docs, installed = _active
+        if ref() is p and _same_objects(docs, p.symbols) and _same_objects(installed, _symbols.project_symbols()):
+            return
+    _active = None
+    p.activate_symbols()
+    _active = (weakref.ref(p), dict(p.symbols), _symbols.project_symbols())
 
 
 def _invalidate() -> None:
@@ -49,13 +73,31 @@ def _invalidate() -> None:
 
 # ---------------------------------------------------------------- validation helpers
 def _num(v, what: str) -> float:
-    if isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v):
+    """`v` as a finite float. Accepts any real number type (int, float,
+    Fraction, NumPy scalars) except bool; raises InvalidOperationError for
+    anything else, for NaN and infinity, and for integers too large for a
+    float (instead of leaking OverflowError)."""
+    if isinstance(v, bool) or not isinstance(v, numbers.Real):
         raise InvalidOperationError(f"{what} must be a finite number, got {v!r}")
-    return float(v)
+    try:
+        f = float(v)
+    except (ArithmeticError, ValueError, TypeError) as e:
+        raise InvalidOperationError(f"{what} must be a finite number, got {v!r}") from e
+    if not math.isfinite(f):
+        raise InvalidOperationError(f"{what} must be a finite number, got {v!r}")
+    return f
 
 
-def _on_grid(x, y, what: str) -> Point:
-    x, y = _num(x, f"{what} x"), _num(y, f"{what} y")
+def _coord(v, what: str, limit: float = MAX_COORD) -> float:
+    f = _num(v, what)
+    if abs(f) > limit:
+        raise InvalidOperationError(f"{what} {f:g} is out of range; coordinates must lie within "
+                                    f"±{limit:,.0f} drawing units")
+    return f
+
+
+def _on_grid(x, y, what: str, limit: float = MAX_COORD) -> Point:
+    x, y = _coord(x, f"{what} x", limit), _coord(y, f"{what} y", limit)
     for v in (x, y):
         if abs(v / GRID - round(v / GRID)) > 1e-9:
             raise InvalidOperationError(
@@ -65,9 +107,17 @@ def _on_grid(x, y, what: str) -> Point:
 
 
 def _rotation(r) -> int:
-    if isinstance(r, bool) or not isinstance(r, (int, float)) or r not in ROTATIONS:
+    if isinstance(r, bool) or not isinstance(r, numbers.Real) or r not in ROTATIONS:
         raise InvalidOperationError(f"rotation must be one of {ROTATIONS} degrees, got {r!r}")
     return int(r)
+
+
+def _key(v, what: str, kind: type):
+    """Lookup key of the expected type; anything else cannot name an object
+    (and may not even be hashable), so it is reported as not found."""
+    if isinstance(v, bool) or not isinstance(v, kind):
+        raise ObjectNotFoundError(f"{what} must be a {kind.__name__}, got {v!r}")
+    return v
 
 
 def _bool(v, what: str) -> bool:
@@ -97,11 +147,22 @@ def _properties(props) -> dict:
     return out
 
 
+def _style(style) -> str:
+    if not isinstance(style, str) or style not in WIRE_STYLES:
+        raise InvalidOperationError(f"wire style must be one of {', '.join(WIRE_STYLES)}, got {style!r}")
+    return style
+
+
 def _symbol(sid) -> SymbolDef:
     if not isinstance(sid, str) or not sid:
         raise SymbolNotFoundError(f"symbol identifier must be a non-empty string, got {sid!r}")
     sd = _symbols.get(sid)
     if sd is None or sid == UNKNOWN_ID:
+        alias_of = _symbols.resolve(sid)
+        if alias_of is not None and alias_of.id != sid:
+            # drawings always store canonical ids, so the API takes only those
+            raise SymbolNotFoundError(f"{sid!r} is not a symbol id but resolves to symbol {alias_of.id!r} "
+                                      f"(an alias or a different capitalisation); use {alias_of.id!r}")
         raise SymbolNotFoundError(
             f"unknown symbol {sid!r}; use openschematix.api.list_symbols() to find valid identifiers "
             "(custom symbols need load_user_library() or must be embedded in the project)")
@@ -150,19 +211,22 @@ def _validate_valve(sd, changes, merged, fluid) -> None:
         raise InvalidOperationError(f"{sd.id} is a {medium} valve; its medium cannot be changed "
                                     f"(use {'fl.pneu.dcv' if medium == 'hyd' else 'fl.hyd.dcv'})")
     types = fluid.VALVE_TYPES[medium]
-    if merged.get("type") not in types:
+    # isinstance(str) first: these tables are dicts, and an unhashable value
+    # (a list, say) must be reported, not raise TypeError on lookup
+    if not isinstance(merged.get("type"), str) or merged["type"] not in types:
         raise InvalidOperationError(f"valve type must be one of {', '.join(types)}, got {merged.get('type')!r}")
     nports, npos = types[merged["type"]]
     if "type" in changes and "positions" not in changes:
         merged["positions"] = fluid.default_valve_params(medium, merged["type"])["positions"]
     pos = merged.get("positions")
     patterns = fluid.PATTERNS[nports]
-    if not isinstance(pos, list) or len(pos) != npos or any(p not in patterns for p in pos):
+    if not isinstance(pos, list) or len(pos) != npos or any(not isinstance(p, str) or p not in patterns
+                                                             for p in pos):
         raise InvalidOperationError(f"a {merged['type']} valve needs {npos} positions, each one of "
                                     f"{', '.join(patterns)}; got {pos!r}")
     for side in ("left", "right"):
         ops = merged.get(side)
-        if not isinstance(ops, list) or any(o not in fluid.OPERATORS for o in ops):
+        if not isinstance(ops, list) or any(not isinstance(o, str) or o not in fluid.OPERATORS for o in ops):
             raise InvalidOperationError(f"{side} operators must be a list of {', '.join(fluid.OPERATORS)}; "
                                         f"got {ops!r}")
 
@@ -170,6 +234,59 @@ def _validate_valve(sd, changes, merged, fluid) -> None:
 def _layer_locked(project: _Project, obj) -> bool:
     lay = project.layer(obj.layer)
     return bool(getattr(obj, "locked", False) or (lay is not None and lay.locked))
+
+
+def _require_unlocked_layer(project: _Project, layer: str, what: str) -> None:
+    """New objects cannot be created on a locked layer: they would be locked
+    the moment they exist. Uses the project's own layer definitions; the
+    layer is the one the engine assigns (``editing.place`` / ``model.Wire``
+    defaults)."""
+    lay = project.layer(layer)
+    if lay is not None and lay.locked:
+        raise InvalidOperationError(f"cannot {what}: layer {layer!r} is locked")
+
+
+class _Rollback:
+    """Restores a sheet if an edit fails part-way, so a failed API call
+    leaves no partial objects and no consumed object ids.
+
+    Covers everything the creating edits (place, add_wire, connect) can
+    change: objects added to the sheet, the next object id, the points and
+    terminal attachments of existing wires (attach_touching_wires), and the
+    project's embedded custom symbols. Exceptions always propagate; the
+    sheet is restored first."""
+
+    def __init__(self, project: _Project, doc: Document):
+        self.project, self.doc = project, doc
+        self.next_id = doc.next_id
+        self.components = set(doc.components)
+        self.wires = {i: (list(w.points), copy.deepcopy(w.start), copy.deepcopy(w.end), w.auto)
+                      for i, w in doc.wires.items()}
+        self.symbols = dict(project.symbols)
+
+    def __enter__(self) -> "_Rollback":
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> bool:
+        if exc_type is not None:
+            self.restore()
+        return False
+
+    def restore(self) -> None:
+        doc = self.doc
+        for i in [i for i in doc.components if i not in self.components]:
+            del doc.components[i]
+        for i in [i for i in doc.wires if i not in self.wires]:
+            del doc.wires[i]
+        for i, (points, start, end, auto) in self.wires.items():
+            w = doc.wires.get(i)
+            if w is not None:
+                w.points, w.start, w.end, w.auto = points, start, end, auto
+        doc.next_id = self.next_id
+        if not _same_objects(self.symbols, self.project.symbols):
+            self.project.symbols.clear()
+            self.project.symbols.update(self.symbols)
+            _invalidate()
 
 
 # ---------------------------------------------------------------- symbol library
@@ -315,7 +432,7 @@ class Project(_Handle):
             raise InvalidOperationError(str(e)) from e
 
     def _sheet_doc(self, sheet: "Sheet") -> Document:
-        if not isinstance(sheet, Sheet) or sheet._project is not self:
+        if not isinstance(sheet, Sheet) or sheet._project != self:
             raise InvalidOperationError("expected a Sheet of this project")
         return sheet._doc()
 
@@ -369,11 +486,19 @@ class Project(_Handle):
         """Run the drawing checker (Check Drawing). `rules` limits it to the
         given rule ids (see ``openschematix.check.RULES``)."""
         if rules is not None:
-            rules = set(rules)
-            bad = sorted(r for r in rules if r not in _check.RULES)
+            if isinstance(rules, str):
+                raise InvalidOperationError(f"rules must be a collection of rule ids, not the string {rules!r} "
+                                            f"(use [{rules!r}])")
+            try:
+                rules = list(rules)
+            except TypeError:
+                raise InvalidOperationError(f"rules must be a collection of rule ids, got {rules!r}") from None
+            bad = sorted(repr(r) if not isinstance(r, str) else r
+                         for r in rules if not isinstance(r, str) or r not in _check.RULES)
             if bad:
                 raise InvalidOperationError(f"unknown check rule(s) {', '.join(bad)}; "
                                             f"valid: {', '.join(sorted(_check.RULES))}")
+            rules = set(rules)
         p = self._use()
         issues = _check.check(p, rules, _bool(require_part_numbers, "require_part_numbers"))
         return [Issue(i.severity, i.code, i.message, i.sheet_uid, i.obj_id, i.suggestion) for i in issues]
@@ -462,6 +587,7 @@ class Sheet(_Handle):
         return [Component(self, i) for i in self._doc().components]
 
     def component(self, component_id: int) -> "Component":
+        _key(component_id, "component id", int)
         if component_id not in self._doc().components:
             raise ObjectNotFoundError(f"no component {component_id!r} on sheet {self.name!r}")
         return Component(self, component_id)
@@ -470,6 +596,7 @@ class Sheet(_Handle):
         return [Wire(self, i) for i in self._doc().wires]
 
     def wire(self, wire_id: int) -> "Wire":
+        _key(wire_id, "wire id", int)
         if wire_id not in self._doc().wires:
             raise ObjectNotFoundError(f"no wire {wire_id!r} on sheet {self.name!r}")
         return Wire(self, wire_id)
@@ -486,47 +613,65 @@ class Sheet(_Handle):
         assigned (K1, K2, ...; terminal blocks get a strip and number). Free
         wire ends touching the new terminals are connected, as in the
         application. Raises SymbolNotFoundError or InvalidOperationError;
-        nothing is changed then."""
+        nothing is changed then. Placing on the Components layer while it
+        is locked raises, as does placing where a terminal would attach a
+        locked wire."""
         doc = self._use()
+        p = self._project._p
         sd = _symbol(symbol_id)
         x, y = _on_grid(x, y, "position")
         rotation = _rotation(rotation)
         mirror = _bool(mirror, "mirror")
-        full = _validate_params(sd, params or {}) if (params or sd.parametric) else None
+        if params is not None or sd.parametric:
+            full = _validate_params(sd, {} if params is None else params)
+            full = full if sd.parametric else None
+        else:
+            full = None
         designator = None if designator is None else _text(designator, "designator")
         label = _text(label, "label")
-        props = _properties(properties or {})
-        c = editing.place(doc, sd.id, x, y, rotation, mirror, full)
-        if designator is not None:
-            if is_terminal_symbol(sd.id):
-                # a terminal on the named strip gets that strip's next free number
-                c.props.pop("terminal", None)
-                c.designator = designator
-                if designator:
-                    c.props["terminal"] = editing.next_terminal(doc, sd.prefix or "X", designator)[1]
-            else:
-                c.designator = designator
-        c.label = label
-        for k, v in props.items():
-            if v:
-                c.props[k] = v
-        if sd.is_custom:
-            self._project._p.embed_symbols()      # the project keeps its own copy (as on save)
-            _invalidate()
+        props = _properties({} if properties is None else properties)
+        _require_unlocked_layer(p, DEFAULT_LAYER_COMPONENTS, f"place {sd.id}")
+        free_ends = {(w.id, attr) for w in doc.wires.values() for attr in ("start", "end") if getattr(w, attr) is None}
+        with _Rollback(p, doc):
+            c = editing.place(doc, sd.id, x, y, rotation, mirror, full)
+            # editing.place attaches free wire ends lying on the new terminals;
+            # that changes those wires, which a lock forbids
+            for wid, attr in sorted(free_ends):
+                w = doc.wires[wid]
+                if getattr(w, attr) is not None and _layer_locked(p, w):
+                    raise InvalidOperationError(f"cannot place {sd.id} at ({x:g}, {y:g}): its terminal "
+                                                f"{getattr(w, attr)[1]} would attach locked wire {wid}")
+            if designator is not None:
+                if is_terminal_symbol(sd.id):
+                    # a terminal on the named strip gets that strip's next free number
+                    c.props.pop("terminal", None)
+                    c.designator = designator
+                    if designator:
+                        c.props["terminal"] = editing.next_terminal(doc, sd.prefix or "X", designator)[1]
+                else:
+                    c.designator = designator
+            c.label = label
+            for k, v in props.items():
+                if v:
+                    c.props[k] = v
+            if sd.is_custom:
+                p.embed_symbols()      # the project keeps its own copy (as on save)
         return Component(self, c.id)
 
     def add_wire(self, points: Iterable[Point], style: str = "solid") -> "Wire":
         """Draw a wire through `points` (at least two). Every segment must be
         horizontal or vertical and coordinates whole drawing units. Ends
         lying on component terminals are connected to them; a wire end that
-        only passes over a terminal is not (see docs/SCRIPTING_API.md)."""
+        only passes over a terminal is not (see docs/SCRIPTING_API.md).
+        Raises InvalidOperationError if the Wires layer is locked."""
         doc = self._use()
         pts = self._points(points)
-        if style not in WIRE_STYLES:
-            raise InvalidOperationError(f"wire style must be one of {', '.join(WIRE_STYLES)}, got {style!r}")
-        w = editing.add_wire(doc, pts, style=style)
-        if w is None:
-            raise InvalidOperationError("a wire must have two distinct end points")
+        _style(style)
+        _require_unlocked_layer(self._project._p, DEFAULT_LAYER_WIRES, "add a wire")
+        with _Rollback(self._project._p, doc):
+            w = editing.add_wire(doc, pts, style=style)
+            if w is None:
+                raise InvalidOperationError("a wire must have two distinct end points")
         return Wire(self, w.id)
 
     @staticmethod
@@ -541,7 +686,7 @@ class Sheet(_Handle):
         for i, p in enumerate(raw):
             if not isinstance(p, (tuple, list)) or len(p) != 2:
                 raise InvalidOperationError(f"point {i} must be an (x, y) pair, got {p!r}")
-            x, y = _num(p[0], f"point {i} x"), _num(p[1], f"point {i} y")
+            x, y = _coord(p[0], f"point {i} x"), _coord(p[1], f"point {i} y")
             if x != round(x) or y != round(y):
                 raise InvalidOperationError(f"point {i} ({x:g}, {y:g}): wire coordinates must be whole "
                                             "drawing units")
@@ -554,17 +699,29 @@ class Sheet(_Handle):
                 style: str = "solid") -> "Wire":
         """Connect two terminals on this sheet with an automatically routed
         wire (the router used when the application re-routes wires: leaves
-        each terminal along its lead and avoids component bodies)."""
+        each terminal along its lead and avoids component bodies).
+
+        Atomic: if routing fails nothing is added and no object id is used.
+        Raises InvalidOperationError if the Wires layer is locked. The
+        components themselves may be locked: attaching a wire does not
+        change them (as in the application, where wires can be drawn to
+        terminals of locked components)."""
         doc = self._use()
         ta = self._terminal_on_sheet(a, a_terminal)
         tb = self._terminal_on_sheet(b, b_terminal)
         if (a.id, a_terminal) == (b.id, b_terminal):
             raise InvalidOperationError("cannot connect a terminal to itself")
-        if style not in WIRE_STYLES:
-            raise InvalidOperationError(f"wire style must be one of {', '.join(WIRE_STYLES)}, got {style!r}")
-        w = doc.add_wire(_Wire(id=doc.new_id(), points=[ta, tb], start=[a.id, a_terminal],
-                               end=[b.id, b_terminal], style=style))
-        editing.reroute(doc, w)
+        _style(style)
+        _require_unlocked_layer(self._project._p, DEFAULT_LAYER_WIRES, "connect terminals")
+        with _Rollback(self._project._p, doc):
+            w = doc.add_wire(_Wire(id=doc.new_id(), points=[ta, tb], start=[a.id, a_terminal],
+                                   end=[b.id, b_terminal], style=style))
+            editing.reroute(doc, w)
+            pts = w.points
+            if (len(pts) < 2 or not is_orthogonal(pts) or not same(pts[0], ta) or not same(pts[-1], tb)
+                    or not all(math.isfinite(v) for pt in pts for v in pt)):
+                raise InvalidOperationError(f"could not route a wire from {a.designator or a.id}:{a_terminal} "
+                                            f"to {b.designator or b.id}:{b_terminal}")
         return Wire(self, w.id)
 
     def _terminal_on_sheet(self, comp: "Component", name: str) -> Point:
@@ -675,7 +832,7 @@ class Component(_Handle):
     def move_by(self, dx: float, dy: float) -> None:
         """Move by a grid-aligned offset; attached wires follow."""
         x, y = self.position
-        dx, dy = _on_grid(dx, dy, "offset")
+        dx, dy = _on_grid(dx, dy, "offset", limit=2 * MAX_COORD)   # the new position is checked below
         self.position = (x + dx, y + dy)
 
     @property
@@ -747,6 +904,7 @@ class Component(_Handle):
 
     def remove_property(self, key: str) -> None:
         _doc, c = self._editable()
+        _key(key, "property name", str)
         if key not in c.props:
             raise ObjectNotFoundError(f"{c.designator or c.id} has no property {key!r}")
         del c.props[key]
@@ -774,6 +932,7 @@ class Component(_Handle):
                 for t in c.terminal_defs()}
 
     def terminal(self, name: str) -> Terminal:
+        _key(name, "terminal name", str)
         terms = self.terminals
         if name not in terms:
             raise ObjectNotFoundError(f"{self.designator or self.id} ({self.symbol_id}) has no terminal {name!r}; "
@@ -851,7 +1010,7 @@ class Wire(_Handle):
 # ================================================================ entry points
 def new_project(title: str = "", sheet_size: str = "A3") -> Project:
     """A new project with one empty sheet of the given paper size."""
-    if sheet_size not in SHEET_SIZES_MM:
+    if not isinstance(sheet_size, str) or sheet_size not in SHEET_SIZES_MM:
         raise InvalidOperationError(f"unknown sheet size {sheet_size!r}; valid: {', '.join(SHEET_SIZES_MM)}")
     p = _new_project(_text(title, "title"), sheet_size)
     _activate(p)
@@ -861,11 +1020,21 @@ def new_project(title: str = "", sheet_size: str = "A3") -> Project:
 def open_project(path: str) -> Project:
     """Open a ``.schematix`` project, or convert a legacy ``.osch`` drawing
     (then :attr:`Project.path` is None and :meth:`Project.save` needs a new
-    path). The file is never modified by opening it. Raises ProjectFileError."""
+    path). The file is never modified by opening it. Raises ProjectFileError
+    (InvalidOperationError if `path` is not a path)."""
+    if isinstance(path, os.PathLike):
+        path = os.fspath(path)
+    if not isinstance(path, str) or not path:
+        # an int would be opened as a file descriptor (0 is standard input)
+        raise InvalidOperationError(f"path must be a file path (str or os.PathLike), got {path!r}")
     try:
         res = projectio.open_any(path)
     except (OSError, ValueError, KeyError, zipfile.BadZipFile) as e:
         raise ProjectFileError(f"could not open {path}: {e}") from e
+    except (TypeError, AttributeError) as e:
+        # the reader assumes well-formed JSON structure; a damaged file with
+        # the wrong value types surfaces as these
+        raise ProjectFileError(f"could not open {path}: the project is damaged ({type(e).__name__}: {e})") from e
     _invalidate()
     _activate(res.project)
     return Project(res.project, None if res.migrated else path, res.warnings)
