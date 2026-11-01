@@ -272,3 +272,111 @@ def test_invalid_field_types_for_core_metadata():
 
     with pytest.raises(SymbolFormatError, match=r"JSON object|not an OpenSchematix"):
         load_symbol_json("[1, 2, 3]", source="array.osym")
+
+
+def test_unhashable_port_type_does_not_crash():
+    """Unhashable pin type must be a finding, not TypeError."""
+    doc = _valid_custom_doc()
+    doc["pins"][0]["type"] = ["elec", "passive"]
+    findings = validate_document(doc)
+    assert any("port type" in f.problem for f in findings)
+    assert isinstance(findings, list)
+
+
+def test_overflow_and_huge_coordinates():
+    doc = _valid_custom_doc()
+    doc["pins"][0]["x"] = 10 ** 400
+    findings = validate_document(doc)
+    assert any("invalid numeric" in f.problem or "out of range" in f.problem for f in findings)
+
+    doc2 = _valid_custom_doc()
+    doc2["pins"][0]["x"] = 1e20
+    findings2 = validate_document(doc2)
+    assert any("out of range" in f.problem for f in findings2)
+
+
+def test_nested_unexpected_structures():
+    doc = _valid_custom_doc()
+    doc["prims"] = [{"k": "line", "pts": {"a": 1}}]
+    findings = validate_document(doc)
+    assert any("needs at least two points" in f.problem or "malformed" in f.problem for f in findings)
+
+    doc3 = _valid_custom_doc()
+    doc3["pins"] = [None, 42]
+    findings3 = validate_document(doc3)
+    assert sum(1 for f in findings3 if "not an object" in f.problem) >= 2
+
+
+def test_strict_vs_normalise_missing_pin_id():
+    """Strict validator reports missing pin id; normalise synthesises one."""
+    doc = _valid_custom_doc()
+    del doc["pins"][0]["id"]
+    findings = validate_document(doc)
+    assert any("missing id" in f.problem for f in findings)
+    norm = normalise(doc)
+    assert norm["pins"][0]["id"].startswith("p")
+
+
+def test_strict_vs_normalise_invalid_direction():
+    doc = _valid_custom_doc()
+    doc["pins"][0]["dir"] = "north"
+    findings = validate_document(doc)
+    assert any("invalid direction" in f.problem for f in findings)
+    norm = normalise(doc)
+    assert norm["pins"][0]["dir"] == "r"
+
+
+def test_parametric_symbol_build_does_not_mutate_params():
+    sd = get("fl.hyd.dcv")
+    assert sd is not None and sd.parametric
+    params = {"type": "4/3", "medium": "hyd"}
+    params_before = dict(params)
+    default_before = dict(sd.default_params)
+    findings = validate_symbol_def(sd, params=params)
+    assert params == params_before
+    assert sd.default_params == default_before
+    assert not any(f.severity == SEVERITY_ERROR for f in findings)
+
+
+def test_parametric_symbol_default_build_read_only():
+    sd = get("fl.pneu.dcv")
+    assert sd is not None and sd.parametric
+    default_before = dict(sd.default_params)
+    geo_before = sd.geometry
+    findings = validate_symbol_def(sd)
+    assert sd.default_params == default_before
+    assert sd.geometry is geo_before
+    assert not any(f.severity == SEVERITY_ERROR for f in findings)
+
+
+def test_cli_exit_codes_and_source_location(tmp_path):
+    from openschematix.symbols.integrity import main
+    assert main(["--builtins"]) == 0
+    bad = tmp_path / "bad.osym"
+    bad.write_text("{not json")
+    assert main([str(bad)]) == 1
+    doc = _valid_custom_doc()
+    doc["pins"][0]["x"] = 15
+    good_path = tmp_path / "offgrid.osym"
+    good_path.write_text(json.dumps(doc))
+    findings = validate_document(json.loads(good_path.read_text()), source=str(good_path))
+    assert findings
+    assert all(f.source == str(good_path) for f in findings)
+    assert any(f.location for f in findings)
+    d = findings[0].as_dict()
+    assert "source" in d and "problem" in d and "severity" in d
+
+
+def test_cli_json_output_includes_source(tmp_path, capsys):
+    from openschematix.symbols.integrity import main
+    doc = _valid_custom_doc()
+    doc["pins"].append({"id": "p1", "name": "X", "x": 0, "y": 10, "dir": "u"})
+    path = tmp_path / "dup.osym"
+    path.write_text(json.dumps(doc))
+    code = main([str(path), "--json"])
+    assert code == 1
+    out = capsys.readouterr().out
+    data = json.loads(out)
+    assert isinstance(data, list) and data
+    assert any(item.get("source") == str(path) for item in data)
+    assert any("duplicate pin id" in item.get("problem", "") for item in data)
