@@ -380,3 +380,78 @@ def test_malformed_embedded_symbol_is_recovered_and_not_reembedded(tmp_path, fie
     assert loaded.project.symbols == {}
     assert any("placeholders" in w for w in loaded.warnings)
     assert not loaded.project.symbols
+
+
+
+def test_import_refuses_existing_symlink_directory_without_touching_external_files(tmp_path):
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    sentinel = outside / "important.osym"
+    sentinel.write_bytes(b"must remain unchanged")
+    root = tmp_path / "libs"
+    root.mkdir()
+    (root / "Linked").symlink_to(outside, target_is_directory=True)
+    doc = symbol_doc("Incoming")
+    info = userlib.read_package(str(package(tmp_path / "linked.osymlib", [doc])))
+    lib = userlib.UserLibrary(str(root))
+    with pytest.raises(ValueError, match="symbolic links"):
+        userlib.import_package(info, lib, mode="merge", target="Linked")
+    assert sentinel.read_bytes() == b"must remain unchanged"
+    assert not list(outside.glob("Incoming*.osym"))
+    assert (root / "Linked").is_symlink()
+    assert not list(tmp_path.glob(".osymlib-import-*"))
+
+
+def test_import_refuses_existing_symlink_file(tmp_path):
+    outside = tmp_path / "secret.osym"
+    outside.write_bytes(b"outside bytes")
+    root = tmp_path / "libs"
+    folder = root / "Real"
+    folder.mkdir(parents=True)
+    (folder / "linked.osym").symlink_to(outside)
+    doc = symbol_doc("Incoming")
+    info = userlib.read_package(str(package(tmp_path / "linked-file.osymlib", [doc])))
+    with pytest.raises(ValueError, match="symbolic links"):
+        userlib.import_package(info, userlib.UserLibrary(str(root)))
+    assert outside.read_bytes() == b"outside bytes"
+
+
+def test_import_refuses_symlinked_library_root(tmp_path):
+    actual = tmp_path / "actual"
+    actual.mkdir()
+    linked = tmp_path / "linked"
+    linked.symlink_to(actual, target_is_directory=True)
+    info = userlib.read_package(str(package(tmp_path / "root-link.osymlib", [symbol_doc("One")])))
+    with pytest.raises(ValueError, match="symbolic-link library root"):
+        userlib.import_package(info, userlib.UserLibrary(str(linked)))
+    assert not list(actual.rglob("*.osym"))
+
+
+def test_failed_move_to_failed_slot_preserves_preexisting_library(tmp_path, monkeypatch):
+    lib = userlib.UserLibrary(str(tmp_path / "libs"))
+    old = symbol_doc("Old")
+    entry = lib.save_symbol(old, "Library")
+    contents = Path(entry.path).read_bytes()
+    info = userlib.read_package(str(package(tmp_path / "replacement.osymlib",
+                                            [symbol_doc("Incoming")])))
+    original_replace = userlib.os.replace
+
+    def fail_scan_and_failed_rename(src, dst):
+        if dst.endswith(os.sep + "failed"):
+            raise OSError("failed-slot rename blocked")
+        return original_replace(src, dst)
+
+    scan = lib.scan
+    def fail_scan():
+        raise RuntimeError("post-swap scan failure")
+
+    monkeypatch.setattr(lib, "scan", fail_scan)
+    monkeypatch.setattr(userlib.os, "replace", fail_scan_and_failed_rename)
+    with pytest.raises(RuntimeError, match="post-swap"):
+        userlib.import_package(info, lib, mode="merge", target="Library")
+    # An occupied destination prevents automatic restoration; previous bytes
+    # must be retained in a backup, rather than deleted.
+    backups = list(tmp_path.glob(".osymlib-import-*/previous"))
+    assert len(backups) == 1
+    assert (backups[0] / "Library" / Path(entry.path).name).read_bytes() == contents
+    monkeypatch.setattr(lib, "scan", scan)
