@@ -567,6 +567,8 @@ def import_dxf(raw: bytes, units: str | None = None, scale: float = 1.0, origin=
     rep = ImportReport()
     rep.version = (header.get("$ACADVER") or [(1, "")])[0][1]
     if units:
+        if not isinstance(units, str) or units not in UNIT_NAMES:
+            raise DxfError("unsupported DXF units override")
         rep.units_mm = UNIT_NAMES[units]
         rep.units_source = f"{units} (chosen)"
     else:
@@ -783,7 +785,10 @@ def import_dxf(raw: bytes, units: str | None = None, scale: float = 1.0, origin=
                 anchor = {(0, 0): "sw", (0, 1): "sw", (0, 2): "w", (0, 3): "nw", (1, 0): "s", (1, 1): "s",
                           (1, 2): "c", (1, 3): "n", (2, 0): "se", (2, 1): "se", (2, 2): "e", (2, 3): "ne",
                           (4, 0): "c", (3, 0): "sw", (5, 0): "sw"}.get((hal, val), "sw")
-                add(t, Shape(nid(), "text", pts=[tr(m, x, y)], s=s, size=max(1.0, h / 0.72), anchor=anchor,
+                size = max(1.0, h / 0.72)
+                if not math.isfinite(size):
+                    raise DxfError("TEXT size exceeds finite range")
+                add(t, Shape(nid(), "text", pts=[tr(m, x, y)], s=s, size=size, anchor=anchor,
                              angle=(e.f(50) + mrot(m)) % 360), ly)
             elif t == "MTEXT":
                 raw_s = "".join(e.all(3)) + (e.get(1) or "")
@@ -798,6 +803,8 @@ def import_dxf(raw: bytes, units: str | None = None, scale: float = 1.0, origin=
                 base = tr(m, e.f(10), e.f(20))
                 size = max(1.0, h / 0.72)
                 lh = size * 1.25
+                if not math.isfinite(size) or not math.isfinite(lh):
+                    raise DxfError("MTEXT line spacing exceeds finite range")
                 nl = len(lines)
                 # first line position depends on vertical attachment
                 if att in (1, 2, 3):
@@ -812,6 +819,8 @@ def import_dxf(raw: bytes, units: str | None = None, scale: float = 1.0, origin=
                         continue
                     off = y0 + n_ * lh
                     p = (base[0] + off * math.sin(t_rad), base[1] + off * math.cos(t_rad))
+                    if not math.isfinite(off) or not all(map(math.isfinite, p)):
+                        raise DxfError("MTEXT coordinates exceed finite range")
                     add(t, Shape(nid(), "text", pts=[p], s=ln, size=size, anchor=anchor, angle=ang), ly)
             elif t in ("INSERT", "DIMENSION"):
                 name = (e.get(2) or "").strip()
