@@ -2300,10 +2300,13 @@ class App:
             m.add_command(label="Zoom to drawing", command=self.canvas_fit_drawing)
             m.add_command(label="Zoom to sheet", command=lambda: self.canvas.fit())
             m.add_command(label="Sheet properties", command=self.focus_properties)
-        try:
-            m.tk_popup(x, y)
-        finally:
-            m.grab_release()
+        # tk_popup installs Tk's native menu grab and keyboard bindings.
+        # Tk's Menu class unposts on Escape and outside clicks, releases its
+        # grab and supports cascades.  Releasing the grab here (tk_popup
+        # returns immediately) disables that behavior; root-level dismissal
+        # handlers can also dispatch Escape to an active CAD command.
+        # Keep the grab under Tk's control, as in the sheet-tab popup.
+        m.tk_popup(x, y)
 
     def _connect_at(self, p):
         s = self.begin_change()
