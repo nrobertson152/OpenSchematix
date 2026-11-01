@@ -340,7 +340,7 @@ def test_disconnect_t_junction():
     d = Document()
     editing.add_wire(d, [(0, 50), (100, 50)])
     br = editing.add_wire(d, [(50, 50), (50, 100)])
-    assert analyse(d).junctions == [] or True
+    assert analyse(d).junctions == [(50, 50)]  # T-junction before disconnection
     msg = editing.disconnect_junction(d, (50, 50))
     assert msg and br.points[0] == (50, 60)
 
@@ -421,7 +421,12 @@ def test_wire_numbering_stable_manual_and_renumber():
     netlist.assign_wire_numbers(p, renumber=True)
     assert d.wires[wid].number == "L+" and d.wires[wid].number_manual
     nums2 = [w.number for w in d.wires.values()]
-    assert len({n for n in nums2}) == len(netlist.compute_nets(p)) or True
+    # Every wire on a net has that net's number; distinct numbered nets are unique.
+    numbered_nets = [n for n in netlist.compute_nets(p) if n.wires and netlist.numberable(p, n)]
+    assert all({p.find_sheet(uid).wires[wire_id].number for uid, wire_id in n.wires} == {n.number}
+               for n in numbered_nets)
+    assert len({n.number for n in numbered_nets}) == len(numbered_nets)
+    assert all(nums2)
     # prefix / digits convention
     p.settings["wire_numbering"].update(prefix="W", digits=3)
     netlist.assign_wire_numbers(p, renumber=True)
