@@ -58,6 +58,16 @@ PORT_TYPES = {
 CATEGORY_DOMAIN = {"Electrical": "elec", "Electronic": "elec", "Hydraulic": "hyd", "Pneumatic": "pneu"}
 
 
+# Drafting elements: symbols that are drawn but carry no fluid/electrical function of their own (valve
+# operators shown on their own, direction arrows, energy triangles, enclosure lines). They are the only
+# built-in symbols allowed to have no terminals, and they never appear in the BOM (empty designator prefix).
+DRAFTING_GROUPS = ("Valve operators", "Drafting")
+
+
+def is_drafting_element(sd) -> bool:
+    return sd.group in DRAFTING_GROUPS and not sd.prefix
+
+
 def port_domain(ptype: str) -> str:
     return (ptype or "any").split(".", 1)[0]
 

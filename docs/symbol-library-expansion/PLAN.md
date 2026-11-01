@@ -104,5 +104,10 @@ are generated for visual comparison against the sources.
   examples): status `excluded`; they are built from the individual symbols inside a component enclosure.
 * **Q4 — unlabelled / ambiguous ECL drawings left out**: status `blocked` with the reason, to add once identified.
 
+* **Q5 — drafting elements may have no terminals** (director, 2026-11-01): the 1.0.0 rule "every built-in
+  symbol has at least one terminal" (`tests/test_core.py`) keeps applying to every symbol except drafting
+  elements — empty designator prefix and group "Valve operators" or "Drafting"
+  (`symbols.base.is_drafting_element`). Conversely, a terminal-less symbol must be a drafting element.
+
 Scope note: because of Q2, `openschematix/gui/dialogs.py` (ValveDialog only) is the one non-library production
 file this PR may change. The changed-files guard test allows exactly that.

@@ -743,6 +743,97 @@ for r in R:
         r["notes"] = ("Director Q1: ANSI drawing of this operator is offered as an operator style where it differs. "
                       + r["notes"]).strip()
 
+# =============================================================== progress (per batch)
+def op_ids(*ops):
+    out = []
+    for o in ops:
+        out += [f"dcv operator '{o}'", f"fl.hyd.op.{o}", f"fl.pneu.op.{o}"]
+    return "; ".join(out)
+
+
+# key: (status, target, note to append). "validated" = implemented and covered by the batch's automated tests.
+PROGRESS = {
+    # ---- batch F1: directional-valve configurator + standalone operator elements
+    "HO-B17": ("validated", op_ids("spring"), "Operator existed; standalone element added"),
+    "HO-B21": ("validated", op_ids("detent"), "One notch per switching position; marker on the rest position"),
+    "HO-S01": ("validated", op_ids("manual"), "Operator existed; standalone element added"),
+    "HO-S02": ("validated", op_ids("pushbutton"), "Operator existed; standalone element added"),
+    "HO-S03": ("validated", op_ids("pushpull"), ""),
+    "HO-S04": ("validated", op_ids("lever"), "Operator existed; standalone element added"),
+    "HO-S05": ("validated", op_ids("pedal"), ""),
+    "HO-S06": ("validated", op_ids("pedal2"), ""),
+    "HO-S07": ("validated", op_ids("plunger"), ""),
+    "HO-S08": ("validated", op_ids("plunger.limited"), ""),
+    "HO-S09": ("validated", op_ids("spring"), "Operator existed; standalone element added"),
+    "HO-S10": ("validated", op_ids("roller"), ""),
+    "HO-S11": ("validated", op_ids("roller.lever"), "Arrow drawn as in the source (operating direction)"),
+    "HO-S12": ("validated", op_ids("solenoid"), "Operator existed; standalone element added"),
+    "HO-S13": ("validated", op_ids("solenoid.pushpull"), ""),
+    "HO-S14": ("validated", op_ids("pilot.direct"), "Pilot terminal X / 12 at the line end"),
+    "HO-S15": ("validated", op_ids("pilot.applied"), "Pilot terminal on the box's outer edge (the source draws no line)"),
+    "HO-S16": ("validated", op_ids("motor"), ""),
+    "HO-S17": ("validated", op_ids("motor.other"), ""),
+    "HO-S18": ("validated", "dcv option 'transition'", "Two-position valves; dashed transition position"),
+    "HO-S19": ("validated", "dcv option 'proportional'", "Bars along the envelopes"),
+    "HO-S21": ("validated", op_ids("pilot.internal"),
+               "Configurator form: box with triangle, no pilot port (Y32 7.7.2). The source's dashed line from P is "
+               "drawn by the user when the valve is drawn by hand"),
+    "HO-S22": ("validated", op_ids("pilot"), "External pilot = existing pilot operator with port X / 12"),
+    "HO-C32": ("existing", "fl.hyd.dcv",
+               "Spool form 1 centre is not legible at the source's resolution (float or tandem); both centres are "
+               "available in the configurator"),
+    "HO-C33": ("existing", "fl.hyd.dcv", "Spool form 2 = closed centre, available in the configurator"),
+    "HO-C34": ("validated", "dcv operator 'solenoid.and.pilot.int'", "With spring as a second operator"),
+    "HO-C36": ("validated", op_ids("solenoid.prop") + "; dcv option 'proportional'", ""),
+    "HO-C37": ("validated", "dcv operator 'solenoid.and.pilot.int'; dcv operator 'solenoid.prop'; "
+                            "dcv option 'proportional'",
+               "Three operators per side (spring, pilot stage, proportional solenoid)"),
+    "Y32-7.2.3": ("validated", "dcv operator 'pedal'", "Same operator as HO-S05"),
+    "Y32-7.3": ("validated", op_ids("cam") + "; dcv operator 'roller'", "First form = roller, second = roller on cam"),
+    "Y32-7.4": ("validated", "dcv operator 'detent'", "Same operator as HO-B21"),
+    "Y32-7.5": ("validated", op_ids("compensated"),
+                "Box with arrow parallel to the short side (2.10); the arc beside it in the figure is not "
+                "reproduced (meaning unclear)"),
+    "Y32-7.6.2": ("validated", op_ids("motor.reversing"), ""),
+    "Y32-7.7.1": ("validated", op_ids("pilot.remote"), "Pilot line into an empty box"),
+    "Y32-7.7.2": ("validated", "dcv operator 'pilot.internal'", "Same operator as HO-S21"),
+    "Y32-7.7.3a": ("validated", op_ids("release.remote"), ""),
+    "Y32-7.7.3b": ("validated", op_ids("release.internal"), ""),
+    "Y32-7.7.5": ("blocked", "-", "Pilot differential figures are not legible enough to reproduce without guessing"),
+    "Y32-7.8.1a": ("validated", op_ids("solenoid.or.pilot.ext"), "Triangle fill follows the medium"),
+    "Y32-7.8.1b": ("validated", op_ids("solenoid.or.pilot.int"), "Triangle fill follows the medium"),
+    "Y32-7.8.2": ("validated", op_ids("solenoid.and.pilot.ext", "solenoid.and.pilot.int"),
+                  "Pilot supply enters from above (terminal at the top)"),
+    "Y32-7.9.1": ("validated", op_ids("thermal"), ""),
+    "Y32-7.9.2": ("validated", op_ids("thermal.bulb"), "Bulb drawn outward; the source draws it below the valve"),
+    "Y32-7.10": ("validated", op_ids("servo"), ""),
+    "Y32-7.11a": ("validated", "dcv operator 'pilot.applied'", "Basic form = pilot-applied box"),
+    "Y32-10.11.3": ("validated", "dcv pattern 'b-t'; dcv pattern 'apt'; dcv pattern 'ab'; dcv pattern 'a-t'; "
+                                 "dcv pattern 'ab-pt'",
+                    "Five new centre conditions; the other three (closed, open, 5-port closed) already existed"),
+    "Y32-10.11.4": ("validated", "dcv option 'transition'", ""),
+    "Y32-10.14": ("validated", "dcv option 'proportional'",
+                  "Three-way infinite-positioning valves: 3/2 valve types with the proportional option"),
+    "Y32-10.15": ("validated", "dcv option 'proportional'", "Four-way: 4/2 and 4/3 with the proportional option"),
+    "Y32-11.4.6s": ("validated", "dcv operator 'solenoid.and.pilot.ext'; dcv operator 'manual'",
+                    "Simplified symbol reproducible with 2 operators per side (pilot stage + manual override)"),
+    "Y32-11.4.7s": ("validated", "dcv operator 'detent'; dcv operator 'solenoid.and.pilot.ext'",
+                    "Throttled exhausts are drawn separately (not a configurator feature)"),
+}
+for r in R:
+    if r["key"] in PROGRESS:
+        st, tgt, note = PROGRESS[r["key"]]
+        r["status"], r["target"] = st, tgt
+        if note:
+            r["notes"] = (r["notes"] + "; " if r["notes"] else "") + note
+        if st == "validated":
+            r["batch"] = "F1"
+for r in R:
+    if r["key"] == "HO-S20":
+        r.update(status="annotation", target="gen.coupling", batch="F2",
+                 notes="Shaft coupling: mechanical drafting element, not a valve operator")
+assert not set(PROGRESS) - {r["key"] for r in R}, set(PROGRESS) - {r["key"] for r in R}
+
 # =============================================================== write
 here = os.path.dirname(os.path.abspath(__file__))
 keys = [r["key"] for r in R]

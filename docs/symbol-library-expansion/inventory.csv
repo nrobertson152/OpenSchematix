@@ -15,36 +15,36 @@ HO-B13,HO,Basic Symbols r13,Direction of rotation looking at shaft,General,Draft
 HO-B14,HO,Basic Symbols r14,"Pneumatic (energy direction, hollow)",Pneumatic,Drafting,fl.pneu.mark.energy,annotation,F2,Same as Y32 2.5.2 / 4.4
 HO-B15,HO,Basic Symbols r15,"Hydraulic (energy direction, filled)",Hydraulic,Drafting,fl.hyd.mark.energy,annotation,F2,
 HO-B16,HO,Basic Symbols r16,Test point,Hydraulic+Pneumatic,Lines & connections,fl.*.testpoint,pending,F2,
-HO-B17,HO,Basic Symbols r17,Spring,Hydraulic+Pneumatic,Valve operators,dcv operator 'spring',existing,F1,Already a configurator operator; standalone element added with F1
+HO-B17,HO,Basic Symbols r17,Spring,Hydraulic+Pneumatic,Valve operators,dcv operator 'spring'; fl.hyd.op.spring; fl.pneu.op.spring,validated,F1,Already a configurator operator; standalone element added with F1; Operator existed; standalone element added
 HO-B18,HO,Basic Symbols r18,Throttle,Hydraulic+Pneumatic,Non-return & flow,fl.*.throttle,existing,-,
 HO-B19,HO,Basic Symbols r19,Plugged port,Hydraulic+Pneumatic,Lines & connections,fl.*.port.plugged,pending,F2,
 HO-B20,HO,Basic Symbols r20,Rotary union,Hydraulic+Pneumatic,Lines & connections,fl.*.rotaryunion,pending,F2,
-HO-B21,HO,Basic Symbols r21,Detent,Hydraulic+Pneumatic,Valve operators,dcv operator 'detent',configurator,F1,"Director: detents and spool controls go in the configurator, optionally also standalone"
+HO-B21,HO,Basic Symbols r21,Detent,Hydraulic+Pneumatic,Valve operators,dcv operator 'detent'; fl.hyd.op.detent; fl.pneu.op.detent,validated,F1,"Director: detents and spool controls go in the configurator, optionally also standalone; One notch per switching position; marker on the rest position"
 HO-B22,HO,Basic Symbols r22,Return above / below fluid level,Hydraulic,Reservoirs,fl.hyd.tank.above / existing fl.hyd.tank,pending,F3,Below-level form = existing fl.hyd.tank
 HO-B23,HO,Basic Symbols r23,Check valve,Hydraulic+Pneumatic,Non-return & flow,fl.*.check,existing,-,
 HO-B24,HO,Basic Symbols r24,Shut-off valve,Hydraulic+Pneumatic,Non-return & flow,fl.*.shutoff,pending,F8,
-HO-S01,HO,Spool Controls S01,"General symbol (manual, general)",Hydraulic+Pneumatic,Valve operators,dcv operator 'manual',existing,F1,Existing configurator operator
-HO-S02,HO,Spool Controls S02,Push knob,Hydraulic+Pneumatic,Valve operators,dcv operator 'pushbutton',existing,F1,Existing configurator operator
-HO-S03,HO,Spool Controls S03,Push-pull knob,Hydraulic+Pneumatic,Valve operators,dcv operator 'pushpull',configurator,F1,New operator + standalone operator element
-HO-S04,HO,Spool Controls S04,Lever,Hydraulic+Pneumatic,Valve operators,dcv operator 'lever',existing,F1,Existing configurator operator
-HO-S05,HO,Spool Controls S05,Single acting pedal,Hydraulic+Pneumatic,Valve operators,dcv operator 'pedal',configurator,F1,New operator + standalone operator element
-HO-S06,HO,Spool Controls S06,Double acting pedal,Hydraulic+Pneumatic,Valve operators,dcv operator 'pedal2',configurator,F1,New operator + standalone operator element
-HO-S07,HO,Spool Controls S07,Plunger,Hydraulic+Pneumatic,Valve operators,dcv operator 'plunger',configurator,F1,New operator + standalone operator element
-HO-S08,HO,Spool Controls S08,Plunger with stroke limitation,Hydraulic+Pneumatic,Valve operators,dcv operator 'plunger.limited',configurator,F1,New operator + standalone operator element
-HO-S09,HO,Spool Controls S09,Spring,Hydraulic+Pneumatic,Valve operators,dcv operator 'spring',existing,F1,Existing configurator operator
-HO-S10,HO,Spool Controls S10,Roller,Hydraulic+Pneumatic,Valve operators,dcv operator 'roller',configurator,F1,New operator + standalone operator element
-HO-S11,HO,Spool Controls S11,Lever with roller,Hydraulic+Pneumatic,Valve operators,dcv operator 'roller.lever',configurator,F1,New operator + standalone operator element
-HO-S12,HO,Spool Controls S12,Single solenoid,Hydraulic+Pneumatic,Valve operators,dcv operator 'solenoid',existing,F1,Existing configurator operator
-HO-S13,HO,Spool Controls S13,Push/pull solenoid,Hydraulic+Pneumatic,Valve operators,dcv operator 'solenoid.pushpull',configurator,F1,New operator + standalone operator element
-HO-S14,HO,Spool Controls S14,Direct pilot operated,Hydraulic+Pneumatic,Valve operators,dcv operator 'pilot.direct',configurator,F1,New operator + standalone operator element
-HO-S15,HO,Spool Controls S15,Pneumatic / hydraulic operated,Hydraulic+Pneumatic,Valve operators,dcv operator 'pilot.applied',configurator,F1,New operator + standalone operator element
-HO-S16,HO,Spool Controls S16,Electric motor,Hydraulic+Pneumatic,Valve operators,dcv operator 'motor',configurator,F1,New operator + standalone operator element
-HO-S17,HO,Spool Controls S17,Other control unit (not electric motor),Hydraulic+Pneumatic,Valve operators,dcv operator 'motor.other',configurator,F1,New operator + standalone operator element
-HO-S20,HO,Spool Controls S20,Coupling,Hydraulic+Pneumatic,Valve operators,dcv operator 'coupling',configurator,F1,New operator + standalone operator element
-HO-S21,HO,Spool Controls S21,Internal pilot,Hydraulic+Pneumatic,Valve operators,dcv operator 'pilot.internal',configurator,F1,New operator + standalone operator element
-HO-S22,HO,Spool Controls S22,External pilot,Hydraulic+Pneumatic,Valve operators,dcv operator 'pilot.external',configurator,F1,New operator + standalone operator element
-HO-S18,HO,Spool Controls r18,Intermediate position,Hydraulic+Pneumatic,Directional valves,dcv option 'transition position',configurator,F1,Needs a valve-dialog option (GUI) - outside the allowed scope; see decision Q2; Director Q2: dialog change allowed
-HO-S19,HO,Spool Controls r19,Proportional spool (infinite positioning bars),Hydraulic+Pneumatic,Directional valves,dcv option 'proportional',configurator,F1,Needs a valve-dialog option (GUI); see decision Q2; Director Q2: dialog change allowed
+HO-S01,HO,Spool Controls S01,"General symbol (manual, general)",Hydraulic+Pneumatic,Valve operators,dcv operator 'manual'; fl.hyd.op.manual; fl.pneu.op.manual,validated,F1,Existing configurator operator; Operator existed; standalone element added
+HO-S02,HO,Spool Controls S02,Push knob,Hydraulic+Pneumatic,Valve operators,dcv operator 'pushbutton'; fl.hyd.op.pushbutton; fl.pneu.op.pushbutton,validated,F1,Existing configurator operator; Operator existed; standalone element added
+HO-S03,HO,Spool Controls S03,Push-pull knob,Hydraulic+Pneumatic,Valve operators,dcv operator 'pushpull'; fl.hyd.op.pushpull; fl.pneu.op.pushpull,validated,F1,New operator + standalone operator element
+HO-S04,HO,Spool Controls S04,Lever,Hydraulic+Pneumatic,Valve operators,dcv operator 'lever'; fl.hyd.op.lever; fl.pneu.op.lever,validated,F1,Existing configurator operator; Operator existed; standalone element added
+HO-S05,HO,Spool Controls S05,Single acting pedal,Hydraulic+Pneumatic,Valve operators,dcv operator 'pedal'; fl.hyd.op.pedal; fl.pneu.op.pedal,validated,F1,New operator + standalone operator element
+HO-S06,HO,Spool Controls S06,Double acting pedal,Hydraulic+Pneumatic,Valve operators,dcv operator 'pedal2'; fl.hyd.op.pedal2; fl.pneu.op.pedal2,validated,F1,New operator + standalone operator element
+HO-S07,HO,Spool Controls S07,Plunger,Hydraulic+Pneumatic,Valve operators,dcv operator 'plunger'; fl.hyd.op.plunger; fl.pneu.op.plunger,validated,F1,New operator + standalone operator element
+HO-S08,HO,Spool Controls S08,Plunger with stroke limitation,Hydraulic+Pneumatic,Valve operators,dcv operator 'plunger.limited'; fl.hyd.op.plunger.limited; fl.pneu.op.plunger.limited,validated,F1,New operator + standalone operator element
+HO-S09,HO,Spool Controls S09,Spring,Hydraulic+Pneumatic,Valve operators,dcv operator 'spring'; fl.hyd.op.spring; fl.pneu.op.spring,validated,F1,Existing configurator operator; Operator existed; standalone element added
+HO-S10,HO,Spool Controls S10,Roller,Hydraulic+Pneumatic,Valve operators,dcv operator 'roller'; fl.hyd.op.roller; fl.pneu.op.roller,validated,F1,New operator + standalone operator element
+HO-S11,HO,Spool Controls S11,Lever with roller,Hydraulic+Pneumatic,Valve operators,dcv operator 'roller.lever'; fl.hyd.op.roller.lever; fl.pneu.op.roller.lever,validated,F1,New operator + standalone operator element; Arrow drawn as in the source (operating direction)
+HO-S12,HO,Spool Controls S12,Single solenoid,Hydraulic+Pneumatic,Valve operators,dcv operator 'solenoid'; fl.hyd.op.solenoid; fl.pneu.op.solenoid,validated,F1,Existing configurator operator; Operator existed; standalone element added
+HO-S13,HO,Spool Controls S13,Push/pull solenoid,Hydraulic+Pneumatic,Valve operators,dcv operator 'solenoid.pushpull'; fl.hyd.op.solenoid.pushpull; fl.pneu.op.solenoid.pushpull,validated,F1,New operator + standalone operator element
+HO-S14,HO,Spool Controls S14,Direct pilot operated,Hydraulic+Pneumatic,Valve operators,dcv operator 'pilot.direct'; fl.hyd.op.pilot.direct; fl.pneu.op.pilot.direct,validated,F1,New operator + standalone operator element; Pilot terminal X / 12 at the line end
+HO-S15,HO,Spool Controls S15,Pneumatic / hydraulic operated,Hydraulic+Pneumatic,Valve operators,dcv operator 'pilot.applied'; fl.hyd.op.pilot.applied; fl.pneu.op.pilot.applied,validated,F1,New operator + standalone operator element; Pilot terminal on the box's outer edge (the source draws no line)
+HO-S16,HO,Spool Controls S16,Electric motor,Hydraulic+Pneumatic,Valve operators,dcv operator 'motor'; fl.hyd.op.motor; fl.pneu.op.motor,validated,F1,New operator + standalone operator element
+HO-S17,HO,Spool Controls S17,Other control unit (not electric motor),Hydraulic+Pneumatic,Valve operators,dcv operator 'motor.other'; fl.hyd.op.motor.other; fl.pneu.op.motor.other,validated,F1,New operator + standalone operator element
+HO-S20,HO,Spool Controls S20,Coupling,Hydraulic+Pneumatic,Valve operators,gen.coupling,annotation,F2,"Shaft coupling: mechanical drafting element, not a valve operator"
+HO-S21,HO,Spool Controls S21,Internal pilot,Hydraulic+Pneumatic,Valve operators,dcv operator 'pilot.internal'; fl.hyd.op.pilot.internal; fl.pneu.op.pilot.internal,validated,F1,"New operator + standalone operator element; Configurator form: box with triangle, no pilot port (Y32 7.7.2). The source's dashed line from P is drawn by the user when the valve is drawn by hand"
+HO-S22,HO,Spool Controls S22,External pilot,Hydraulic+Pneumatic,Valve operators,dcv operator 'pilot'; fl.hyd.op.pilot; fl.pneu.op.pilot,validated,F1,New operator + standalone operator element; External pilot = existing pilot operator with port X / 12
+HO-S18,HO,Spool Controls r18,Intermediate position,Hydraulic+Pneumatic,Directional valves,dcv option 'transition',validated,F1,Needs a valve-dialog option (GUI) - outside the allowed scope; see decision Q2; Director Q2: dialog change allowed; Two-position valves; dashed transition position
+HO-S19,HO,Spool Controls r19,Proportional spool (infinite positioning bars),Hydraulic+Pneumatic,Directional valves,dcv option 'proportional',validated,F1,Needs a valve-dialog option (GUI); see decision Q2; Director Q2: dialog change allowed; Bars along the envelopes
 HO-T01,HO,Energy Transformations r1,Fixed displacement pump,Hydraulic,Pumps & motors,fl.hyd.pump,existing,-,
 HO-T02,HO,Energy Transformations r2,Single-acting hand pump,Hydraulic,Pumps & motors,fl.hyd.pump.hand,pending,F5,
 HO-T03,HO,Energy Transformations r3,Double-acting hand pump,Hydraulic,Pumps & motors,fl.hyd.pump.hand2,pending,F5,"Composite (pump, checks, lever); external ports only"
@@ -91,12 +91,12 @@ HO-C28,HO,Energy Control C28,Normally open solenoid check valve,Hydraulic,Direct
 HO-C29,HO,Energy Control C29,Normally closed solenoid check valve,Hydraulic,Directional valves,fl.hyd.sol.check.nc,pending,F8,Seated 2/2
 HO-C30,HO,Energy Control C30,Solenoid operated 6-port diverter / changeover valve,Hydraulic,Directional valves,fl.hyd.diverter6,pending,F8,6-port valve: not expressible by the configurator (port layouts 2-5)
 HO-C31,HO,Energy Control C31,Solenoid diverter valve with external drain,Hydraulic,Directional valves,fl.hyd.diverter6.drain,pending,F8,
-HO-C32,HO,Energy Control C32,Direct acting solenoid directional valve (spool form 1),Hydraulic,Directional valves,fl.hyd.dcv (config),configurator,F1,Reachable with existing configurator; verify spool form against PATTERNS
-HO-C33,HO,Energy Control C33,Direct acting solenoid directional valve (spool form 2),Hydraulic,Directional valves,fl.hyd.dcv (config),configurator,F1,May need a new centre PATTERN
-HO-C34,HO,Energy Control C34,Pilot operated solenoid directional valve,Hydraulic,Directional valves,fl.hyd.dcv (config),configurator,F1,Needs 3 operators per side (solenoid+pilot+spring); see Q2
+HO-C32,HO,Energy Control C32,Direct acting solenoid directional valve (spool form 1),Hydraulic,Directional valves,fl.hyd.dcv,existing,F1,Reachable with existing configurator; verify spool form against PATTERNS; Spool form 1 centre is not legible at the source's resolution (float or tandem); both centres are available in the configurator
+HO-C33,HO,Energy Control C33,Direct acting solenoid directional valve (spool form 2),Hydraulic,Directional valves,fl.hyd.dcv,existing,F1,"May need a new centre PATTERN; Spool form 2 = closed centre, available in the configurator"
+HO-C34,HO,Energy Control C34,Pilot operated solenoid directional valve,Hydraulic,Directional valves,dcv operator 'solenoid.and.pilot.int',validated,F1,Needs 3 operators per side (solenoid+pilot+spring); see Q2; With spring as a second operator
 HO-C35,HO,Energy Control C35,Direct acting seated solenoid directional valve,Hydraulic,Directional valves,fl.hyd.dcv.seated,pending,F8,Seated 3-way with poppet marks; distinct from spool valve
-HO-C36,HO,Energy Control C36,Direct acting proportional solenoid directional valve,Hydraulic,Directional valves,fl.hyd.dcv (config),configurator,F1,Proportional bars; see Q2; Director Q2: dialog change allowed
-HO-C37,HO,Energy Control C37,Pilot operated proportional solenoid directional valve,Hydraulic,Directional valves,fl.hyd.dcv (config),configurator,F1,Proportional bars + 3 operators; see Q2; Director Q2: dialog change allowed
+HO-C36,HO,Energy Control C36,Direct acting proportional solenoid directional valve,Hydraulic,Directional valves,dcv operator 'solenoid.prop'; fl.hyd.op.solenoid.prop; fl.pneu.op.solenoid.prop; dcv option 'proportional',validated,F1,Proportional bars; see Q2; Director Q2: dialog change allowed
+HO-C37,HO,Energy Control C37,Pilot operated proportional solenoid directional valve,Hydraulic,Directional valves,dcv operator 'solenoid.and.pilot.int'; dcv operator 'solenoid.prop'; dcv option 'proportional',validated,F1,"Proportional bars + 3 operators; see Q2; Director Q2: dialog change allowed; Three operators per side (spring, pilot stage, proportional solenoid)"
 HO-C38,HO,Energy Control C38,Series directional control valve,Hydraulic,Mobile valves,fl.hyd.mobile.series,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Composite; see Q3
 HO-C39,HO,Energy Control C39,Series directional control valve with negative overlap and valves in spool,Hydraulic,Mobile valves,fl.hyd.mobile.series.neg,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Composite; see Q3
 HO-C40,HO,Energy Control C40,Parallel directional control valve,Hydraulic,Mobile valves,fl.hyd.mobile.parallel,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Composite; Q3
@@ -206,25 +206,25 @@ Y32-7.1,Y32,p8 cl.7.1,Spring,Hydraulic+Pneumatic,Valve operators,dcv operator 's
 Y32-7.2,Y32,p8 cl.7.2,"Manual, general",Hydraulic+Pneumatic,Valve operators,dcv operator 'manual',existing,F1,
 Y32-7.2.1,Y32,p8 cl.7.2.1,Push button,Hydraulic+Pneumatic,Valve operators,dcv operator 'pushbutton',existing,F1,
 Y32-7.2.2,Y32,p8 cl.7.2.2,Lever,Hydraulic+Pneumatic,Valve operators,dcv operator 'lever',existing,F1,
-Y32-7.2.3,Y32,p8 cl.7.2.3,Pedal or treadle,Hydraulic+Pneumatic,Valve operators,dcv operator 'pedal',configurator,F1,Director Q1: ANSI drawing of this operator is offered as an operator style where it differs. Same function as an HO spool control row
-Y32-7.3,Y32,p8 cl.7.3,Mechanical (cam / roller; two forms),Hydraulic+Pneumatic,Valve operators,dcv operator 'roller / cam',configurator,F1,
-Y32-7.4,Y32,p8 cl.7.4,Detent,Hydraulic+Pneumatic,Valve operators,dcv operator 'detent',configurator,F1,Director Q1: ANSI drawing of this operator is offered as an operator style where it differs. Same function as an HO spool control row
-Y32-7.5,Y32,p8 cl.7.5,Pressure compensated,Hydraulic+Pneumatic,Valve operators,dcv operator 'compensated',configurator,F1,
+Y32-7.2.3,Y32,p8 cl.7.2.3,Pedal or treadle,Hydraulic+Pneumatic,Valve operators,dcv operator 'pedal',validated,F1,Director Q1: ANSI drawing of this operator is offered as an operator style where it differs. Same function as an HO spool control row; Same operator as HO-S05
+Y32-7.3,Y32,p8 cl.7.3,Mechanical (cam / roller; two forms),Hydraulic+Pneumatic,Valve operators,dcv operator 'cam'; fl.hyd.op.cam; fl.pneu.op.cam; dcv operator 'roller',validated,F1,"First form = roller, second = roller on cam"
+Y32-7.4,Y32,p8 cl.7.4,Detent,Hydraulic+Pneumatic,Valve operators,dcv operator 'detent',validated,F1,Director Q1: ANSI drawing of this operator is offered as an operator style where it differs. Same function as an HO spool control row; Same operator as HO-B21
+Y32-7.5,Y32,p8 cl.7.5,Pressure compensated,Hydraulic+Pneumatic,Valve operators,dcv operator 'compensated'; fl.hyd.op.compensated; fl.pneu.op.compensated,validated,F1,Box with arrow parallel to the short side (2.10); the arc beside it in the figure is not reproduced (meaning unclear)
 Y32-7.6.1,Y32,p8 cl.7.6.1,Solenoid (single winding),Hydraulic+Pneumatic,Valve operators,dcv operator 'solenoid',existing,F1,
-Y32-7.6.2,Y32,p8 cl.7.6.2,Reversing motor,Hydraulic+Pneumatic,Valve operators,dcv operator 'motor.reversing',configurator,F1,
-Y32-7.7.1,Y32,p8 cl.7.7.1,"Pilot pressure, remote supply",Hydraulic+Pneumatic,Valve operators,dcv operator 'pilot',existing,F1,
-Y32-7.7.2,Y32,p10 cl.7.7.2,"Pilot pressure, internal supply",Hydraulic+Pneumatic,Valve operators,dcv operator 'pilot.internal',configurator,F1,Director Q1: ANSI drawing of this operator is offered as an operator style where it differs. Same function as an HO spool control row
-Y32-7.7.3a,Y32,p10 cl.7.7.3,"Actuation by released pressure, by remote exhaust",Hydraulic+Pneumatic,Valve operators,dcv operator 'pilot.release.remote',configurator,F1,
-Y32-7.7.3b,Y32,p10 cl.7.7.3,"Actuation by released pressure, by internal return",Hydraulic+Pneumatic,Valve operators,dcv operator 'pilot.release.internal',configurator,F1,
+Y32-7.6.2,Y32,p8 cl.7.6.2,Reversing motor,Hydraulic+Pneumatic,Valve operators,dcv operator 'motor.reversing'; fl.hyd.op.motor.reversing; fl.pneu.op.motor.reversing,validated,F1,
+Y32-7.7.1,Y32,p8 cl.7.7.1,"Pilot pressure, remote supply",Hydraulic+Pneumatic,Valve operators,dcv operator 'pilot.remote'; fl.hyd.op.pilot.remote; fl.pneu.op.pilot.remote,validated,F1,Pilot line into an empty box
+Y32-7.7.2,Y32,p10 cl.7.7.2,"Pilot pressure, internal supply",Hydraulic+Pneumatic,Valve operators,dcv operator 'pilot.internal',validated,F1,Director Q1: ANSI drawing of this operator is offered as an operator style where it differs. Same function as an HO spool control row; Same operator as HO-S21
+Y32-7.7.3a,Y32,p10 cl.7.7.3,"Actuation by released pressure, by remote exhaust",Hydraulic+Pneumatic,Valve operators,dcv operator 'release.remote'; fl.hyd.op.release.remote; fl.pneu.op.release.remote,validated,F1,
+Y32-7.7.3b,Y32,p10 cl.7.7.3,"Actuation by released pressure, by internal return",Hydraulic+Pneumatic,Valve operators,dcv operator 'release.internal'; fl.hyd.op.release.internal; fl.pneu.op.release.internal,validated,F1,
 Y32-7.7.4,Y32,p10 cl.7.7.4,"Pilot controlled, spring centered (simplified and complete)",Hydraulic+Pneumatic,Valve operators,dcv operator 'pilot + spring',existing,F1,
-Y32-7.7.5,Y32,p10 cl.7.7.5,"Pilot differential (simplified, complete)",Hydraulic+Pneumatic,Valve operators,dcv operator 'pilot.differential',configurator,F1,
-Y32-7.8.1a,Y32,p10 cl.7.8.1,"Solenoid or pilot, external pilot supply",Hydraulic+Pneumatic,Valve operators,dcv operator 'solenoid.pilot.ext',configurator,F1,
-Y32-7.8.1b,Y32,p10 cl.7.8.1,"Solenoid or pilot, internal pilot supply and exhaust",Hydraulic+Pneumatic,Valve operators,dcv operator 'solenoid.pilot.int',configurator,F1,
-Y32-7.8.2,Y32,p10 cl.7.8.2,Solenoid and pilot (two forms),Hydraulic+Pneumatic,Valve operators,dcv operator 'solenoid.and.pilot',configurator,F1,
-Y32-7.9.1,Y32,p10 cl.7.9.1,"Thermal, local sensing",Hydraulic+Pneumatic,Valve operators,dcv operator 'thermal',configurator,F1,
-Y32-7.9.2,Y32,p10 cl.7.9.2,"Thermal, with bulb for remote sensing",Hydraulic+Pneumatic,Valve operators,dcv operator 'thermal.bulb',configurator,F1,
-Y32-7.10,Y32,p10 cl.7.10,Servo,Hydraulic+Pneumatic,Valve operators,dcv operator 'servo',configurator,F1,
-Y32-7.11a,Y32,p10 cl.7.11,Composite actuator: basic,Hydraulic+Pneumatic,Valve operators,dcv operator 'pilot.applied',configurator,F1,Director Q1: ANSI drawing of this operator is offered as an operator style where it differs. Same function as an HO spool control row
+Y32-7.7.5,Y32,p10 cl.7.7.5,"Pilot differential (simplified, complete)",Hydraulic+Pneumatic,Valve operators,-,blocked,F1,Pilot differential figures are not legible enough to reproduce without guessing
+Y32-7.8.1a,Y32,p10 cl.7.8.1,"Solenoid or pilot, external pilot supply",Hydraulic+Pneumatic,Valve operators,dcv operator 'solenoid.or.pilot.ext'; fl.hyd.op.solenoid.or.pilot.ext; fl.pneu.op.solenoid.or.pilot.ext,validated,F1,Triangle fill follows the medium
+Y32-7.8.1b,Y32,p10 cl.7.8.1,"Solenoid or pilot, internal pilot supply and exhaust",Hydraulic+Pneumatic,Valve operators,dcv operator 'solenoid.or.pilot.int'; fl.hyd.op.solenoid.or.pilot.int; fl.pneu.op.solenoid.or.pilot.int,validated,F1,Triangle fill follows the medium
+Y32-7.8.2,Y32,p10 cl.7.8.2,Solenoid and pilot (two forms),Hydraulic+Pneumatic,Valve operators,dcv operator 'solenoid.and.pilot.ext'; fl.hyd.op.solenoid.and.pilot.ext; fl.pneu.op.solenoid.and.pilot.ext; dcv operator 'solenoid.and.pilot.int'; fl.hyd.op.solenoid.and.pilot.int; fl.pneu.op.solenoid.and.pilot.int,validated,F1,Pilot supply enters from above (terminal at the top)
+Y32-7.9.1,Y32,p10 cl.7.9.1,"Thermal, local sensing",Hydraulic+Pneumatic,Valve operators,dcv operator 'thermal'; fl.hyd.op.thermal; fl.pneu.op.thermal,validated,F1,
+Y32-7.9.2,Y32,p10 cl.7.9.2,"Thermal, with bulb for remote sensing",Hydraulic+Pneumatic,Valve operators,dcv operator 'thermal.bulb'; fl.hyd.op.thermal.bulb; fl.pneu.op.thermal.bulb,validated,F1,Bulb drawn outward; the source draws it below the valve
+Y32-7.10,Y32,p10 cl.7.10,Servo,Hydraulic+Pneumatic,Valve operators,dcv operator 'servo'; fl.hyd.op.servo; fl.pneu.op.servo,validated,F1,
+Y32-7.11a,Y32,p10 cl.7.11,Composite actuator: basic,Hydraulic+Pneumatic,Valve operators,dcv operator 'pilot.applied',validated,F1,Director Q1: ANSI drawing of this operator is offered as an operator style where it differs. Same function as an HO spool control row; Basic form = pilot-applied box
 Y32-7.11b,Y32,p10 cl.7.11,Composite actuator: and,Hydraulic+Pneumatic,Valve operators,dcv operator 'and',blocked,F1,Stacked (parallel) operator boxes are a further configurator layout feature not covered by the Q2 change; left out
 Y32-7.11c,Y32,p10 cl.7.11,Composite actuator: or,Hydraulic+Pneumatic,Valve operators,dcv operator 'or',blocked,F1,Stacked (parallel) operator boxes are a further configurator layout feature not covered by the Q2 change; left out
 Y32-7.11d,Y32,p10 cl.7.11,Composite actuator: and/or,Hydraulic+Pneumatic,Valve operators,dcv operator 'and/or',blocked,F1,Stacked (parallel) operator boxes are a further configurator layout feature not covered by the Q2 change; left out
@@ -291,8 +291,8 @@ Y32-10.10.2.1,Y32,p17 cl.10.10.2.1,Double check valve without cross bleed,Hydrau
 Y32-10.10.2.2,Y32,p17 cl.10.10.2.2,Double check valve with cross bleed,Hydraulic+Pneumatic,Valves,fl.*.doublecheck.bleed,pending,F8,
 Y32-10.11.1,Y32,p18 cl.10.11.1,"Four-way, two position (normal and actuated; two forms)",Hydraulic+Pneumatic,Valves,fl.*.dcv (4/2),existing,F1,Second form is a 5-connection drawing; check against pneumatic 5/2
 Y32-10.11.2,Y32,p18 cl.10.11.2,"Four-way, three position (normal, actuated left, actuated right)",Hydraulic+Pneumatic,Valves,fl.*.dcv (4/3),existing,F1,Actuated states are the same valve shifted; drawn only in the normal state
-Y32-10.11.3,Y32,p18 cl.10.11.3,Typical centre conditions of three-position valves (8 shown),Hydraulic+Pneumatic,Valves,dcv PATTERNS,configurator,F1,Add each missing centre condition as a configurator flow pattern
-Y32-10.11.4,Y32,p18 cl.10.11.4,"Two-position, snap action with transition",Hydraulic+Pneumatic,Valves,dcv option 'transition position',configurator,F1,Q2; Director Q2: dialog change allowed
+Y32-10.11.3,Y32,p18 cl.10.11.3,Typical centre conditions of three-position valves (8 shown),Hydraulic+Pneumatic,Valves,dcv pattern 'b-t'; dcv pattern 'apt'; dcv pattern 'ab'; dcv pattern 'a-t'; dcv pattern 'ab-pt',validated,F1,"Add each missing centre condition as a configurator flow pattern; Five new centre conditions; the other three (closed, open, 5-port closed) already existed"
+Y32-10.11.4,Y32,p18 cl.10.11.4,"Two-position, snap action with transition",Hydraulic+Pneumatic,Valves,dcv option 'transition',validated,F1,Q2; Director Q2: dialog change allowed
 Y32-10.12.1,Y32,p18 cl.10.12.1,"Infinite positioning between open and closed, normally closed",Hydraulic+Pneumatic,Valves,fl.*.valve.prop.nc,pending,F8,
 Y32-10.12.2,Y32,p18 cl.10.12.2,"Infinite positioning between open and closed, normally open",Hydraulic+Pneumatic,Valves,fl.*.valve.prop.no,pending,F8,
 Y32-10.13.1s,Y32,p18 cl.10.13.1,"Pressure relief, simplified",Hydraulic+Pneumatic,Valves,fl.*.relief.ansi,pending,F8,Director Q1: ANSI-style variant of fl.*.relief; becomes 'equivalent' if the ANSI drawing is identical. Pneumatic relief added (pending)
@@ -304,8 +304,8 @@ Y32-10.13.3a,Y32,p19 cl.10.13.3,Pressure reducing,Hydraulic+Pneumatic,Valves,fl.
 Y32-10.13.3b,Y32,p19 cl.10.13.3,Pressure reducing with external drain,Hydraulic,Valves,fl.hyd.reducing.drain,pending,F7,
 Y32-10.13.4,Y32,p19 cl.10.13.4,Pressure reducing and relieving,Hydraulic,Valves,fl.hyd.reducing.relieving,pending,F7,
 Y32-10.13.5,Y32,p19 cl.10.13.5,"Airline pressure regulator (adjustable, relieving)",Pneumatic,Valves,fl.pneu.regulator.relieving,pending,F7,
-Y32-10.14,Y32,p19 cl.10.14,Infinite positioning three-way valves (four examples),Hydraulic+Pneumatic,Valves,fl.*.valve.3way.prop,configurator,F1,Proportional bars; Q2; Director Q2: dialog change allowed
-Y32-10.15,Y32,p19 cl.10.15,Infinite positioning four-way valves (four examples),Hydraulic+Pneumatic,Valves,fl.*.valve.4way.prop,configurator,F1,Q2; Director Q2: dialog change allowed
+Y32-10.14,Y32,p19 cl.10.14,Infinite positioning three-way valves (four examples),Hydraulic+Pneumatic,Valves,dcv option 'proportional',validated,F1,Proportional bars; Q2; Director Q2: dialog change allowed; Three-way infinite-positioning valves: 3/2 valve types with the proportional option
+Y32-10.15,Y32,p19 cl.10.15,Infinite positioning four-way valves (four examples),Hydraulic+Pneumatic,Valves,dcv option 'proportional',validated,F1,Q2; Director Q2: dialog change allowed; Four-way: 4/2 and 4/3 with the proportional option
 Y32-10.16.1,Y32,p19 cl.10.16.1,"Flow control, adjustable, non-compensated",Hydraulic+Pneumatic,Valves,fl.*.throttle.adj.ansi,pending,F8,Director Q1: ANSI-style variant of fl.*.throttle.adj; becomes 'equivalent' if the ANSI drawing is identical.
 Y32-10.16.2,Y32,p19 cl.10.16.2,"Flow control, adjustable with bypass",Hydraulic+Pneumatic,Valves,fl.*.flow.oneway.ansi,pending,F8,Director Q1: ANSI-style variant of fl.*.flow.oneway; becomes 'equivalent' if the ANSI drawing is identical.
 Y32-10.16.3,Y32,p19 cl.10.16.3,"Flow control, adjustable and pressure compensated with bypass",Hydraulic+Pneumatic,Valves,fl.*.flow.pc.bypass,pending,F8,
@@ -323,9 +323,9 @@ Y32-11.4.3,Y32,p23 cl.11.4.3,Remote and direct operated sequence with differenti
 Y32-11.4.4,Y32,p23 cl.11.4.4,Pressure reducing with integral check,Hydraulic+Pneumatic,Composite,-,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Q3
 Y32-11.4.5.1,Y32,p23 cl.11.4.5.1,"Pilot operated check, differential pilot opened",Hydraulic+Pneumatic,Composite,-,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Q3
 Y32-11.4.5.2,Y32,p23 cl.11.4.5.2,Pilot operated check (second form; untitled in source),Hydraulic+Pneumatic,Composite,-,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Q3; source gives no title for 11.4.5.2
-Y32-11.4.6s,Y32,p22 cl.11.4.6,"2-position 4-connection solenoid and pilot actuated, manual pilot override (simplified)",Hydraulic+Pneumatic,Composite,fl.*.dcv (config),configurator,F1,Q2 (3 operators per side); Director Q2: dialog change allowed
+Y32-11.4.6s,Y32,p22 cl.11.4.6,"2-position 4-connection solenoid and pilot actuated, manual pilot override (simplified)",Hydraulic+Pneumatic,Composite,dcv operator 'solenoid.and.pilot.ext'; dcv operator 'manual',validated,F1,Q2 (3 operators per side); Director Q2: dialog change allowed; Simplified symbol reproducible with 2 operators per side (pilot stage + manual override)
 Y32-11.4.6c,Y32,p22 cl.11.4.6,"Same, complete symbol",Hydraulic+Pneumatic,Composite,-,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Q3
-Y32-11.4.7s,Y32,p24 cl.11.4.7,"2-position 5-connection solenoid controlled pilot actuated, detents, throttled exhaust (simplified)",Pneumatic,Composite,fl.pneu.dcv (config),configurator,F1,"Q2 (3 operators + throttled exhausts); Director Q2: dialog change allowed; throttled exhausts are not a configurator feature (drawn without them, noted)"
+Y32-11.4.7s,Y32,p24 cl.11.4.7,"2-position 5-connection solenoid controlled pilot actuated, detents, throttled exhaust (simplified)",Pneumatic,Composite,dcv operator 'detent'; dcv operator 'solenoid.and.pilot.ext',validated,F1,"Q2 (3 operators + throttled exhausts); Director Q2: dialog change allowed; throttled exhausts are not a configurator feature (drawn without them, noted); Throttled exhausts are drawn separately (not a configurator feature)"
 Y32-11.4.7c,Y32,p24 cl.11.4.7,"Same, complete symbol",Hydraulic+Pneumatic,Composite,-,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Q3
 Y32-11.4.8,Y32,p24 cl.11.4.8,Variable pressure compensated flow control and overload relief,Hydraulic+Pneumatic,Composite,-,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Q3
 ECL-OTH1.1,ECL,Other things r1 #1,"Buzzer, AC",Electrical,Signalling,el.buzzer.ac,pending,E8,Dome with ~

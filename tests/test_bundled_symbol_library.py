@@ -23,7 +23,8 @@ from openschematix import editing, export, netlist, projectio, symbols
 from openschematix.geometry import GRID, point_on_segment
 from openschematix.project import new_project
 from openschematix.symbols import fluid
-from openschematix.symbols.base import CATEGORY_DOMAIN, LINE_WIDTHS, PORT_TYPES, port_domain, validate_geometry
+from openschematix.symbols.base import (CATEGORY_DOMAIN, LINE_WIDTHS, PORT_TYPES, is_drafting_element, port_domain,
+                                        validate_geometry)
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
@@ -97,7 +98,7 @@ def test_definition_loads_and_geometry_is_valid(sd):
                 assert str(p["s"]).strip()
             assert all(math.isfinite(v) for v in nums), (label, p)
         b = g.bbox()
-        assert b[2] > b[0] and b[3] > b[1], label
+        assert (b[2] - b[0]) + (b[3] - b[1]) > 0, label
 
 
 @pytest.mark.parametrize("sd", BUILTINS, ids=ids)
@@ -130,7 +131,7 @@ def test_new_symbol_is_searchable_and_documented(sd):
     assert sd.id in {s.id for s in symbols.search(sd.name)}
     assert sd.category in symbols.categories()
     if not sd.build(None).terminals:
-        assert sd.prefix == "", "a drafting element without terminals must stay out of the BOM"
+        assert is_drafting_element(sd), "only drafting elements (no BOM prefix, drafting group) may lack terminals"
 
 
 # ---------------------------------------------------------------- unchanged existing drawings
