@@ -186,8 +186,9 @@ def to_svg(doc: Document, use_sheet: bool = True, project=None) -> str:
             if it.get("angle"):
                 ax, ay = it["p"]
                 rot = f' transform="rotate({_fmt(-it["angle"])} {_fmt(ax)} {_fmt(ay)})"'
+            color = it.get("color", "#000000")
             out.append(f'<text x="{_fmt(x)}" y="{_fmt(y)}" font-family="Helvetica, Arial, sans-serif" '
-                       f'font-size="{_fmt(it.get("size", 10))}"{weight}{rot} fill="#000000" stroke="none">'
+                       f'font-size="{_fmt(it.get("size", 10))}"{weight}{rot} fill="{escape(color)}" stroke="none">'
                        f'{escape(it["s"])}</text>')
     out.append("</g>")
     out.append("</svg>")
@@ -253,6 +254,10 @@ def _page_content(items, extent) -> tuple[bytes, float, float]:
         if it["k"] != "text":
             continue
         font = "/F2" if it.get("bold") else "/F1"
+        if it.get("role") == "watermark":
+            ops.append("0.72 0.72 0.72 rg")
+        else:
+            ops.append("0 0 0 rg")
         ang = it.get("angle", 0) or 0
         if ang:
             # rotate about the anchor point: compute origin in the rotated frame
