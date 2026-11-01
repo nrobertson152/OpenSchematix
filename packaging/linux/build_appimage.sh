@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Package the PyInstaller bundle (dist/OpenSchematix, made by build_linux.sh or the release workflow)
 # as an AppImage: dist/OpenSchematix-<version>-x86_64.AppImage
-# Needs: appimagetool on PATH or in $APPIMAGETOOL (downloaded automatically if missing).
+# Uses pinned, SHA-256-checked appimagetool by default; APPIMAGETOOL explicitly overrides.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 VERSION=$(python3 -c "import openschematix; print(openschematix.VERSION)")
@@ -30,11 +30,20 @@ EOF
 chmod +x "$APPDIR/AppRun"
 chmod -R a+rX "$APPDIR"
 
-TOOL="${APPIMAGETOOL:-$(command -v appimagetool || true)}"
-if [ -z "$TOOL" ]; then
-    TOOL=dist/appimagetool-x86_64.AppImage
-    curl -fsSL -o "$TOOL" \
-        https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
+# appimagetool 1.9.1 upstream x86_64 release asset and published SHA-256.
+# Update the tag and checksum together, with independent verification.
+APPIMAGETOOL_VERSION=1.9.1
+APPIMAGETOOL_SHA256=ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0
+if [ -n "${APPIMAGETOOL:-}" ]; then
+    # Local override only; release workflow does not set APPIMAGETOOL.
+    TOOL="$APPIMAGETOOL"
+else
+    TOOL="dist/appimagetool-${APPIMAGETOOL_VERSION}-x86_64.AppImage"
+    if [ ! -f "$TOOL" ]; then
+        curl -fsSL --retry 3 -o "$TOOL" \
+            "https://github.com/AppImage/appimagetool/releases/download/${APPIMAGETOOL_VERSION}/appimagetool-x86_64.AppImage"
+    fi
+    echo "$APPIMAGETOOL_SHA256  $TOOL" | sha256sum -c -
     chmod +x "$TOOL"
 fi
 # Extract-and-run works without FUSE (CI runners, containers).

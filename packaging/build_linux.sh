@@ -13,7 +13,8 @@ if [ ! -d .build-venv ]; then
 fi
 # shellcheck disable=SC1091
 source .build-venv/bin/activate
-python -m pip install --upgrade pip pyinstaller pytest
+python -m pip install -r packaging/requirements-release.txt
+python packaging/check_release_version.py
 
 echo "Running tests..."
 python -m pytest -q tests
