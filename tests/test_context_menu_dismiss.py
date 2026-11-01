@@ -49,7 +49,7 @@ def capture_menus(app, monkeypatch):
     # Native Tk menus are global: do not leave a posted menu between tests.
     yield menus
     try:
-        app.root.tk.call("tk::MenuUnpost", "")
+        app.root.tk.call("tk::MenuEscape", str(menu))
         app.root.update()
     except tk.TclError:
         pass
@@ -88,7 +88,7 @@ def test_escape_unposts_without_cancelling_the_active_cad_command(app, capture_m
 
     # Deliver a Tk key event to the focused native menu, exercising the
     # Menu class Escape binding rather than a private application callback.
-    assert app.root.tk.call("focus") == str(menu)
+    assert str(app.root.tk.call("focus")) == str(menu)
     menu.event_generate("<Escape>")
     app.root.update()
     assert not menu.winfo_ismapped()
@@ -108,9 +108,9 @@ def test_repeated_menu_post_and_dismiss_does_not_leak_grabs_or_root_bindings(app
         menu = capture_menus[-1]
         assert menu.winfo_ismapped()
         assert app.root.grab_current() == menu
-        # This is the same native Tk unpost operation used by Escape and
-        # clicking outside the grabbed menu. It releases the native grab.
-        app.root.tk.call("tk::MenuUnpost", "")
+        # The native Menu class Escape handler performs both unposting
+        # and proper grab release (unpost alone need not release grabs).
+        menu.event_generate("<Escape>")
         app.root.update()
         assert not menu.winfo_ismapped()
         assert app.root.grab_current() is None
@@ -132,7 +132,7 @@ def test_regular_menu_commands_remain_callable(app, capture_menus, monkeypatch):
     assert "Select all" in labels
     menu.invoke(index)
     assert invoked == ["select"]
-    app.root.tk.call("tk::MenuUnpost", "")
+    app.root.tk.call("tk::MenuEscape", str(menu))
     app.root.update()
     assert app.root.bind("<Escape>") == before_escape
     assert app.root.bind("<ButtonPress>") == before_click
@@ -155,7 +155,7 @@ def test_align_submenu_commands_and_disabled_items_survive(app, capture_menus, m
         submenu.invoke(0)
         assert called == [editing.ALIGN_MODES[0]]
     finally:
-        app.root.tk.call("tk::MenuUnpost", "")
+        app.root.tk.call("tk::MenuEscape", str(menu))
         app.root.update()
         app.selection = old_selection
         for c in placed:
@@ -192,6 +192,6 @@ def test_sheet_tab_context_menu_uses_same_native_popup_semantics(app, capture_me
     app.root.update()
     menu = capture_menus[-1]
     assert menu.entrycget(0, "label") == "Rename…"
-    app.root.tk.call("tk::MenuUnpost", "")
+    app.root.tk.call("tk::MenuEscape", str(menu))
     app.root.update()
     assert app.root.bind("<Escape>") == before_escape
