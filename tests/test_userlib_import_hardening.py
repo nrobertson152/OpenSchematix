@@ -311,3 +311,36 @@ def test_invalid_preview_folder_is_rejected_before_import(tmp_path):
     with pytest.raises(ValueError, match="invalid symbol folder"):
         userlib.import_package(info, lib)
     assert not Path(lib.root).exists()
+
+
+
+def test_exporter_rejects_packages_it_cannot_reimport(tmp_path, monkeypatch):
+    lib = userlib.UserLibrary(str(tmp_path / "libs"))
+    lib.save_symbol(symbol_doc("First"), "Engineering")
+    lib.save_symbol(symbol_doc("Second"), "Engineering")
+    target = tmp_path / "export.osymlib"
+    monkeypatch.setattr(userlib, "MAX_PACKAGE_SYMBOLS", 1)
+    with pytest.raises(ValueError, match="more than 1 symbols"):
+        lib.export_package("Engineering", str(target))
+    assert not target.exists()
+    monkeypatch.setattr(userlib, "MAX_PACKAGE_SYMBOLS", 1000)
+    monkeypatch.setattr(userlib, "MAX_PACKAGE_UNCOMPRESSED", 100)
+    with pytest.raises(ValueError, match="uncompressed size limit"):
+        lib.export_package("Engineering", str(target))
+    assert not target.exists()
+
+
+def test_exported_package_is_readable_and_imports_with_same_pin_geometry(tmp_path):
+    lib = userlib.UserLibrary(str(tmp_path / "source"))
+    doc = symbol_doc("Reference")
+    lib.save_symbol(doc, "Engineering")
+    package_path = tmp_path / "created.osymlib"
+    lib.export_package("Engineering", str(package_path))
+    info = userlib.read_package(str(package_path))
+    assert not info.problems and len(info.items) == 1
+    dest = userlib.UserLibrary(str(tmp_path / "destination"))
+    counts = userlib.import_package(info, dest)
+    assert counts["imported"] == 1
+    assert doc["id"] in dest.entries
+    assert [(p["id"], p["x"], p["y"]) for p in dest.entries[doc["id"]].doc["pins"]] == [
+        (p["id"], p["x"], p["y"]) for p in doc["pins"]]
