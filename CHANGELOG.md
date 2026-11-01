@@ -52,6 +52,10 @@ All notable changes to this project are documented here. Versions follow [Semant
   grid index instead of testing every wire for every wire end and corner. Results are identical; canvas
   redraws on a 1,152-component / 1,728-wire sheet drop from about 10 s to about 0.6 s (see
   `tools/bench_phase4.py`). No caching was introduced.
+- Performance: wire-crossing detection (bridges/gaps, crossing checks) only tests pairs of wire segments
+  that share a cell of a per-call grid index instead of every pair. Results and their order are identical;
+  crossing detection on the 1,152-component benchmark sheet drops from 0.34 s to 0.009 s and a full canvas
+  redraw from about 0.56 s to about 0.22 s. No caching was introduced.
 - File format: new `hatch` drafting shape and sheet schema 3. Projects and `.osch` sheets are written with the
   lowest schema that can hold their content, so files without fills remain schema 2 and open in 1.0.x;
   1.0.x refuses files with fills with a clear "newer schema" message. A fill stored only in the revision
