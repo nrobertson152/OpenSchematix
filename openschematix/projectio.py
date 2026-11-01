@@ -89,12 +89,12 @@ def _dumps(obj, member: str) -> str:
 
 
 def check_savable(project: Project) -> None:
-    """Raise ProjectFormatError if the project cannot be written (a
-    non-finite number anywhere), before anything is changed."""
-    d = project.to_dict()
-    for s in d.pop("sheets"):
-        _dumps(s, f"sheet '{s.get('name', '')}'")
-    _dumps(d, "the project settings")
+    """Validate every serialized member before recording a save snapshot.
+
+    Sheets alone are insufficient: embedded symbols, the manifest and the
+    revision index must also be serializable. This does not mutate the project.
+    """
+    project_bytes(project)
 
 
 def write_zip(project: Project, fileobj):
@@ -149,15 +149,38 @@ def atomic_write_bytes(path: str, data: bytes):
 def save_project(project: Project, path: str, snapshot: bool = True):
     """Save atomically. With `snapshot`, an automatic revision snapshot is
     recorded first if the content changed since the last snapshot."""
-    check_savable(project)      # before the snapshot: a failed save records nothing
-    if project.revisions is None:
-        project.revisions = RevisionStore()
-    if snapshot:
-        project.revisions.create(project, "auto", description="Saved")
-    data = project_bytes(project)
-    # verify before replacing the user's file: the bytes must load back
-    _verify(data)
-    atomic_write_bytes(path, data)
+    check_savable(project)      # validate all existing members before mutation
+    original_store = project.revisions
+    # Keep the original store identity for any callers holding a reference.
+    # A failed serialization, verification, or disk write must not leave a
+    # newly recorded revision in memory when no save was committed.
+    original_state = None
+    if original_store is not None:
+        original_state = (
+            list(original_store.entries),
+            dict(original_store.objects),
+            dict(original_store._schema_cache),
+        )
+    try:
+        if project.revisions is None:
+            project.revisions = RevisionStore()
+        if snapshot:
+            project.revisions.create(project, "auto", description="Saved")
+        data = project_bytes(project)
+        # verify before replacing the user's file: the bytes must load back
+        _verify(data)
+        atomic_write_bytes(path, data)
+    except BaseException:
+        if original_store is None:
+            project.revisions = None
+        else:
+            original_store.entries[:] = original_state[0]
+            original_store.objects.clear()
+            original_store.objects.update(original_state[1])
+            original_store._schema_cache.clear()
+            original_store._schema_cache.update(original_state[2])
+            project.revisions = original_store
+        raise
 
 
 def _verify(data: bytes):
