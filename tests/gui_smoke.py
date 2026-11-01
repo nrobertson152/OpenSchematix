@@ -229,8 +229,23 @@ click(mid)
 cmd("")
 pieces = [s for s in app.doc.shapes.values() if s.kind == "line" and abs(s.pts[0][1] - (H - 200)) < 1e-6
           and abs(s.pts[-1][1] - (H - 200)) < 1e-6]
-check(len(pieces) == 2 and long_line.id not in [p.id for p in pieces],
-      "TRIM removed the middle of the line (two pieces left)")
+# TRIM preserves the original shape ID for the first retained segment and assigns a new ID to
+# the other; assert the actual geometry instead of requiring the original ID to disappear.
+expected_trim_segments = [
+    [(800, H - 200), (860, H - 200)],   # 200–215 mm, Y = 50 mm
+    [(980, H - 200), (1040, H - 200)],  # 245–260 mm, Y = 50 mm
+]
+actual_trim_segments = sorted(
+    ([tuple(p) for p in s.pts] for s in pieces),
+    key=lambda pts: pts[0][0],
+)
+check(len(pieces) == 2 and all(
+    len(actual) == 2 and all(
+        abs(actual[i][axis] - expected[i][axis]) < 1e-6
+        for i in (0, 1) for axis in (0, 1)
+    )
+    for actual, expected in zip(actual_trim_segments, expected_trim_segments)
+), "TRIM leaves exact outside segments and removes the middle 215–245 mm interval")
 # MOVE with typed relative displacement
 app.set_selection({c.id})
 cmd("M")
