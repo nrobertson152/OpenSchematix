@@ -120,8 +120,17 @@ def pytest_collection_modifyitems(config, items):
             reason="Tk root cannot be initialized "
             f"({tk_root_initializable.reason}). Use xvfb-run on Linux for @pytest.mark.gui tests."
         )
+    headless_gui_logic = {
+        "test_drawing_status_uses_real_gui_undo_redo_commands_without_display",
+    }
     for item in items:
-        if skip_tk is not None and ("requires_tk" in item.keywords or "gui" in item.keywords):
+        needs_tk = (
+            "requires_tk" in item.keywords
+            or "gui" in item.keywords
+            or item.name in headless_gui_logic
+            or item.name.split("[", 1)[0] in headless_gui_logic
+        )
+        if skip_tk is not None and needs_tk:
             item.add_marker(skip_tk)
         elif skip_gui is not None and "gui" in item.keywords:
             item.add_marker(skip_gui)
