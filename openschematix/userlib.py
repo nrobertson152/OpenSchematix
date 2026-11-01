@@ -29,6 +29,7 @@ import json
 import os
 import re
 import shutil
+import struct
 import tempfile
 import zipfile
 from dataclasses import dataclass, field
@@ -46,6 +47,7 @@ PACKAGE_EXT = ".osymlib"
 MAX_PACKAGE_ENTRIES = 2048
 MAX_PACKAGE_SYMBOLS = 1000
 MAX_PACKAGE_UNCOMPRESSED = 64 * 1024 * 1024
+MAX_PACKAGE_ARCHIVE_BYTES = 80 * 1024 * 1024
 MAX_MANIFEST_BYTES = MAX_SYMBOL_BYTES
 _BAD = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
 
@@ -74,6 +76,32 @@ def _read_symbol_file(path: str) -> dict:
         raise SymbolFormatError(f"symbol file is not UTF-8: {path}") from e
 
 
+def _zip_preflight(path: str):
+    """Reject oversized archives and excessive directory entries before ZipFile.
+
+    ZIP's end-of-central-directory record contains the entry count. ZIP64
+    sentinel counts are rejected: packages support at most MAX_PACKAGE_ENTRIES.
+    """
+    try:
+        with open(path, "rb") as f:
+            size = os.fstat(f.fileno()).st_size
+            if size > MAX_PACKAGE_ARCHIVE_BYTES:
+                raise ValueError(f"package archive exceeds {MAX_PACKAGE_ARCHIVE_BYTES} bytes")
+            f.seek(max(0, size - (65535 + 22)))
+            tail = f.read()
+    except OSError as e:
+        raise ValueError("cannot read symbol library package") from e
+    pos = tail.rfind(b"PK\\x05\\x06")
+    if pos < 0 or pos + 22 > len(tail):
+        raise ValueError("not a valid symbol library package")
+    disk, cd_disk, local_count, total_count, _cd_size, _cd_offset, _comment = struct.unpack_from(
+        "<HHHHIIH", tail, pos + 4)
+    if disk or cd_disk or local_count != total_count:
+        raise ValueError("multi-disk ZIP packages are not supported")
+    if total_count > MAX_PACKAGE_ENTRIES:
+        raise ValueError(f"package has more than {MAX_PACKAGE_ENTRIES} ZIP entries")
+
+
 def _zip_member(z: zipfile.ZipFile, name: str, limit: int) -> str:
     """Read only up to the given byte limit, regardless of ZIP metadata."""
     try:
@@ -89,7 +117,7 @@ def _zip_member(z: zipfile.ZipFile, name: str, limit: int) -> str:
         return raw.decode("utf-8")
     except KeyError as e:
         raise ValueError(f"missing package entry: {name}") from e
-    except (zipfile.BadZipFile, RuntimeError, EOFError, UnicodeDecodeError, OSError) as e:
+    except (zipfile.BadZipFile, RuntimeError, NotImplementedError, EOFError, UnicodeDecodeError, OSError) as e:
         raise ValueError(f"unreadable package entry {name}: {e}") from e
 
 
@@ -444,6 +472,7 @@ class PackageInfo:
 
 def read_package(path: str, lib: UserLibrary | None = None) -> PackageInfo:
     """Read a bounded, validated package for preview; do not write to disk."""
+    _zip_preflight(path)
     try:
         z = zipfile.ZipFile(path)
     except (zipfile.BadZipFile, OSError) as e:
@@ -460,7 +489,7 @@ def read_package(path: str, lib: UserLibrary | None = None) -> PackageInfo:
         try:
             man = parse_symbol_json(_zip_member(z, "manifest.json", MAX_MANIFEST_BYTES),
                                     source="manifest.json")
-        except SymbolFormatError as e:
+        except (SymbolFormatError, ValueError) as e:
             raise ValueError(f"the package has no readable manifest: {e}") from e
         if man.get("format") != LIB_FORMAT:
             raise ValueError("not an OpenSchematix symbol library")
