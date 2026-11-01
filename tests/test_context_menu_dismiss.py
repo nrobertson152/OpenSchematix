@@ -53,6 +53,14 @@ def capture_menus(app, monkeypatch):
         app.root.update()
     except tk.TclError:
         pass
+    # Direct Menu.invoke() in tests bypasses Tk's mouse-release class
+    # binding, so clean up an artificial leftover grab after unposting.
+    try:
+        grabbed = app.root.grab_current()
+        if grabbed is not None:
+            grabbed.grab_release()
+    except tk.TclError:
+        pass
     for menu in reversed(menus):
         try:
             menu.destroy()
