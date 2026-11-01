@@ -35,13 +35,18 @@ from dataclasses import dataclass, field
 
 from . import VERSION, symbols
 from .settings import config_dir
-from .symbols.custom import SYMBOL_FORMAT, SymbolFormatError, alias_problems, new_symbol_id, normalise, to_symdef
+from .symbols.custom import (MAX_SYMBOL_BYTES, SYMBOL_FORMAT, SymbolFormatError, alias_problems,
+                             load_symbol_json, new_symbol_id, normalise, parse_symbol_json, to_symdef)
 
 LIB_FORMAT = "OpenSchematix Symbol Library"
 LIB_VERSION = 1
 LIB_MIMETYPE = "application/x-openschematix-library"
 SYMBOL_EXT = ".osym"
 PACKAGE_EXT = ".osymlib"
+MAX_PACKAGE_ENTRIES = 2048
+MAX_PACKAGE_SYMBOLS = 1000
+MAX_PACKAGE_UNCOMPRESSED = 64 * 1024 * 1024
+MAX_MANIFEST_BYTES = MAX_SYMBOL_BYTES
 _BAD = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
 
 
@@ -55,6 +60,37 @@ def safe_name(name: str, fallback: str = "Untitled") -> str:
 def _rel_ok(p: str) -> bool:
     parts = p.replace("\\", "/").split("/")
     return bool(p) and not p.startswith("/") and ".." not in parts and ":" not in p
+
+
+def _read_symbol_file(path: str) -> dict:
+    """Read one .osym with a hard byte budget before JSON decoding."""
+    with open(path, "rb") as f:
+        raw = f.read(MAX_SYMBOL_BYTES + 1)
+    if len(raw) > MAX_SYMBOL_BYTES:
+        raise SymbolFormatError(f"symbol file exceeds {MAX_SYMBOL_BYTES} bytes: {path}")
+    try:
+        return load_symbol_json(raw.decode("utf-8"), source=path)
+    except UnicodeDecodeError as e:
+        raise SymbolFormatError(f"symbol file is not UTF-8: {path}") from e
+
+
+def _zip_member(z: zipfile.ZipFile, name: str, limit: int) -> str:
+    """Read only up to the given byte limit, regardless of ZIP metadata."""
+    try:
+        entry = z.getinfo(name)
+        if entry.is_dir():
+            raise ValueError(f"package entry is a directory: {name}")
+        if entry.file_size > limit:
+            raise ValueError(f"package entry exceeds {limit} bytes: {name}")
+        with z.open(entry) as stream:
+            raw = stream.read(limit + 1)
+        if len(raw) > limit:
+            raise ValueError(f"package entry exceeds {limit} bytes: {name}")
+        return raw.decode("utf-8")
+    except KeyError as e:
+        raise ValueError(f"missing package entry: {name}") from e
+    except (zipfile.BadZipFile, RuntimeError, EOFError, UnicodeDecodeError, OSError) as e:
+        raise ValueError(f"unreadable package entry {name}: {e}") from e
 
 
 def _atomic_json(path: str, data):
@@ -107,8 +143,7 @@ class UserLibrary:
                     continue
                 path = os.path.join(dirpath, fn)
                 try:
-                    with open(path, encoding="utf-8") as f:
-                        doc = normalise(json.load(f))
+                    doc = _read_symbol_file(path)
                 except (OSError, ValueError) as e:
                     self.problems.append(f"{path}: {e}")
                     continue
@@ -327,9 +362,7 @@ class UserLibrary:
         _atomic_json(path, doc)
 
     def import_symbol_file(self, path: str, folder: str, on_conflict: str = "duplicate") -> Entry | None:
-        with open(path, encoding="utf-8") as f:
-            data = json.load(f)
-        return self.import_symbol_doc(data, folder, on_conflict)
+        return self.import_symbol_doc(_read_symbol_file(path), folder, on_conflict)
 
     def import_symbol_doc(self, data: dict, folder: str, on_conflict: str = "duplicate") -> Entry | None:
         """on_conflict (same id already present): skip | replace | duplicate."""
@@ -410,33 +443,57 @@ class PackageInfo:
 
 
 def read_package(path: str, lib: UserLibrary | None = None) -> PackageInfo:
-    """Read and validate a package without importing it (for the preview)."""
+    """Read a bounded, validated package for preview; do not write to disk."""
     try:
         z = zipfile.ZipFile(path)
-    except zipfile.BadZipFile as e:
+    except (zipfile.BadZipFile, OSError) as e:
         raise ValueError("not a valid symbol library package") from e
     with z:
+        entries = z.infolist()
+        if len(entries) > MAX_PACKAGE_ENTRIES:
+            raise ValueError(f"package has more than {MAX_PACKAGE_ENTRIES} ZIP entries")
+        if sum(e.file_size for e in entries) > MAX_PACKAGE_UNCOMPRESSED:
+            raise ValueError(f"package exceeds {MAX_PACKAGE_UNCOMPRESSED} uncompressed bytes")
+        names = [e.filename for e in entries]
+        if len(set(names)) != len(names):
+            raise ValueError("package contains duplicate ZIP member names")
         try:
-            man = json.loads(z.read("manifest.json").decode("utf-8"))
-        except (KeyError, ValueError) as e:
-            raise ValueError("the package has no readable manifest") from e
+            man = parse_symbol_json(_zip_member(z, "manifest.json", MAX_MANIFEST_BYTES),
+                                    source="manifest.json")
+        except SymbolFormatError as e:
+            raise ValueError(f"the package has no readable manifest: {e}") from e
         if man.get("format") != LIB_FORMAT:
             raise ValueError("not an OpenSchematix symbol library")
-        if not isinstance(man.get("version"), int) or man["version"] > LIB_VERSION:
-            raise ValueError(f"library format version {man.get('version')} is newer than supported")
+        version = man.get("version")
+        if isinstance(version, bool) or not isinstance(version, int) or version < 1 or version > LIB_VERSION:
+            raise ValueError(f"unsupported library format version {version!r}")
+        folders = man.get("folders", [])
+        listed = man.get("symbols", [])
+        if not isinstance(folders, list) or not isinstance(listed, list):
+            raise ValueError("package manifest folders and symbols must be arrays")
+        if len(listed) > MAX_PACKAGE_SYMBOLS:
+            raise ValueError(f"package contains more than {MAX_PACKAGE_SYMBOLS} symbols")
         info = PackageInfo(path, str(man.get("name") or "Imported library"), str(man.get("description", "")),
                            str(man.get("author", "")), str(man.get("created", "")))
-        info.folders = [f for f in man.get("folders", []) if isinstance(f, str) and _rel_ok(f)]
-        for s in man.get("symbols", []):
-            f = s.get("file", "")
-            folder = s.get("folder", "") or ""
-            if not _rel_ok(f) or (folder and not _rel_ok(folder)):
-                info.problems.append(f"unsafe path skipped: {f!r}")
+        for folder in folders:
+            if isinstance(folder, str) and _rel_ok(folder):
+                info.folders.append(folder)
+            else:
+                info.problems.append(f"unsafe or malformed folder skipped: {folder!r}")
+        for index, item in enumerate(listed):
+            if not isinstance(item, dict):
+                info.problems.append(f"symbol entry {index}: expected an object")
+                continue
+            f = item.get("file", "")
+            folder = item.get("folder", "") or ""
+            if not isinstance(f, str) or not isinstance(folder, str) or not _rel_ok(f) or (
+                    folder and not _rel_ok(folder)):
+                info.problems.append(f"unsafe or malformed symbol path skipped: {f!r}")
                 continue
             try:
-                doc = normalise(json.loads(z.read(f).decode("utf-8")))
-            except (KeyError, ValueError) as e:
-                info.problems.append(f"{s.get('name', f)}: {e}")
+                doc = load_symbol_json(_zip_member(z, f, MAX_SYMBOL_BYTES), source=f)
+            except (SymbolFormatError, ValueError) as e:
+                info.problems.append(f"{item.get('name', f)}: {e}")
                 continue
             it = PackageItem(doc["id"], doc["name"], folder, doc, doc.get("revision", 0))
             if lib is not None and doc["id"] in lib.entries:
