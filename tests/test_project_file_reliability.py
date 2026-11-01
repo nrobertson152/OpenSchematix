@@ -312,7 +312,9 @@ def test_one_damaged_revision_object_loses_only_that_revision(tmp_path, files, d
     assert [e["n"] for e in st.entries] == [1, 2]                      # intact revisions kept
     assert res.recovered and res.needs_new_name
     msg = next(w for w in res.warnings if "revision history is damaged" in w)
-    assert "revision #3 (B)" in msg and "file itself is unchanged" in msg
+    assert "revision #3" in msg
+    assert "revision #3 (B)" not in msg
+    assert "file itself is unchanged" in msg
     for e in st.entries:
         st.load(e["n"])
     assert open(path, "rb").read() == before                          # the source is never modified
