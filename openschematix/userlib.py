@@ -476,18 +476,39 @@ class UserLibrary:
         manifest = {"format": LIB_FORMAT, "version": LIB_VERSION, "name": name, "description": description,
                     "author": author, "created": _dt.datetime.now().isoformat(timespec="seconds"),
                     "app": f"OpenSchematix {VERSION}", "folders": folders, "symbols": []}
+        if len(syms) > MAX_PACKAGE_SYMBOLS:
+            raise ValueError(f"library contains more than {MAX_PACKAGE_SYMBOLS} symbols")
+        if len(folders) > MAX_PACKAGE_FOLDERS or any(not _package_rel_ok(f) for f in folders):
+            raise ValueError("library contains too many folders or an unsupported folder path")
+        serialized = []
+        uncompressed = len(LIB_MIMETYPE.encode("utf-8"))
+        for i, e in enumerate(syms, 1):
+            f = f"symbols/{i:04d}{SYMBOL_EXT}"
+            rel = e.folder[len(prefix):] if e.folder.startswith(prefix) else ""
+            if e.folder == folder:
+                rel = ""
+            if rel and not _package_rel_ok(rel):
+                raise ValueError(f"unsupported library folder path: {rel!r}")
+            manifest["symbols"].append({"id": e.id, "name": e.name, "revision": e.doc.get("revision", 0),
+                                        "folder": rel, "file": f})
+            payload = json.dumps(e.doc, indent=1, ensure_ascii=False).encode("utf-8")
+            if len(payload) > MAX_SYMBOL_BYTES:
+                raise ValueError(f"symbol {e.id} exceeds {MAX_SYMBOL_BYTES} bytes")
+            uncompressed += len(payload)
+            serialized.append((f, payload))
+        manifest_data = json.dumps(manifest, indent=1, ensure_ascii=False).encode("utf-8")
+        if len(manifest_data) > MAX_MANIFEST_BYTES:
+            raise ValueError("library manifest exceeds the package import size limit")
+        if uncompressed + len(manifest_data) > MAX_PACKAGE_UNCOMPRESSED:
+            raise ValueError("library exceeds the package import uncompressed size limit")
         buf = io.BytesIO()
         with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
             z.writestr(zipfile.ZipInfo("mimetype"), LIB_MIMETYPE, compress_type=zipfile.ZIP_STORED)
-            for i, e in enumerate(syms, 1):
-                f = f"symbols/{i:04d}{SYMBOL_EXT}"
-                rel = e.folder[len(prefix):] if e.folder.startswith(prefix) else ""
-                if e.folder == folder:
-                    rel = ""
-                manifest["symbols"].append({"id": e.id, "name": e.name, "revision": e.doc.get("revision", 0),
-                                            "folder": rel, "file": f})
-                z.writestr(f, json.dumps(e.doc, indent=1, ensure_ascii=False))
-            z.writestr("manifest.json", json.dumps(manifest, indent=1, ensure_ascii=False))
+            for f, payload in serialized:
+                z.writestr(f, payload)
+            z.writestr("manifest.json", manifest_data)
+        if buf.tell() > MAX_PACKAGE_ARCHIVE_BYTES:
+            raise ValueError("library exceeds the package import archive size limit")
         from .projectio import atomic_write_bytes
         atomic_write_bytes(path, buf.getvalue())
         return manifest
