@@ -141,3 +141,17 @@ def isolate_symbol_registry():
     yield
     symbols.set_user_symbols(user.values())
     symbols.set_project_symbols(project.values())
+
+
+@pytest.fixture(autouse=True)
+def _unanswered_symbol_safety_prompts_fail(monkeypatch):
+    """The symbol-collision and update-preflight prompts are modal. A test
+    that triggers one without answering it (by setting
+    ``app.ask_symbol_collision`` / ``app.confirm_symbol_update``) fails here
+    instead of waiting forever for a click."""
+    mod = sys.modules.get("openschematix.gui.app")
+    if mod is not None:
+        def unanswered(*_a, **_k):
+            raise AssertionError("a symbol safety prompt was shown but the test did not answer it")
+        monkeypatch.setattr(mod.App, "ask_symbol_collision", unanswered)
+        monkeypatch.setattr(mod.App, "confirm_symbol_update", unanswered)
