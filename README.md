@@ -63,6 +63,9 @@ There are no other dependencies.
 python -m openschematix [project.schematix | drawing.osch]
 ```
 
+Python scripts can create and edit projects without the GUI through the scripting API; see
+[`docs/SCRIPTING_API.md`](docs/SCRIPTING_API.md).
+
 Examples are in `examples/`: `demo_project.schematix` (three sheets: supply, motor control, hydraulics),
 and the single-sheet drawings `start_stop_latch.osch` and `hydraulic_cylinder_circuit.osch`.
 
@@ -185,6 +188,7 @@ openschematix/
   dxf.py            DXF import/export (no dependencies)
   bom.py search.py check.py compare.py revisions.py recovery.py templates.py userlib.py commands.py
   symbols/          symbol framework, built-in libraries, custom symbols
+  api/              public headless Python scripting API (docs/SCRIPTING_API.md)
   gui/              Tkinter interface: theme (design system), icons, widgets, canvas, command line,
                     panels, inspector, dialogs, reports, revisions, symbol editor
 tests/              pytest suites and the GUI smoke test

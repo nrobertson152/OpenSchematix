@@ -6,6 +6,12 @@ All notable changes to this project are documented here. Versions follow [Semant
 
 ### Added
 
+- Python scripting API (`openschematix.api`, phase 1): create, open, edit, inspect, check and save projects
+  from Python scripts without the GUI (no tkinter or display needed). Supports sheets; placing symbols with
+  position, rotation, mirroring and valve parameters; wires (drawn or auto-routed); component properties;
+  terminals; nets; per-sheet connectivity; BOM; Check Drawing; wire numbering; native `.schematix` saving;
+  and opening legacy drawings. Invalid input raises clear exceptions instead of being snapped or replaced.
+  Guide and reference: `docs/SCRIPTING_API.md`; complete example: `docs/examples/motor_starter.py`.
 - Boundary fill: `FILL` (aliases `HATCH`, `H`, *Draw ▸ Fill (hatch)*, toolbar button). Click inside areas
   enclosed by lines, polylines, polygons, rectangles, circles and arcs to fill them solid — boundaries may be
   made of separate, crossing, overshooting, overlapping or partial segments and tangent curves. Islands inside

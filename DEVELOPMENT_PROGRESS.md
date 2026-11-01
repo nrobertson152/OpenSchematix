@@ -370,3 +370,33 @@ system Tk: `uv python install 3.12` (includes Tkinter); PyPI may be blocked — 
 GitHub or copy pure-Python packages; PyInstaller/altgraph/pyinstaller-hooks-contrib can be cloned from GitHub
 and used via PYTHONPATH (bootloaders are in the repo). Standalone-Python builds need
 `LD_LIBRARY_PATH=<python>/lib` for Tk.
+
+## Python scripting API, phase 1 (`feature/python-scripting-api`)
+
+- New package `openschematix/api/`:
+  - `__init__.py`: public surface (`__all__`);
+  - `_core.py`: handles (`Project`, `Sheet`, `Component`, `Wire`) and entry points;
+  - `types.py`: frozen value types;
+  - `errors.py`: the `ApiError` hierarchy.
+
+  It is a thin layer over `editing`, `projectio`, `connectivity`, `netlist`, `bom` and `check`. No
+  existing module was changed.
+- **Decisions:**
+  - Handles hold (project, sheet uid, object id) and resolve the object on each access. A removed
+    object raises `ObjectNotFoundError`.
+  - Strict validation, so input that the engine would silently correct raises instead:
+    - off-grid insertion points;
+    - rotations other than 0/90/180/270;
+    - non-orthogonal or fractional wires;
+    - invalid valve parameters (the builder would fall back to defaults);
+    - a parameter change that would orphan a wired terminal;
+    - locked objects or layers.
+  - Symbol registry: it is process-wide, so every entry point re-activates its project's embedded
+    symbols (`_activate`). `load_user_library` always re-publishes, because `UserLibrary.scan()` leaves
+    the registry untouched for a missing folder.
+- The example script lives in `docs/examples/`: tests in `test_connectivity_index.py` and
+  `test_crossings_index.py` open every entry of `examples/` as a drawing.
+- Tests: `tests/test_scripting_api.py` (68), including a subprocess test with tkinter blocked and no
+  display.
+- Not covered yet (documented): drafting shapes, layers, page setup beyond paper size, manual wire
+  numbers, terminal overrides, revisions, exports, undo.
