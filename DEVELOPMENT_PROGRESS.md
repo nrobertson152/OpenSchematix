@@ -196,6 +196,22 @@ rejected intersections and holes, fills stored as plain polygons, a failing test
   10.1→0.57 s. analyse peak memory +26 % (index). Next candidate: `editing.crossings()` (now the largest
   redraw cost on large sheets) — not started.
 
+### Phase 4 (performance) — optimization 2: crossing-detection index (session 9, branch `perf/crossing-detection`)
+
+- Contract: `crossings()` pairs only a "horizontal" segment (|dy| < 0.01) with a non-horizontal one, treats the
+  latter as vertical at the x of its FIRST point (x extent ignored — diagonals included), requires strict
+  0.01 margins on both ranges, then the interior/corner filters; output in (i, j) segment-pair order with
+  duplicates. The pair test is now `editing._crossing_pair` (body unchanged).
+- Change: horizontals registered in the grid cells of their row, others in the cells of their column (50-unit
+  cells, per call). A row and a column share at most one cell, so each candidate pair is found once; per
+  segment i the candidates j > i are tested in increasing j, so order is unchanged. Non-finite, > 256-cell
+  and over-budget (32·S + 4096 registrations) segments are paired with every opposite segment (original
+  behaviour). No caching.
+- Tests: `tests/test_crossings_index.py` (40; oracle = verbatim old algorithm).
+- Result (median of 7, main @ 81a8da2 → branch): crossings 0.0025→0.0006 s / 0.036→0.0028 s / 0.337→0.0093 s;
+  full redraw large 0.56→0.22 s, medium 0.104→0.074 s, small unchanged within noise. Peak memory of the call
+  on large 188 KiB → 1.27 MiB (linear in segments).
+
 ## Status summary
 
 **Version 1.0.1 (originally developed internally as "3.0") is implemented and tested on Linux** (engine + GUI). All 25 sections of the brief are

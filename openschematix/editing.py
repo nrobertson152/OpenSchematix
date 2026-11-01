@@ -610,37 +610,123 @@ def _interior(p, pts) -> bool:
     return not same(p, pts[0]) and not same(p, pts[-1])
 
 
+_XCELL = 50.0                    # crossing index cell size (drawing units)
+_XMAX_CELLS_PER_SEGMENT = 256    # longer segments are paired with every opposite segment
+_XBUDGET_PER_SEGMENT = 32        # total index registrations allowed per segment ...
+_XBUDGET_MIN = 4096              # ... plus this many
+
+
+def _crossing_pair(w1, a1, b1, w2, a2, b2):
+    """The pair test of crossings() (unchanged): crossing tuple or None."""
+    if w1.id == w2.id:
+        return None
+    h1, h2 = abs(a1[1] - b1[1]) < 0.01, abs(a2[1] - b2[1]) < 0.01
+    if h1 == h2:
+        return None  # parallel: overlaps are not crossings
+    hs, vs = ((a1, b1), (a2, b2)) if h1 else ((a2, b2), (a1, b1))
+    x, y = vs[0][0], hs[0][1]
+    if not (min(hs[0][0], hs[1][0]) + 0.01 < x < max(hs[0][0], hs[1][0]) - 0.01):
+        return None
+    if not (min(vs[0][1], vs[1][1]) + 0.01 < y < max(vs[0][1], vs[1][1]) - 0.01):
+        return None
+    p = (x, y)
+    if not (_interior(p, w1.points) and _interior(p, w2.points)):
+        return None
+    # a corner of either wire exactly at the crossing is a touch, not a crossing
+    if any(same(p, q) for q in w1.points + w2.points):
+        return None
+    wv = w1 if not h1 else w2
+    wh = w2 if wv is w1 else w1
+    return (p, wh.id, wv.id)
+
+
+def _xcell(v: float) -> int:
+    import math
+    return math.floor(v / _XCELL)
+
+
 def crossings(doc: Document) -> list:
     """Points where two wires cross without being connected: a segment of
     one wire passes through a segment of another, and neither wire ends
     there. Returns [(point, wire_a_id, wire_b_id)] with wire_b the one that
     is drawn with a bridge (the vertical segment by convention, otherwise
-    the later wire)."""
-    out = []
+    the later wire).
+
+    Semantics are defined by `_crossing_pair`, applied to every pair of
+    segments (i, j), i < j, in segment order: only a "horizontal" segment
+    (|dy| < 0.01) and a non-horizontal one can cross; the non-horizontal one
+    is treated as vertical at the x of its FIRST point (its x extent is not
+    used), and the crossing (x, y_h) must lie strictly inside both ranges.
+
+    Speed-up (results and order identical to testing every pair): such a
+    pair can only pass when x lies in the horizontal's x range and y_h in
+    the other's y range, i.e. when the horizontal's grid row and the
+    other's grid column share the cell containing (x, y_h). Horizontals are
+    registered in the cells of their row, the others in the cells of their
+    column; a row and a column share at most one cell, so every candidate
+    pair is found exactly once. For each segment i the candidates j > i are
+    tested in increasing j, so output order is unchanged. Segments with
+    non-finite coordinates, spanning more than _XMAX_CELLS_PER_SEGMENT
+    cells, or beyond the registration budget (_XBUDGET_PER_SEGMENT * S +
+    _XBUDGET_MIN, so memory is O(S)) are not registered and are paired with
+    every segment of the opposite kind instead (the original behaviour).
+    Time O(S * c + K log K) for K candidate pairs; worst case the original
+    O(S^2). The index is local to the call: nothing is cached."""
+    import math
+    from bisect import bisect_right
+
     ws = list(doc.wires.values())
     segs = [(w, a, b) for w in ws for a, b in zip(w.points, w.points[1:])]
-    for i, (w1, a1, b1) in enumerate(segs):
-        for w2, a2, b2 in segs[i + 1:]:
-            if w1.id == w2.id:
-                continue
-            h1, h2 = abs(a1[1] - b1[1]) < 0.01, abs(a2[1] - b2[1]) < 0.01
-            if h1 == h2:
-                continue  # parallel: overlaps are not crossings
-            hs, vs = ((a1, b1), (a2, b2)) if h1 else ((a2, b2), (a1, b1))
-            x, y = vs[0][0], hs[0][1]
-            if not (min(hs[0][0], hs[1][0]) + 0.01 < x < max(hs[0][0], hs[1][0]) - 0.01):
-                continue
-            if not (min(vs[0][1], vs[1][1]) + 0.01 < y < max(vs[0][1], vs[1][1]) - 0.01):
-                continue
-            p = (x, y)
-            if not (_interior(p, w1.points) and _interior(p, w2.points)):
-                continue
-            # a corner of either wire exactly at the crossing is a touch, not a crossing
-            if any(same(p, q) for q in w1.points + w2.points):
-                continue
-            wv = w1 if not h1 else w2
-            wh = w2 if wv is w1 else w1
-            out.append((p, wh.id, wv.id))
+    n = len(segs)
+    horiz = [abs(a[1] - b[1]) < 0.01 for _w, a, b in segs]
+    budget = _XBUDGET_PER_SEGMENT * n + _XBUDGET_MIN
+    used = 0
+    cells_h, cells_v = {}, {}
+    seg_cells = [None] * n          # (first cell, last cell, fixed cell) of an indexed segment
+    for i, (_w, a, b) in enumerate(segs):
+        if horiz[i]:
+            lo, hi, fixed = min(a[0], b[0]), max(a[0], b[0]), a[1]   # row at y = a.y
+        else:
+            lo, hi, fixed = min(a[1], b[1]), max(a[1], b[1]), a[0]   # column at x = a.x
+        if not (math.isfinite(lo) and math.isfinite(hi) and math.isfinite(fixed)):
+            continue
+        k0, k1, f = _xcell(lo), _xcell(hi), _xcell(fixed)
+        count = k1 - k0 + 1
+        if count > _XMAX_CELLS_PER_SEGMENT or used + count > budget:
+            continue
+        used += count
+        seg_cells[i] = (k0, k1, f)
+        table = cells_h if horiz[i] else cells_v
+        for k in range(k0, k1 + 1):
+            table.setdefault((k, f) if horiz[i] else (f, k), []).append(i)
+    all_h = [i for i in range(n) if horiz[i]]
+    all_v = [i for i in range(n) if not horiz[i]]
+    loose_h = [i for i in all_h if seg_cells[i] is None]
+    loose_v = [i for i in all_v if seg_cells[i] is None]
+
+    out = []
+    for i in range(n):
+        if horiz[i]:
+            others, every, loose = cells_v, all_v, loose_v
+        else:
+            others, every, loose = cells_h, all_h, loose_h
+        if seg_cells[i] is None:
+            cand = every[bisect_right(every, i):]
+        else:
+            k0, k1, f = seg_cells[i]
+            cand = []
+            for k in range(k0, k1 + 1):
+                for j in others.get((k, f) if horiz[i] else (f, k), ()):
+                    if j > i:
+                        cand.append(j)
+            cand += loose[bisect_right(loose, i):]
+            cand.sort()
+        w1, a1, b1 = segs[i]
+        for j in cand:
+            w2, a2, b2 = segs[j]
+            r = _crossing_pair(w1, a1, b1, w2, a2, b2)
+            if r is not None:
+                out.append(r)
     return out
 
 
