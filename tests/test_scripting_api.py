@@ -897,6 +897,16 @@ def test_damaged_project_files_raise_project_file_error(tmp_path, damage):
     with zipfile.ZipFile(path, "w") as out:
         for k, v in files.items():
             out.writestr(k, v)
+    if damage == "manifest-symbols" and hasattr(projectio.OpenResult, "needs_new_name"):
+        # With PR #40 a damaged list of embedded symbols is recovered from (the symbols are left
+        # out with a warning) instead of failing; the original must then never be overwritten.
+        original = path.read_bytes()
+        q = api.open_project(str(path))
+        assert q.needs_new_name and q.path is None and q.warnings
+        with pytest.raises(api.InvalidOperationError, match="would overwrite the original"):
+            q.save(str(path))
+        assert path.read_bytes() == original
+        return
     with pytest.raises(api.ProjectFileError, match="could not open"):
         api.open_project(str(path))
 
