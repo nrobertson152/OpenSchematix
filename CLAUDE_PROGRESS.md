@@ -4,49 +4,56 @@ _Checkpoint updated 2026-10-31 by Claude (Opus 5.5). Longer history: `DEVELOPMEN
 
 ## 1. Where things stand
 
-- Optimization 1 (connectivity spatial index) is **merged** (PR #20, `81a8da2`).
-- Optimization 2 (crossing-detection index) is **implemented, tested and benchmarked** on branch
-  `perf/crossing-detection`, with a draft PR open. **Nothing is in progress.**
-- Waiting for independent review. Do not merge, and do not start another optimization until authorised.
+- Optimization 1 (connectivity spatial index) is merged as PR #20.
+- Optimization 2 (crossing-detection index) is merged as PR #21 (`0e2823b`).
+- Optimization 3 (hover highlighting without full redraws) is **implemented, tested and benchmarked** on
+  branch `perf/hover-highlighting`, and a draft PR is open.
+- **Nothing is in progress.** It is waiting for review. Do not merge, and do not start viewport culling or any
+  other optimization until authorised.
 
 ## 2. Exact next step when resuming
 
-1. `git fetch origin`, then check `main` and the PR for new commits, comments and reviews. Use the REST API
+1. `git fetch origin`, then check `main` and the PR for comments and reviews. Use the REST API
    (`gh api repos/nrobertson152/OpenSchematix/issues/<n>/comments`, `.../pulls/<n>/reviews`,
    `.../pulls/<n>/comments`); GraphQL and `gh pr view` are blocked in this environment.
-2. Address review feedback on `perf/crossing-detection` with a regression test per defect, then rerun section 5.
+2. Address feedback with a regression test per defect, then rerun section 5.
 3. Without new instructions: report status and wait.
 
 ## 3. Git / PR state
 
 | Item | Value |
 |---|---|
-| Base | `main` @ `81a8da2` (PR #20) |
-| Branch | `perf/crossing-detection`: optimization + tests + docs commit, then this checkpoint |
+| Base | `main` @ `0e2823b` (PR #21) |
+| Branch | `perf/hover-highlighting`: implementation + tests + docs commit, then this checkpoint |
 | Do not touch | `test/cache-invalidation-regressions`, any Jules branch or PR |
 
 ## 4. Architectural decisions
 
-- **Connectivity (`connectivity._WireIndex`, merged):**
-  - Grid of 50-unit cells; segment bounding boxes padded by tol + 1.
-  - Segments over 256 cells, non-finite wires and wires over the 32·S + 4096 registration budget go to an
-    always-examined list.
-  - Built per call; no caching.
-- **Crossings (`editing.crossings`, this branch):**
-  - The pair test `_crossing_pair` keeps the original body.
-  - Horizontals are registered in the cells of their row (y = a.y); non-horizontals in the cells of their
-    column (x = a.x, i.e. the first point, matching the original quirk that ignores a diagonal's x extent).
-  - A row and a column share at most one cell, so each candidate pair is found exactly once.
-  - Per segment i, candidates j > i are tested in increasing j, so output order and duplicates are unchanged.
-  - Non-finite, over-256-cell and over-budget segments are paired with every opposite-kind segment
-    (the original behaviour).
-  - Built per call; no caching.
-- **Oracles:** each test file holds a verbatim copy of the original algorithm (`reference_analyse`,
-  `reference_crossings`).
+- **Connectivity** (`connectivity._WireIndex`, merged):
+  - grid of 50-unit cells; segment boxes padded by tol + 1;
+  - built per call; no caching.
+- **Crossings** (`editing.crossings`, merged):
+  - horizontals are registered along their row (y = a.y), others along their column (x = a.x);
+  - per segment, candidates are tested in increasing index order;
+  - non-finite, over-256-cell and over-budget segments fall back to all pairs.
+- **Hover** (`gui/canvas_view.py`, this branch):
+  - `draw_items(hover_index=HoverIndex())` records (document item, canvas id) for hoverable canvas items: not
+    overridden, not selected, actually created. Recording is two list appends per canvas item. It also records
+    the normal colour of items drawn already hovered.
+  - `SchematicCanvas._set_hover(h)`:
+    - if h is unchanged, it does nothing;
+    - if a redraw is pending, it only stores h (the redraw draws it);
+    - otherwise it restores the previously shown object and paints h with `recolor()`.
+  - `recolor()` replaces whichever of fill/outline is non-empty, which is exactly how `draw_items` colours each
+    kind, and returns the previous colour so it can be restored.
+  - The index lives only until the next full redraw. `_hover_shown` is the object currently drawn
+    highlighted.
+  - No connectivity, scene or Tk item creation happens on hover changes. The hit test still runs on every
+    motion (unchanged).
 
 ## 5. Test / benchmark commands and results (2026-10-31)
 
-Environment:
+**Environment:**
 - Standalone CPython 3.13.14 + Tk 9.0 (installed with uv), Xvfb, 2 vCPU.
 - The system Pythons have no tkinter.
 - PyPI is blocked, so ezdxf is unavailable.
@@ -55,33 +62,36 @@ Environment:
 ```
 PYTHONPATH=.:/usr/local/lib/python3.13/site-packages xvfb-run -a <py3.13> -m pytest -q -rs
 xvfb-run -a <py3.13> tests/gui_smoke.py OUT
-xvfb-run -a -s "-screen 0 1920x1200x24" <py3.13> tools/bench_phase4.py --sizes small,medium,large --repeat 7 --gui --json OUT.json
+xvfb-run -a -s "-screen 0 1920x1200x24" <py3.13> tools/bench_phase4.py --sizes small,medium,large --repeat 9 --gui --json OUT.json
 ```
 
 **Tests:**
-- pytest: **572 passed, 3 skipped** (ezdxf ×3), 0 failed.
+- pytest: **600 passed, 3 skipped** (ezdxf ×3), 0 failed.
 - GUI smoke: **168/168**, 0 failures.
-- `tests/test_crossings_index.py`: 40 tests.
-- Mutation check:
-  - Caught: using the wrong column anchor (b.x), dropping the fallback list, reversing the candidate order.
-  - Never finishes: removing the cap (killed by the timeout).
-  - Survives, but equivalent: row from b.y, and a shifted cell origin.
+- `tests/test_hover_highlighting.py`: 28 tests. They skip without a display.
+- Mutation check: all six seeded defects fail the suite.
 
-**Benchmarks** (median of 7, main @ 81a8da2 → branch):
+**Benchmark changes:**
+- `hover_change_redraw_s` now alternates between two wires. The old version re-entered the same object, which
+  is a no-op with this change.
+- New metrics: `hover_leave_s`, `hover_hit_test_s`, `redraw_peak_kib`, `hover_index_items`.
+
+**Results**, main @ 0e2823b → branch (median of 9):
 
 | | small | medium | large |
 |---|---|---|---|
-| crossings() | 0.0025 → 0.0006 s | 0.036 → 0.0028 s | 0.337 → 0.0093 s (36×) |
-| full redraw (fit) | 0.027 → 0.029 s (noise) | 0.104 → 0.074 s | 0.556 → 0.217 s |
-| crossings() peak memory | 17 → 96 KiB | 63 → 396 KiB | 188 KiB → 1.27 MiB |
+| hover change (switch) | 0.048 → 0.0022 s | 0.103 → 0.0028 s | 0.266 → 0.0057 s |
+| hover leave (includes the hit test of an empty point) | 0.041 → 0.0019 s | 0.140 → 0.0080 s | 0.306 → 0.020 s |
+| full redraw, 5 interleaved rounds (median) | — | 0.074 → 0.075 s | 0.222 → 0.229 s |
+| redraw peak memory | 553 → 572 KiB | 1.8 → 1.9 MiB | 5.0 → 5.4 MiB |
 
 ## 6. Known issues / follow-ups (need owner decision)
 
-- **`point_on_segment`:** a point up to tol/length beyond a very short diagonal counts as on it.
-  Pre-existing; preserved.
-- **`crossings()` and non-horizontal segments:** a diagonal is treated as vertical at its first point's x, so
-  crossings with diagonal wires are reported at a point not on the diagonal, or missed. Pre-existing;
-  preserved.
-- **Remaining large-redraw costs:** connectivity ~0.04 s, scene ~0.06 s, Tk ~0.10 s. Further candidates
-  (hover hit-test ~12 ms per motion, object snap, the per-press JSON undo snapshot) are not started.
+- **Hit test on every motion:** it is now the main per-motion cost on large sheets (5–9 ms on an object,
+  ~20 ms over empty space). Not addressed: out of scope.
+- **Code that changes the document without requesting a redraw:** previously this was hidden by the next hover
+  change, which redrew everything. It no longer is. All editing paths found go through `commit_change`/
+  `refresh`/`redraw`, and drags call `redraw`.
+- **`point_on_segment` overshoot** on very short diagonals: pre-existing; preserved.
+- **`crossings()` and diagonals:** a diagonal is treated as vertical at its first x. Pre-existing; preserved.
 - **Dead state:** `SchematicCanvas._scene_cache` is never read.
