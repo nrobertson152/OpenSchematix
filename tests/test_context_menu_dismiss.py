@@ -49,7 +49,8 @@ def capture_menus(app, monkeypatch):
     # Native Tk menus are global: do not leave a posted menu between tests.
     yield menus
     try:
-        app.root.tk.call("tk::MenuEscape", str(menu))
+        if menus:
+            app.root.tk.call("tk::MenuEscape", str(menus[0]))
         app.root.update()
     except tk.TclError:
         pass
