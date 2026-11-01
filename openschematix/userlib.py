@@ -80,8 +80,15 @@ def _recover_interrupted_package_import(root: str):
     candidates = []
     for name in os.listdir(parent):
         if name.startswith(".osymlib-import-"):
-            backup = os.path.join(parent, name, "previous")
-            if os.path.isdir(backup):
+            directory = os.path.join(parent, name)
+            backup = os.path.join(directory, "previous")
+            marker = os.path.join(directory, "target.txt")
+            try:
+                with open(marker, encoding="utf-8") as f:
+                    expected = f.read(4097)
+            except (OSError, UnicodeError):
+                continue
+            if expected == root and os.path.isdir(backup):
                 candidates.append(backup)
     if candidates:
         backup = max(candidates, key=os.path.getmtime)
@@ -595,6 +602,10 @@ def import_package(info: PackageInfo, lib: UserLibrary, mode: str = "separate", 
     user_registry = symbols.user_symbols()
     moved_old = moved_new = committed = False
     try:
+        with open(os.path.join(workdir, "target.txt"), "w", encoding="utf-8") as f:
+            f.write(original_root)
+            f.flush()
+            os.fsync(f.fileno())
         if original_exists:
             shutil.copytree(original_root, staged_root)
         else:
