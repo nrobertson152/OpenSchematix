@@ -24,14 +24,50 @@ def env():
     try:
         import tkinter as tk
         root = tk.Tk()
-        root.geometry("1200x800")
-        root.withdraw()
     except Exception as e:  # noqa: BLE001
         pytest.skip(f"Tk GUI display not available: {e}")
     from openschematix.gui.app import App
     app = App(root, check_recovery=False)
+    root.geometry("+-6000+-6000")    # mapped like a real window, but where no pointer can reach it
+    wait_for_final_layout(root, app)
     yield root, app
     root.destroy()
+
+
+def wait_for_final_layout(root, app, timeout_ms=15000):
+    """Process events until the window is mapped and the App has applied its saved pane layout.
+
+    These tests compare canvas contents, so the canvas size must not change under them unnoticed. The
+    window is mapped, not withdrawn: in a withdrawn window the canvas is never mapped, Tk computes its size
+    lazily (on Windows up to seconds later, in whichever test is running) and sends no <Configure>, so the
+    application cannot redraw and the canvas keeps a drawing made for the old size. It is placed off-screen
+    so that the real mouse pointer can never be over it (Tk would tag the item under the pointer
+    "current" and deliver pointer events).
+    App.__init__ also restores the pane sizes from a timer that retries until Tk has sized the panes;
+    App.layout_restored tells when it is done."""
+    import tkinter as tk
+    done = tk.BooleanVar(root, False)
+    give_up = [False]
+
+    def ready():
+        return app.layout_restored and app.canvas.winfo_ismapped()
+
+    def poll():
+        if ready() or give_up[0]:
+            done.set(True)
+        else:
+            root.after(25, poll)
+
+    def timeout():
+        give_up[0] = True
+
+    deadline = root.after(timeout_ms, timeout)
+    poll()
+    if not done.get():
+        root.wait_variable(done)
+    root.after_cancel(deadline)
+    assert ready(), "the window was not mapped or the application never finished restoring its pane layout"
+    settle(root)
 
 
 @pytest.fixture
