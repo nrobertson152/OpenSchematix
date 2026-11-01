@@ -20,10 +20,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - run: python -m pip install -e ".[dev]"
-      - name: Run the full suite 8 times
+      - name: Trigger bisection (3 runs)
         shell: bash
         run: |
-          for i in $(seq 1 10); do
-            echo "=== ITERATION $i"
-            PYTHONPATH=tests python -m pytest -q -s -p _diagplug tests/ 2>&1 | grep -E "\[diag\]|DIAG|STEP|^\('redraw|passed|failed" || true
-          done
+          for i in 1 2 3; do echo "=== RUN $i"; python tests/_diag_trigger.py; done
