@@ -117,7 +117,7 @@ def test_approved_revision_restores_original_geometry_after_foreign_activation(t
     first = a.revisions.create(a, "approved", label="A")
     assert first is not None
     assert symbols.project_owner() is b
-    assert a.revisions.load(first["n"]).symbols[SID] == original
+    assert same_symbol(a.revisions.load(first["n"]).symbols[SID], original)
     a.sheets[0].components[ac].label = "changed after approval"
     second = a.revisions.create(a, "approved", label="B")
     assert second is not None
