@@ -23,4 +23,4 @@ jobs:
       - name: Trigger bisection (3 runs)
         shell: bash
         run: |
-          for i in 1 2 3; do echo "=== RUN $i"; python tests/_diag_trigger.py; done
+          for i in 1 2 3; do for m in idle reset; do python tests/_diag_time.py $m; done; done
