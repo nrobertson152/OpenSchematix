@@ -4,6 +4,8 @@ import zipfile
 import re
 import zlib
 
+import pytest
+
 from openschematix.model import Document, Sheet
 from openschematix.project import new_project
 from openschematix.projectio import project_bytes, save_project, open_any
@@ -116,8 +118,15 @@ def test_native_file_save_reopen_preserves_independent_statuses(tmp_path):
     assert "PRELIMINARY" not in to_svg(reopened.sheets[1], project=reopened)
 
 
-def test_drawing_status_uses_real_gui_undo_redo_commands_without_display():
-    """Exercise App's actual snapshot, commit, undo, and restore paths headlessly."""
+@pytest.mark.requires_tk
+def test_drawing_status_uses_real_gui_undo_redo_commands_without_display(require_tk):
+    """Exercise App snapshot/commit/undo/redo headlessly (no window, no DISPLAY).
+
+    Failure mode without Tk: ``import openschematix.gui.app`` raises
+    ``ModuleNotFoundError: tkinter`` because ``app.py`` imports Tk at module
+    level. That is a missing *binding*, not a missing display and not an
+    application logic defect. CI installs ``python3-tk`` so this runs there.
+    """
     from types import SimpleNamespace
     from openschematix.gui.app import App
 

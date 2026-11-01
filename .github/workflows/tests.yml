@@ -27,15 +27,32 @@ jobs:
           cache-dependency-path: pyproject.toml
       - name: Install project and test dependencies
         run: python -m pip install -e ".[dev]"
-      - name: Run pytest (Linux with virtual display)
+      - name: Install Tk and Xvfb (Linux)
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y xvfb python3-tk
-          xvfb-run -a python -m pytest -q
+      - name: Byte-compile package and tests
+        run: python -m compileall -q openschematix tests
+      - name: Repository integrity checks
+        run: python -m pytest -q tests/test_repo_integrity.py
+      - name: Run pytest (Linux with virtual display)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a python -m pytest -q --tb=short -ra --durations=20
       - name: Run pytest (Windows)
         if: runner.os == 'Windows'
-        run: python -m pytest -q
+        run: python -m pytest -q --tb=short -ra --durations=20
+      - name: Re-run failures with full tracebacks
+        if: failure()
+        shell: bash
+        run: |
+          set +e
+          if [ "${{ runner.os }}" = "Linux" ]; then
+            xvfb-run -a python -m pytest --lf -vv --tb=long -ra
+          else
+            python -m pytest --lf -vv --tb=long -ra
+          fi
+          exit 0
 
   gui-smoke:
     name: GUI smoke / Ubuntu / Python ${{ matrix.python-version }}
