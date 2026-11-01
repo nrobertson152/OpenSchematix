@@ -210,10 +210,10 @@ def _check_geometry(g: Geometry, sid: str, findings: list, source: str = ""):
 def validate_symbol_def(sd: SymbolDef, *, params: Optional[dict] = None) -> list:
     """Inspect one SymbolDef. Never mutates ``sd``, its geometry, or ``params``.
 
-    For parametric symbols, ``sd.build`` is called with a shallow copy of
-    ``params`` (or ``None``) so a builder cannot observe or alter the caller's
-    dict. Built-in builders are expected to return fresh geometry; this
-    function does not write back to ``sd.geometry`` or ``sd.default_params``.
+    For parametric symbols, ``sd.build`` is called with a **deep** copy of
+    ``params`` (or ``None``) so a builder cannot mutate nested structures in
+    the caller's dict. Built-in builders are expected to return fresh geometry;
+    this function does not write back to ``sd.geometry`` or ``sd.default_params``.
     """
     findings = []
     sid = getattr(sd, "id", None) or ""
@@ -222,7 +222,7 @@ def validate_symbol_def(sd: SymbolDef, *, params: Optional[dict] = None) -> list
         sid = sid or "<missing>"
     if not (getattr(sd, "name", None) or "").strip():
         findings.append(Finding(sid, "symbol name is empty", SEVERITY_WARNING))
-    build_params = copy.copy(params) if params is not None else None
+    build_params = copy.deepcopy(params) if params is not None else None
     try:
         g = sd.build(build_params)
     except Exception as e:  # noqa: BLE001
