@@ -8,7 +8,7 @@ permissions:
 
 jobs:
   diag:
-    name: diag hover / windows / ${{ matrix.python-version }}
+    name: verify hover fix / windows / ${{ matrix.python-version }}
     runs-on: windows-latest
     strategy:
       fail-fast: false
@@ -20,7 +20,17 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - run: python -m pip install -e ".[dev]"
-      - name: Trigger bisection (3 runs)
+      - name: Full suite 10 times
         shell: bash
         run: |
-          for i in 1 2 3; do for m in idle reset; do python tests/_diag_time.py $m; done; done
+          for i in $(seq 1 10); do
+            echo "=== FULL $i"
+            PYTHONPATH=tests python -m pytest -q -s -p _diagplug -p _sizeplug tests/ 2>&1 | grep -E "\[diag\] _restore|\[size\]|passed|failed|FAILED" || true
+          done
+      - name: Hover module alone 10 times
+        shell: bash
+        run: |
+          for i in $(seq 1 10); do
+            echo "=== MODULE $i"
+            PYTHONPATH=tests python -m pytest -q -s -p _sizeplug tests/test_hover_highlighting.py 2>&1 | grep -E "\[size\]|passed|failed|FAILED" || true
+          done

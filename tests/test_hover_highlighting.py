@@ -18,67 +18,42 @@ from openschematix.project import Layer
 OPTS = ("fill", "outline", "width", "dash", "text", "font", "anchor", "angle", "capstyle", "joinstyle", "tags")
 
 
-# ---------------- DIAGNOSTIC INSTRUMENTATION (temporary diag branch only) ----------------
-DIAG = []
-
-
-def _diag_install(root, app):
-    from openschematix.gui import canvas_view
-    cv = app.canvas
-    real = canvas_view.SchematicCanvas._redraw_now
-
-    def redraw_now(self):
-        DIAG.append(("redraw", self.winfo_width(), self.winfo_height(), root.winfo_height(),
-                     root.winfo_reqheight(), root.wm_state(), root.winfo_ismapped()))
-        return real(self)
-    canvas_view.SchematicCanvas._redraw_now = redraw_now
-    cv.bind("<Configure>", lambda e: DIAG.append(("canvas<Configure>", e.width, e.height, cv.winfo_height())), add="+")
-    root.bind("<Configure>", lambda e: DIAG.append(("root<Configure>", e.width, e.height)) if e.widget is root
-              else None, add="+")
-
-
-def diag(tag, root, app):
-    cv = app.canvas
-    DIAG.append(("STEP " + tag, cv.winfo_width(), cv.winfo_height(), root.geometry(), root.winfo_reqwidth(),
-                 root.winfo_reqheight(), cv._redraw_pending))
-
-
-def diag_dump():
-    print("\n".join(repr(x) for x in DIAG))
-
-
 @pytest.fixture(scope="module")
 def env():
     os.environ.setdefault("OPENSCHEMATIX_CONFIG_DIR", tempfile.mkdtemp())
     try:
         import tkinter as tk
         root = tk.Tk()
-        root.geometry("1200x800")
-        root.withdraw()
     except Exception as e:  # noqa: BLE001
         pytest.skip(f"Tk GUI display not available: {e}")
     from openschematix.gui.app import App
     app = App(root, check_recovery=False)
-    _diag_install(root, app)
-    wait_for_startup_layout(root, app)
+    root.geometry("+-6000+-6000")    # mapped like a real window, but where no pointer can reach it
+    wait_for_final_layout(root, app)
     yield root, app
     root.destroy()
 
 
-def wait_for_startup_layout(root, app, timeout_ms=15000):
-    """Process events until the App has applied its saved pane layout.
+def wait_for_final_layout(root, app, timeout_ms=15000):
+    """Process events until the window is mapped and the App has applied its saved pane layout.
 
-    App.__init__ restores the pane sizes from a timer that retries until Tk has sized the panes (up to
-    about 2 s; on Windows a withdrawn window can be laid out that late). If a test is already running, that
-    resizes the drawing canvas under it, and an unmapped (withdrawn) canvas gets no <Configure>, so nothing
-    redraws: the canvas then shows a drawing made for the previous size. Tests compare canvas contents, so
-    they start only once the layout is final."""
+    These tests compare canvas contents, so the canvas size must not change under them unnoticed. The
+    window is mapped, not withdrawn: in a withdrawn window the canvas is never mapped, Tk computes its size
+    lazily (on Windows up to seconds later, in whichever test is running) and sends no <Configure>, so the
+    application cannot redraw and the canvas keeps a drawing made for the old size. It is placed off-screen
+    so that the real mouse pointer can never be over it (Tk would tag the item under the pointer
+    "current" and deliver pointer events).
+    App.__init__ also restores the pane sizes from a timer that retries until Tk has sized the panes;
+    App.layout_restored tells when it is done."""
     import tkinter as tk
     done = tk.BooleanVar(root, False)
     give_up = [False]
 
+    def ready():
+        return app.layout_restored and app.canvas.winfo_ismapped()
+
     def poll():
-        if app.layout_restored or give_up[0]:
+        if ready() or give_up[0]:
             done.set(True)
         else:
             root.after(25, poll)
@@ -91,7 +66,8 @@ def wait_for_startup_layout(root, app, timeout_ms=15000):
     if not done.get():
         root.wait_variable(done)
     root.after_cancel(deadline)
-    assert app.layout_restored, "the application never finished restoring its pane layout"
+    assert ready(), "the window was not mapped or the application never finished restoring its pane layout"
+    settle(root)
 
 
 @pytest.fixture
@@ -316,29 +292,17 @@ def test_deleting_hovered_object_leaves_no_highlight(scene):
 def test_edit_undo_tool_and_theme_changes_rebuild_hover_state(scene):
     root, app, ids = scene
     cv = app.canvas
-    DIAG.clear()
-    diag("start", root, app)
     move_to(app, target_point(app, "r", ids))
     # editing: move the hovered component; the redraw rebuilds the item map
     s = app.begin_change()
     editing.move_items(app.doc, [ids["r"]], [], 0, 40)
-    diag("before commit", root, app)
     app.commit_change(s, "moved")
-    diag("after commit", root, app)
-    root.update_idletasks()
-    diag("after update_idletasks", root, app)
-    root.update()
-    diag("after update", root, app)
+    settle(root)
     move_to(app, (214, 238))
     assert cv.hover == ids["r"]
     inc = snapshot(cv)
-    diag("before reference", root, app)
     reference_redraw(app)
-    diag("after reference", root, app)
-    ok = inc == snapshot(cv)
-    print("DIAG first comparison ok =", ok)
-    diag_dump()
-    assert ok
+    assert inc == snapshot(cv)
     # undo
     app.undo()
     # Windows Tk can finish sizing a withdrawn test window after the undo redraw.
