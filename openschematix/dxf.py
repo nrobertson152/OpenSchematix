@@ -324,6 +324,11 @@ class DxfError(ValueError):
     pass
 
 
+MAX_DXF_BYTES = 64 * 1024 * 1024
+MAX_DXF_PAIRS = 1_000_000
+
+
+
 @dataclass
 class ImportReport:
     shapes: list = field(default_factory=list)
@@ -347,7 +352,11 @@ class ImportReport:
 
 
 def _pairs(text: str):
+    if len(text) > MAX_DXF_BYTES:
+        raise DxfError("the DXF input exceeds the maximum supported size")
     lines = text.splitlines()
+    if len(lines) // 2 > MAX_DXF_PAIRS:
+        raise DxfError("the DXF input has too many group-code pairs")
     if len(lines) % 2:
         lines = lines[:-1]
     for i in range(0, len(lines), 2):
@@ -374,17 +383,26 @@ class _Ent:
 
     def f(self, code, default=0.0):
         v = self.get(code)
-        try:
-            return float(v) if v is not None else default
-        except ValueError:
-            return default
+        return _finite_float(v, code) if v is not None else default
 
     def i(self, code, default=0):
         v = self.get(code)
-        try:
-            return int(float(v)) if v is not None else default
-        except ValueError:
+        if v is None:
             return default
+        number = _finite_float(v, code)
+        if not number.is_integer():
+            raise DxfError(f"invalid integer group {code}")
+        return int(number)
+
+
+def _finite_float(value, code):
+    try:
+        number = float(value)
+    except (TypeError, ValueError, OverflowError):
+        raise DxfError(f"invalid numeric group {code}") from None
+    if not math.isfinite(number):
+        raise DxfError(f"non-finite numeric group {code}")
+    return number
 
 
 def _parse(text: str):
@@ -445,9 +463,9 @@ def _parse(text: str):
                     if code == 2:
                         block["name"] = v
                     elif code == 10:
-                        block["base"] = (float(v), block["base"][1])
+                        block["base"] = (_finite_float(v, code), block["base"][1])
                     elif code == 20:
-                        block["base"] = (block["base"][0], float(v))
+                        block["base"] = (block["base"][0], _finite_float(v, code))
         elif section == "ENTITIES":
             if code == 0:
                 if cur is not None:
@@ -485,19 +503,28 @@ def _bulge_points(p1, p2, bulge, segs=8):
     theta = 4 * math.atan(bulge)
     dx, dy = p2[0] - p1[0], p2[1] - p1[1]
     chord = math.hypot(dx, dy)
+    if not math.isfinite(chord):
+        raise DxfError("POLYLINE bulge geometry exceeds finite range")
     if chord < 1e-12:
         return [p2]
     r = chord / (2 * math.sin(theta / 2))
     mx, my = (p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2
     h = r * math.cos(theta / 2)
+    if not math.isfinite(r) or not math.isfinite(h):
+        raise DxfError("POLYLINE bulge geometry exceeds finite range")
     nx, ny = -dy / chord, dx / chord
     cx, cy = mx + nx * h, my + ny * h
+    if not all(map(math.isfinite, (cx, cy))):
+        raise DxfError("POLYLINE bulge geometry exceeds finite range")
     a1 = math.atan2(p1[1] - cy, p1[0] - cx)
     n = max(2, int(abs(math.degrees(theta)) / 10) + 1, segs if abs(theta) > 1 else 2)
     pts = []
     for i in range(1, n + 1):
         a = a1 + theta * i / n
-        pts.append((cx + abs(r) * math.cos(a), cy + abs(r) * math.sin(a)))
+        pt = (cx + abs(r) * math.cos(a), cy + abs(r) * math.sin(a))
+        if not all(map(math.isfinite, pt)):
+            raise DxfError("POLYLINE bulge geometry exceeds finite range")
+        pts.append(pt)
     pts[-1] = p2
     return pts
 
@@ -542,11 +569,15 @@ def import_dxf(raw: bytes, units: str | None = None, scale: float = 1.0, origin=
     default $INSUNITS is used, or millimetres if the file does not say.
     `origin` is the model point where the DXF origin (0, 0) is placed.
     `scale` is an extra factor applied after unit conversion."""
+    if len(raw) > MAX_DXF_BYTES:
+        raise DxfError("the DXF input exceeds the maximum supported size")
     text = read_dxf_text(raw)
     header, layer_tab, blocks, entities = _parse(text)
     rep = ImportReport()
     rep.version = (header.get("$ACADVER") or [(1, "")])[0][1]
-    if units:
+    if units is not None:
+        if not isinstance(units, str) or units not in UNIT_NAMES:
+            raise DxfError("unsupported DXF units override")
         rep.units_mm = UNIT_NAMES[units]
         rep.units_source = f"{units} (chosen)"
     else:
@@ -570,8 +601,19 @@ def import_dxf(raw: bytes, units: str | None = None, scale: float = 1.0, origin=
             rep.units_mm = 25.4 if meas == "0" else 1.0
             rep.units_source = ("inches ($MEASUREMENT=imperial)" if meas == "0"
                                 else "millimetres (not specified in the file; assumed)")
+    try:
+        scale = float(scale)
+        ox, oy = origin
+        ox, oy = float(ox), float(oy)
+    except (TypeError, ValueError, OverflowError):
+        raise DxfError("DXF import scale and origin must be numeric") from None
+    if not math.isfinite(scale) or scale <= 0:
+        raise DxfError("DXF import scale must be finite and positive")
+    if not math.isfinite(ox) or not math.isfinite(oy):
+        raise DxfError("DXF import origin must be finite")
     k = rep.units_mm * scale / UNIT_MM      # DXF unit -> model units
-    ox, oy = origin
+    if not math.isfinite(k):
+        raise DxfError("DXF import unit conversion overflow")
     ident = [0]
 
     def nid():
@@ -582,10 +624,22 @@ def import_dxf(raw: bytes, units: str | None = None, scale: float = 1.0, origin=
         """Apply 2D affine m=(a,b,c,d,e,f) then DXF->model (y flip)."""
         X = m[0] * x + m[2] * y + m[4]
         Y = m[1] * x + m[3] * y + m[5]
-        return (ox + X * k, oy - Y * k)
+        px, py = ox + X * k, oy - Y * k
+        if not math.isfinite(px) or not math.isfinite(py):
+            raise DxfError("DXF geometry exceeds finite coordinate range")
+        return (px, py)
 
     def mscale(m):
-        return math.sqrt(abs(m[0] * m[3] - m[1] * m[2]))
+        value = math.sqrt(abs(m[0] * m[3] - m[1] * m[2]))
+        if not math.isfinite(value):
+            raise DxfError("DXF transform scale exceeds finite range")
+        return value
+
+    def scaled_length(value, m):
+        result = value * k * mscale(m)
+        if not math.isfinite(result):
+            raise DxfError("DXF geometry size exceeds finite range")
+        return result
 
     def mrot(m):
         return math.degrees(math.atan2(m[1], m[0]))
@@ -600,6 +654,8 @@ def import_dxf(raw: bytes, units: str | None = None, scale: float = 1.0, origin=
         return ACI.get(abs(ci), "")
 
     def add(kind_name, shape, layer):
+        if len(rep.shapes) >= max_entities:
+            raise DxfError(f"the drawing emits more than {max_entities} shapes")
         shape.layer = layer
         rep.shapes.append(shape)
         rep.counts[kind_name] = rep.counts.get(kind_name, 0) + 1
@@ -639,8 +695,8 @@ def import_dxf(raw: bytes, units: str | None = None, scale: float = 1.0, origin=
                     skip("POLYLINE (3D mesh)")
                     continue
                 if t == "LWPOLYLINE":
-                    xs = [float(v) for v in e.all(10)]
-                    ys = [float(v) for v in e.all(20)]
+                    xs = [_finite_float(v, 10) for v in e.all(10)]
+                    ys = [_finite_float(v, 20) for v in e.all(20)]
                     # bulges belong to the preceding vertex; rebuild per vertex
                     bul, vi = [], -1
                     for c, v in e.tags:
@@ -648,7 +704,7 @@ def import_dxf(raw: bytes, units: str | None = None, scale: float = 1.0, origin=
                             vi += 1
                             bul.append(0.0)
                         elif c == 42 and vi >= 0:
-                            bul[vi] = float(v)
+                            bul[vi] = _finite_float(v, 42)
                     verts = list(zip(xs, ys))
                 else:
                     verts = [(v.f(10), v.f(20)) for v in getattr(e, "vertices", [])]
@@ -672,7 +728,7 @@ def import_dxf(raw: bytes, units: str | None = None, scale: float = 1.0, origin=
                     add(t, Shape(nid(), "line" if len(mp) == 2 else "polyline", pts=mp, dash=dash), ly)
             elif t == "CIRCLE":
                 c = tr(m, e.f(10), e.f(20))
-                add(t, Shape(nid(), "circle", c=c, r=e.f(40) * k * mscale(m), dash=dash), ly)
+                add(t, Shape(nid(), "circle", c=c, r=scaled_length(e.f(40), m), dash=dash), ly)
             elif t == "ARC":
                 c = tr(m, e.f(10), e.f(20))
                 st, en = e.f(50), e.f(51)
@@ -683,7 +739,7 @@ def import_dxf(raw: bytes, units: str | None = None, scale: float = 1.0, origin=
                     vx, vy = math.cos(a), math.sin(a)
                     return math.degrees(math.atan2(m[1] * vx + m[3] * vy, m[0] * vx + m[2] * vy)) % 360
                 st = mapped(en) if mirrored(m) else mapped(st)
-                add(t, Shape(nid(), "arc", c=c, r=e.f(40) * k * mscale(m), start=st, extent=ext, dash=dash), ly)
+                add(t, Shape(nid(), "arc", c=c, r=scaled_length(e.f(40), m), start=st, extent=ext, dash=dash), ly)
             elif t == "ELLIPSE":
                 cx, cy = e.f(10), e.f(20)
                 mx, my = e.f(11), e.f(21)
@@ -691,7 +747,10 @@ def import_dxf(raw: bytes, units: str | None = None, scale: float = 1.0, origin=
                 a0, a1 = e.f(41, 0.0), e.f(42, 2 * math.pi)
                 if a1 <= a0:
                     a1 += 2 * math.pi
-                n = max(16, int((a1 - a0) / (2 * math.pi) * 72))
+                sweep = a1 - a0
+                if not math.isfinite(sweep) or sweep > 2 * math.pi + 1e-6:
+                    raise DxfError("invalid ELLIPSE parameter sweep")
+                n = min(256, max(16, int(sweep / (2 * math.pi) * 72)))
                 pts = []
                 for i in range(n + 1):
                     a = a0 + (a1 - a0) * i / n
@@ -702,8 +761,8 @@ def import_dxf(raw: bytes, units: str | None = None, scale: float = 1.0, origin=
                 add(t, Shape(nid(), "polygon" if full else "polyline", pts=pts[:-1] if full else pts, dash=dash), ly)
                 approx(t)
             elif t == "SPLINE":
-                fx, fy = [float(v) for v in e.all(11)], [float(v) for v in e.all(21)]
-                cx_, cy_ = [float(v) for v in e.all(10)], [float(v) for v in e.all(20)]
+                fx, fy = [_finite_float(v, 11) for v in e.all(11)], [_finite_float(v, 21) for v in e.all(21)]
+                cx_, cy_ = [_finite_float(v, 10) for v in e.all(10)], [_finite_float(v, 20) for v in e.all(20)]
                 src = list(zip(fx, fy)) if len(fx) >= 2 else list(zip(cx_, cy_))
                 if len(src) < 2:
                     skip(t)
@@ -726,7 +785,7 @@ def import_dxf(raw: bytes, units: str | None = None, scale: float = 1.0, origin=
                 s = _unescape(e.get(1) or "")
                 if not s.strip():
                     continue
-                h = e.f(40, 2.5) * k * mscale(m)
+                h = scaled_length(e.f(40, 2.5), m)
                 hal, val = e.i(72), e.i(73)
                 if hal or val:
                     x, y = e.f(11, e.f(10)), e.f(21, e.f(20))
@@ -735,12 +794,15 @@ def import_dxf(raw: bytes, units: str | None = None, scale: float = 1.0, origin=
                 anchor = {(0, 0): "sw", (0, 1): "sw", (0, 2): "w", (0, 3): "nw", (1, 0): "s", (1, 1): "s",
                           (1, 2): "c", (1, 3): "n", (2, 0): "se", (2, 1): "se", (2, 2): "e", (2, 3): "ne",
                           (4, 0): "c", (3, 0): "sw", (5, 0): "sw"}.get((hal, val), "sw")
-                add(t, Shape(nid(), "text", pts=[tr(m, x, y)], s=s, size=max(1.0, h / 0.72), anchor=anchor,
+                size = max(1.0, h / 0.72)
+                if not math.isfinite(size):
+                    raise DxfError("TEXT size exceeds finite range")
+                add(t, Shape(nid(), "text", pts=[tr(m, x, y)], s=s, size=size, anchor=anchor,
                              angle=(e.f(50) + mrot(m)) % 360), ly)
             elif t == "MTEXT":
                 raw_s = "".join(e.all(3)) + (e.get(1) or "")
                 lines = [_unescape(x) for x in mtext_plain(raw_s)]
-                h = e.f(40, 2.5) * k * mscale(m)
+                h = scaled_length(e.f(40, 2.5), m)
                 att = e.i(71, 1)
                 anchor = {1: "nw", 2: "n", 3: "ne", 4: "w", 5: "c", 6: "e", 7: "sw", 8: "s", 9: "se"}.get(att, "nw")
                 ang = e.f(50)
@@ -750,6 +812,8 @@ def import_dxf(raw: bytes, units: str | None = None, scale: float = 1.0, origin=
                 base = tr(m, e.f(10), e.f(20))
                 size = max(1.0, h / 0.72)
                 lh = size * 1.25
+                if not math.isfinite(size) or not math.isfinite(lh):
+                    raise DxfError("MTEXT line spacing exceeds finite range")
                 nl = len(lines)
                 # first line position depends on vertical attachment
                 if att in (1, 2, 3):
@@ -764,6 +828,8 @@ def import_dxf(raw: bytes, units: str | None = None, scale: float = 1.0, origin=
                         continue
                     off = y0 + n_ * lh
                     p = (base[0] + off * math.sin(t_rad), base[1] + off * math.cos(t_rad))
+                    if not math.isfinite(off) or not all(map(math.isfinite, p)):
+                        raise DxfError("MTEXT coordinates exceed finite range")
                     add(t, Shape(nid(), "text", pts=[p], s=ln, size=size, anchor=anchor, angle=ang), ly)
             elif t in ("INSERT", "DIMENSION"):
                 name = (e.get(2) or "").strip()
