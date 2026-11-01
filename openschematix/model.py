@@ -16,6 +16,7 @@ holds an ordered list of sheets plus project-wide metadata.
 from __future__ import annotations
 
 import copy
+import json
 import math
 import uuid
 from dataclasses import dataclass, field
@@ -579,7 +580,13 @@ class Document:
         return d
 
     @classmethod
-    def from_dict(cls, d) -> "Document":
+    def from_dict(cls, d, resolve=None) -> "Document":
+        """Build a sheet from its dict.
+
+        `resolve(symbol_id) -> SymbolDef | None` supplies the symbol definitions used to validate wire
+        terminal references; Project.from_dict passes one that sees the project's own embedded symbols.
+        The default (symbols.lookup) uses built-in and user-library symbols only, never the active
+        project's, so a sheet is never validated against another project's symbols."""
         doc = cls(name=str(d.get("name") or "Sheet 1"), uid=str(d.get("uid") or new_uid()))
         doc.sheet = Sheet.from_dict(d.get("sheet"))
         for cd in d.get("components", []):
@@ -599,16 +606,37 @@ class Document:
             doc.shapes[s.id] = s
         ids = doc.all_ids()
         doc.next_id = max(max(ids, default=0) + 1, int(d.get("next_id", 1) or 1))
-        # Drop dangling terminal references instead of failing.
+        # Drop terminal references that are certainly dangling (no such component, or a symbol that is
+        # known and has no such terminal) instead of failing. A reference to a component whose symbol is
+        # not available is kept: its pins are unknown here, and the reference becomes valid again as soon
+        # as the symbol is (dropping it would lose the connection for good on the next save).
+        resolve = resolve or symbols.lookup
+        names_cache: dict = {}
+
+        def terminal_names(c):
+            key = (c.symbol, json.dumps(c.params, sort_keys=True) if c.params else "")
+            if key not in names_cache:
+                sd = resolve(c.symbol)
+                try:
+                    names_cache[key] = None if sd is None else {t.name for t in sd.build(c.params or None).terminals}
+                except Exception:  # noqa: BLE001 - a symbol that cannot be built cannot validate anything
+                    names_cache[key] = None
+            return names_cache[key]
+
         for w in doc.wires.values():
             for attr in ("start", "end"):
                 ref = getattr(w, attr)
-                if ref and doc.terminal_pos(ref) is None:
+                if not ref:
+                    continue
+                c = doc.components.get(ref[0])
+                names = terminal_names(c) if c is not None else set()
+                if names is not None and ref[1] not in names:
                     setattr(w, attr, None)
         return doc
 
     def copy(self) -> "Document":
-        return Document.from_dict(self.to_dict())
+        resolve = self.project.symbol_resolver() if self.project is not None else None
+        return Document.from_dict(self.to_dict(), resolve=resolve)
 
 
 # Schema of one sheet's JSON (the .osch "schema" number). 1 = OpenSchematix

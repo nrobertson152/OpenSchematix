@@ -68,7 +68,7 @@ def load_data(data) -> LoadResult:
         except (KeyError, TypeError, ValueError) as e:
             raise FileFormatError(f"The file is damaged or incomplete: {e}") from e
         res = LoadResult(doc)
-        unknown = sorted({c.symbol for c in doc.components.values() if symbols.get(c.symbol) is None})
+        unknown = sorted({c.symbol for c in doc.components.values() if symbols.lookup(c.symbol) is None})
         if unknown:
             res.warnings.append("Unknown symbols shown as placeholders: " + ", ".join(unknown))
         return res
