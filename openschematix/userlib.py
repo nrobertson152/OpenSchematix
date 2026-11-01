@@ -91,7 +91,7 @@ def _zip_preflight(path: str):
             tail = f.read()
     except OSError as e:
         raise ValueError("cannot read symbol library package") from e
-    pos = tail.rfind(b"PK\\x05\\x06")
+    pos = tail.rfind(b"PK\x05\x06")
     if pos < 0 or pos + 22 > len(tail):
         raise ValueError("not a valid symbol library package")
     disk, cd_disk, local_count, total_count, _cd_size, _cd_offset, _comment = struct.unpack_from(
