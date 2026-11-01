@@ -481,3 +481,25 @@ and used via PYTHONPATH (bootloaders are in the repo). Standalone-Python builds 
   revision restore/save). main @ 6a9c543: 337 leaked and 94 latent crashes in 4,148 files; this branch: 0
   in 4,148, and 0 in 4 × 12,148 other seeds.
 - Tests: `tests/test_project_file_reliability.py` (107), `tests/test_gui_error_reporting.py` (11, Tk).
+
+
+## v1.1.0 cycle 2 — import and edit existing symbols (`feature/import-edit-existing-symbols`)
+
+Most of the feature already existed on main (Phase 2 item 6: `symbols/explode.py`, *Edit a copy…*, the
+editor's *Open existing symbol*, *Save as new symbol…*). This branch closes the remaining gaps:
+
+- **No silent loss.** `normalise()` used to drop unknown primitive attributes, truncate text/pin names, clamp
+  text size and blank unknown port types without saying so. `explode.conversion_losses` now compares every
+  primitive and connection point of a copy with its source; `SymbolImportError` (a `SymbolFormatError`) names
+  each loss. All 78 built-ins and every valve type/operator convert with no losses.
+- **`.osym` files.** `explode.doc_from_file` / `doc_from_data`; `App.edit_symbol_file_copy` with entries in the
+  library *Import* menu and folder context menu. The file is only read.
+- **GUI errors.** `App.open_symbol_editor(copy_of=…)` converts first, so a failing symbol shows a message
+  instead of an empty editor window.
+- `gui/symbol_editor.py` is deliberately **unchanged** (the aliases branch is editing it). Known gap: the
+  editor's own *Open existing symbol* picker calls `SymbolEditor(copy_of=…)` directly, so a symbol that fails
+  conversion there would raise inside a Tk callback. Only built-in, library and project symbols can be picked
+  there, and tests guarantee these all convert. Follow-up once the aliases work lands: route
+  `open_existing` through `App.open_symbol_editor`, and optionally add an "Open symbol file" toolbar entry.
+- Tests: `tests/test_import_existing_symbols.py` (74), `tests/gui_smoke.py` (+6). Full pytest: 715 passed,
+  3 skipped (ezdxf). GUI smoke: 174/174.

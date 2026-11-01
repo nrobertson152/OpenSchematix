@@ -262,7 +262,9 @@ class LibraryPanel(ttk.Frame):
             return
         e = self.app.userlib.entries.get(s.id)
         if s.is_custom and e is not None:
-            self.app.open_symbol_editor(doc=s.custom, folder=e.folder)
+            # in place, from the library's own definition: the registry may hold the open
+            # project's (older) embedded revision of this id, which saving would write back
+            self.app.edit_library_symbol(s.id)
         else:
             # built-in or project-only symbols open as a copy: the original is never changed
             self.app.edit_symbol_copy(s.id)
@@ -297,6 +299,8 @@ class LibraryPanel(ttk.Frame):
         m = make_menu(self)
         m.add_command(label="Import library package (.osymlib)…", command=self.import_package)
         m.add_command(label="Import symbol file (.osym)…", command=self.import_symbol)
+        m.add_command(label="Edit a copy of a symbol file (.osym)…",
+                      command=lambda: self.app.edit_symbol_file_copy(folder=self.selected_folder()))
         x, y = self.winfo_pointerxy()
         m.tk_popup(x, y)
 
@@ -370,6 +374,8 @@ class LibraryPanel(ttk.Frame):
                 m.add_command(label="Export as library package…", command=lambda: self._export_package(folder))
             m.add_command(label="Import library package…", command=self.import_package)
             m.add_command(label="Import symbol file…", command=self.import_symbol)
+            m.add_command(label="Edit a copy of a symbol file…",
+                          command=lambda: self.app.edit_symbol_file_copy(folder=folder or None))
             if folder:
                 m.add_separator()
                 m.add_command(label="Delete folder…", command=lambda: self._delete_folder(folder))

@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import csv
 import io
+import json
 import re
 from dataclasses import dataclass, field
 
@@ -60,8 +61,101 @@ class Net:
         return sorted({w[0] for w in self.wires} | {t[0] for t in self.terminals})
 
 
+
+# ================================================================ wire terminal references
+# Outcome of validating a wire end's [component id, terminal name] reference.
+REF_OK = "ok"                        # component exists, its symbol defines the pin
+REF_UNRESOLVED = "unresolved"        # component exists, its symbol is not available: pin unknown, kept
+REF_MALFORMED = "malformed"          # not a [component id, terminal name] pair
+REF_MISSING_COMPONENT = "missing-component"
+REF_BLANK_PIN = "blank-pin"
+REF_UNKNOWN_PIN = "unknown-pin"      # the (resolved) symbol has no such pin
+
+#: Outcomes that join the netlist. An unresolved symbol keeps its named attachment (as at load time,
+#: PR #37): its pins are unknown here and the reference becomes valid again once the symbol is.
+CONNECTING_REFS = frozenset((REF_OK, REF_UNRESOLVED))
+
+
+def symbol_resolver_for(doc):
+    """Function symbol_id -> SymbolDef | None that resolves symbols as the project owning *doc*.
+
+    The symbol registry is process-wide and holds the custom symbols of the project activated last
+    (PR #46). Validating a sheet against it would use another project's definition of the same
+    custom-symbol id - different pins - whenever a foreign project is registered. So:
+
+    * the sheet's project is the registered one (the normal case, and inside every
+      ``@symbols.project_scoped`` engine call): the registry, which also holds symbols added in
+      this session that are not embedded yet;
+    * another project is registered: the owning project's own definitions
+      (``Project.symbol_resolver``: built-in, its embedded symbols, user libraries), never the
+      registered project's;
+    * a standalone sheet (no project): the registry when it has no owner, else built-in and user
+      library symbols only (``symbols.lookup``), as when the sheet is loaded.
+    """
+    project = getattr(doc, "project", None)
+    owner = symbols.project_owner()
+    if project is not None:
+        return symbols.get if owner is project else project.symbol_resolver()
+    return symbols.get if owner is None else symbols.lookup
+
+
+def _pin_names(c, resolve, cache):
+    """Terminal names the component's symbol defines, or None when the symbol is unavailable (or cannot
+    be built, so cannot validate anything)."""
+    try:
+        params = json.dumps(c.params, sort_keys=True) if c.params else ""
+    except (TypeError, ValueError):
+        params = repr(c.params)
+    key = (c.symbol, params)
+    if cache is None or key not in cache:
+        sd = resolve(c.symbol)
+        try:
+            names = None if sd is None else frozenset(t.name for t in sd.build(c.params or None).terminals)
+        except Exception:  # noqa: BLE001 - a symbol that cannot be built cannot validate anything
+            names = None
+        if cache is None:
+            return names
+        cache[key] = names
+    return cache[key]
+
+
+def classify_pin_ref(doc, ref, resolve=None, cache=None) -> str:
+    """Validate one wire end reference on *doc* (see the REF_* outcomes).
+
+    *resolve* defaults to ``symbol_resolver_for(doc)`` (the owning project's definitions); pass one
+    resolver and a shared *cache* dict when validating many references of one sheet."""
+    if not isinstance(ref, (list, tuple)) or len(ref) != 2:
+        return REF_MALFORMED
+    cid, pin = ref
+    if isinstance(cid, bool) or not isinstance(cid, int):
+        return REF_MALFORMED
+    c = doc.components.get(cid)
+    if c is None:
+        return REF_MISSING_COMPONENT
+    if pin is None or not str(pin).strip():
+        return REF_BLANK_PIN
+    names = _pin_names(c, resolve or symbol_resolver_for(doc), cache)
+    if names is None:
+        return REF_UNRESOLVED
+    return REF_OK if str(pin) in names else REF_UNKNOWN_PIN
+
+
+def pin_ref_connects(doc, ref, resolve=None, cache=None) -> bool:
+    """True if wire end reference *ref* joins the electrical netlist: the component exists on *doc* and
+    the pin is a terminal of its symbol as defined by the sheet's own project, or the symbol is
+    temporarily unavailable (the named attachment is kept). Missing components, blank pins and pins the
+    symbol does not define never create netlist terminals."""
+    return classify_pin_ref(doc, ref, resolve, cache) in CONNECTING_REFS
+
+
 def _sheet_nodes(doc, uf: _UF):
-    """Union the nodes of one sheet. Node ids: ('w', uid, wid), ('t', uid, cid, name)."""
+    """Union the nodes of one sheet. Node ids: ('w', uid, wid), ('t', uid, cid, name).
+
+    Wire endpoints join terminals by *validated* pin references and by
+    geometry (end point coincides with a terminal). Invalid pin names never
+    create fictitious terminals. Geometric wire-to-wire joins are unchanged
+    and remain compatible with a spatial candidate index on the wire loop.
+    """
     uid = doc.uid
     wires = list(doc.wires.values())
     for w in wires:
@@ -75,10 +169,11 @@ def _sheet_nodes(doc, uf: _UF):
     for nodes in term_at.values():
         for n in nodes[1:]:
             uf.union(nodes[0], n)
+    resolve, cache = symbol_resolver_for(doc), {}
     for w in wires:
         for ref in (w.start, w.end):
-            if ref and ref[0] in doc.components:
-                uf.union(("w", uid, w.id), ("t", uid, ref[0], ref[1]))
+            if pin_ref_connects(doc, ref, resolve, cache):
+                uf.union(("w", uid, w.id), ("t", uid, ref[0], str(ref[1])))
         for idx in (0, -1):
             p = w.points[idx]
             for n in term_at.get(_key(p), []):
@@ -303,6 +398,7 @@ def _natural(s: str):
 
 
 # ================================================================ reports
+@symbols.project_scoped
 def connection_rows(project, nets=None) -> list[dict]:
     """From-to connection list. Within each net the terminals are chained
     in drawing order (daisy chain), which is how the net is usually wired."""
@@ -324,15 +420,19 @@ def connection_rows(project, nets=None) -> list[dict]:
     return rows
 
 
+@symbols.project_scoped
 def wire_rows(project) -> list[dict]:
     """One row per drawn wire with its number, ends and properties."""
     names = {d.uid: d.name for d in project.sheets}
     rows = []
     for doc in project.sheets:
+        resolve, cache = symbol_resolver_for(doc), {}
         for w in sorted(doc.wires.values(), key=lambda w: (_natural(w.number), w.id)):
             def end(ref, p):
-                if ref and ref[0] in doc.components:
-                    return terminal_tag(project, doc.uid, ref[0], ref[1])
+                # only a reference that joins the netlist names a terminal: an invalid one (missing
+                # component, blank or unknown pin) must not appear as a real connection
+                if ref and pin_ref_connects(doc, ref, resolve, cache):
+                    return terminal_tag(project, doc.uid, ref[0], str(ref[1]))
                 return "junction" if p else ""
             rows.append({"sheet": names[doc.uid], "wire": w.number, "from": end(w.start, w.points[0]),
                          "to": end(w.end, w.points[-1]), "colour": w.props.get("colour", ""),
@@ -340,6 +440,7 @@ def wire_rows(project) -> list[dict]:
     return rows
 
 
+@symbols.project_scoped
 def terminal_rows(project, nets=None) -> list[dict]:
     """Terminal-strip report: one row per terminal with what is connected on
     each side (side 1 = left/field, side 2 = right/internal)."""

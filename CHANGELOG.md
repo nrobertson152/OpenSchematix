@@ -4,6 +4,16 @@ All notable changes to this project are documented here. Versions follow [Semant
 
 ## [Unreleased]
 
+### Fixed
+
+- Netlist generation no longer creates phantom terminals from invalid wire terminal
+  references (a missing component, a blank terminal name, or a pin the symbol does
+  not define, e.g. `R1:ghost`). Such ends no longer join nets, connection and wire
+  lists, terminal reports or CSV exports, and Check reports them as
+  `invalid-wire-ref`. Pins are validated against the definition of the project
+  that owns the sheet, never another open project's symbol with the same id.
+  References to a temporarily unavailable custom symbol keep their attachment.
+
 ### Added
 
 - Symbol aliases: a custom symbol can have extra identifiers (symbol editor, *Symbol* tab, "Aliases"). The library
@@ -38,6 +48,13 @@ All notable changes to this project are documented here. Versions follow [Semant
   polylines become real arcs again. Connection points keep their identifiers, positions, lead directions and port
   types. Saving a copy always creates a new symbol (new id) and records what it was derived from; the original is
   never changed.
+- *Edit a copy of a symbol file (.osym)…* (library *Import* menu and folder context menu) opens a symbol file
+  directly in the symbol editor as an editable copy; the file itself is only read, and saving adds a new symbol
+  to the library.
+- Opening a symbol as an editable copy is now checked against the original: if the custom-symbol format cannot
+  hold a primitive, attribute or connection point exactly (an unknown primitive kind, text longer or larger than
+  the format allows, an off-grid or unknown-type connection point), the copy is refused with a message naming
+  what would be lost, instead of silently dropping or altering it.
 - *Save as new symbol…* asks for a name. When a library symbol is edited in place the primary button reads
   *Save changes* and its tooltip says that it overwrites the symbol.
 
