@@ -281,7 +281,10 @@ def test_edit_undo_tool_and_theme_changes_rebuild_hover_state(scene):
     s = app.begin_change()
     editing.move_items(app.doc, [ids["r"]], [], 0, 40)
     app.commit_change(s, "moved")
-    settle(root)
+    # A withdrawn Windows Tk window can finish resizing after the edit redraw.
+    # Establish the reference canvas at its settled dimensions before testing
+    # incremental hover painting against a full redraw.
+    full_redraw(root, app)
     move_to(app, (214, 238))
     assert cv.hover == ids["r"]
     inc = snapshot(cv)
