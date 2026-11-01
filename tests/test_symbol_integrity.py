@@ -231,7 +231,6 @@ def test_load_symbol_json_preserves_normalise_contract():
 
 
 def test_optional_and_legacy_fields_accepted():
-    """Documents with optional fields and without optional sections remain valid."""
     doc = blank_symbol("Legacy-ish")
     del doc["tags"]
     doc["derived_from"] = {"id": "el.resistor.iec", "name": "Resistor", "revision": "1"}
@@ -275,7 +274,6 @@ def test_invalid_field_types_for_core_metadata():
 
 
 def test_unhashable_port_type_does_not_crash():
-    """Unhashable pin type must be a finding, not TypeError."""
     doc = _valid_custom_doc()
     doc["pins"][0]["type"] = ["elec", "passive"]
     findings = validate_document(doc)
@@ -308,7 +306,6 @@ def test_nested_unexpected_structures():
 
 
 def test_strict_vs_normalise_missing_pin_id():
-    """Strict validator reports missing pin id; normalise synthesises one."""
     doc = _valid_custom_doc()
     del doc["pins"][0]["id"]
     findings = validate_document(doc)
@@ -380,3 +377,70 @@ def test_cli_json_output_includes_source(tmp_path, capsys):
     assert isinstance(data, list) and data
     assert any(item.get("source") == str(path) for item in data)
     assert any("duplicate pin id" in item.get("problem", "") for item in data)
+
+
+def test_nested_mutable_params_not_mutated():
+    """Deep copy of params: nested lists/dicts survive validation unchanged."""
+    sd = get("fl.hyd.dcv")
+    assert sd is not None and sd.parametric
+    nested = {"positions": ["parallel", "closed"], "extra": {"k": [1, 2, 3]}}
+    params = {"type": "4/3", "medium": "hyd", "nested": nested}
+    params_before = copy.deepcopy(params)
+    default_before = copy.deepcopy(sd.default_params)
+    geo_before = sd.geometry
+    findings = validate_symbol_def(sd, params=params)
+    assert params == params_before
+    assert params["nested"] is nested
+    assert params["nested"]["extra"]["k"] == [1, 2, 3]
+    assert sd.default_params == default_before
+    assert sd.geometry is geo_before
+    assert not any(f.severity == SEVERITY_ERROR for f in findings)
+
+
+def test_cli_module_subprocess_builtins():
+    """Invoke the real CLI entry point: python -m openschematix.symbols.integrity."""
+    import subprocess
+    import sys
+    r = subprocess.run(
+        [sys.executable, "-m", "openschematix.symbols.integrity", "--builtins"],
+        capture_output=True, text=True, timeout=60,
+    )
+    assert r.returncode == 0, r.stderr or r.stdout
+    assert "finding" not in r.stdout.lower() or "No integrity problems" in r.stdout
+
+
+def test_cli_module_subprocess_bad_file_and_json(tmp_path):
+    import subprocess
+    import sys
+    bad = tmp_path / "broken.osym"
+    bad.write_text("{not-json")
+    r = subprocess.run(
+        [sys.executable, "-m", "openschematix.symbols.integrity", str(bad)],
+        capture_output=True, text=True, timeout=30,
+    )
+    assert r.returncode == 1
+    assert "invalid JSON" in r.stdout or "invalid JSON" in r.stderr
+
+    doc = _valid_custom_doc()
+    doc["pins"].append({"id": "p1", "name": "X", "x": 0, "y": 10, "dir": "u"})
+    path = tmp_path / "dup.osym"
+    path.write_text(json.dumps(doc))
+    r2 = subprocess.run(
+        [sys.executable, "-m", "openschematix.symbols.integrity", str(path), "--json"],
+        capture_output=True, text=True, timeout=30,
+    )
+    assert r2.returncode == 1
+    data = json.loads(r2.stdout)
+    assert isinstance(data, list) and data
+    assert any(item.get("source") == str(path) for item in data)
+    assert any("duplicate pin id" in item.get("problem", "") for item in data)
+
+
+def test_aliases_optional_field_accepted_after_main_merge():
+    """Documents with aliases (main PR #31) remain valid under strict validation."""
+    doc = _valid_custom_doc()
+    doc["aliases"] = ["ALT-ID", "sensor.prox"]
+    findings = validate_document(doc)
+    assert not any(f.severity == SEVERITY_ERROR for f in findings)
+    norm = normalise(doc)
+    assert norm.get("aliases") == ["ALT-ID", "sensor.prox"]
