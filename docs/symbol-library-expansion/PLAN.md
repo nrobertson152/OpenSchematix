@@ -32,6 +32,24 @@ Expected result: about **375 new symbol ids** (fluid symbols valid for both medi
 because the port domain — hydraulic vs pneumatic — drives the drawing checker) and about **30 configurator
 additions**.
 
+## Result (all batches done, 2026-11-02)
+
+No inventory row is pending. **425 new built-in symbol ids** (Hydraulic 177, Pneumatic 127, Electronic 81,
+Electrical 29, General 11) plus the configurator additions; the 78 existing symbols and 1,702 existing valve
+configurations render exactly as on main (geometry-baseline test).
+
+| Status | HO | Y32 | ECL |
+|---|---:|---:|---:|
+| validated (new symbol or configurator addition) | 86 | 126 | 111 |
+| equivalent (drawn the same as an existing/new symbol) | 0 | 12 | 0 |
+| existing | 13 | 14 | 19 |
+| duplicate | 0 | 9 | 28 |
+| convention | 3 | 20 | 7 |
+| excluded (composites, Q3) | 13 | 14 | 0 |
+| blocked (reason recorded per row) | 9 | 10 | 19 |
+
+The inventory summary below is the plan as first written; the counts above supersede it.
+
 ## Directional-valve configurator (director instruction)
 
 Detents and spool controls go **into the configurator** (`fl.hyd.dcv` / `fl.pneu.dcv`), and are also offered as
