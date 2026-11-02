@@ -991,10 +991,32 @@ F6 = {
 }
 for k, (st, tgt, note) in F6.items():
     PROGRESS[k] = (st, tgt, note)
+ORIENT = "Drawn as the sources draw it (inlet top, spring left, pilot right); mirror of the existing fl.*.relief"
+F7 = {
+    "HO-C19": ("validated", "fl.hyd.relief.pilot", ORIENT),
+    "HO-C20": ("validated", "fl.hyd.sequence", "Drain to a reservoir symbol, as in the chart"),
+    "HO-C21": ("blocked", "-", "The feature that makes it leak-free (and the symbol at its drain end) is not legible "
+                               "at the chart's resolution; not implemented without identification"),
+    "HO-C22": ("validated", "fl.hyd.unloading", "External pilot port X"),
+    "HO-C23": ("validated", "fl.hyd.reducing.drain",
+               "The chart's reducing valve has a drain to the reservoir, which the existing fl.hyd.reducing lacks"),
+    "HO-C24": ("validated", "fl.hyd.unloading.sol", "Solenoid without electrical terminals (as in the configurator)"),
+    "HO-C25": ("validated", "fl.hyd.relief.prop", "Proportional solenoid without electrical terminals"),
+    "Y32-10.13.1s": ("validated", both("relief.ansi"), "Normal (port) form; simplified form's reservoir is the T port"),
+    "Y32-10.13.2a": ("equivalent", both("relief.ansi"),
+                     "Drawn identically to the ANSI relief valve; the outlet connection distinguishes a sequence valve"),
+    "Y32-10.13.2b": ("validated", both("sequence.drain"), ""),
+    "Y32-10.13.3a": ("validated", both("reducing.ansi"), ""),
+    "Y32-10.13.3b": ("validated", "fl.hyd.reducing.drain.ansi", ""),
+    "Y32-10.13.4": ("validated", "fl.hyd.reducing.relieving", "Relieving path and drain to reservoir symbols"),
+    "Y32-10.13.5": ("validated", "fl.pneu.regulator.relieving", "Vent to atmosphere drawn as in the source"),
+}
+for k, (st, tgt, note) in F7.items():
+    PROGRESS[k] = (st, tgt, note)
 # Rows deliberately reopened by a director decision (completed -> pending). The write guard below allows
 # exactly these; any other completed row that would fall back to pending is refused.
 REOPENED = {"Y32-8.3.1", "Y32-8.3.1.2", "Y32-8.3.2.1", "Y32-8.3.2.2", "Y32-8.6.2"}   # decision 1, 2026-11-02
-BATCH_OF = {**{k: "F2" for k in F2}, **{k: "F3" for k in F3}, **{k: "F4" for k in F4}, **{k: "F5" for k in F5}, **{k: "F5b" for k in REOPENED}, **{k: "F6" for k in F6}}
+BATCH_OF = {**{k: "F2" for k in F2}, **{k: "F3" for k in F3}, **{k: "F4" for k in F4}, **{k: "F5" for k in F5}, **{k: "F5b" for k in REOPENED}, **{k: "F6" for k in F6}, **{k: "F7" for k in F7}}
 for r in R:
     if r["key"] in PROGRESS:
         st, tgt, note = PROGRESS[r["key"]]

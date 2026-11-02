@@ -78,13 +78,13 @@ HO-C15,HO,Energy Control C15,"Steering unit, open centre",Hydraulic,Steering,fl.
 HO-C16,HO,Energy Control C16,"Steering unit, closed centre",Hydraulic,Steering,fl.hyd.steer.cc,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Composite; see Q3
 HO-C17,HO,Energy Control C17,"Steering unit, closed centre with LS (with priority valve)",Hydraulic,Steering,fl.hyd.steer.ls,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Composite; see Q3
 HO-C18,HO,Energy Control C18,Direct acting relief valve,Hydraulic,Pressure control,fl.hyd.relief,existing,F7,
-HO-C19,HO,Energy Control C19,Pilot operated relief valve,Hydraulic,Pressure control,fl.hyd.relief.pilot,pending,F7,
-HO-C20,HO,Energy Control C20,Sequence valve,Hydraulic,Pressure control,fl.hyd.sequence,pending,F7,Also Y32 10.13.2
-HO-C21,HO,Energy Control C21,Leak-free sequence valve with external drain,Hydraulic,Pressure control,fl.hyd.sequence.leakfree,pending,F7,
-HO-C22,HO,Energy Control C22,Relief / unloading valve with external hydraulic pilot and internal drain,Hydraulic,Pressure control,fl.hyd.unloading,pending,F7,
-HO-C23,HO,Energy Control C23,Reducing valve,Hydraulic,Pressure control,fl.hyd.reducing,existing,F7,"Verify drawing matches during F7; existing = direct operated, pilot from outlet"
-HO-C24,HO,Energy Control C24,Electrical unloading valve,Hydraulic,Pressure control,fl.hyd.unloading.sol,pending,F7,
-HO-C25,HO,Energy Control C25,Electrical proportional relief valve,Hydraulic,Pressure control,fl.hyd.relief.prop,pending,F7,
+HO-C19,HO,Energy Control C19,Pilot operated relief valve,Hydraulic,Pressure control,fl.hyd.relief.pilot,validated,F7,"Drawn as the sources draw it (inlet top, spring left, pilot right); mirror of the existing fl.*.relief"
+HO-C20,HO,Energy Control C20,Sequence valve,Hydraulic,Pressure control,fl.hyd.sequence,validated,F7,"Also Y32 10.13.2; Drain to a reservoir symbol, as in the chart"
+HO-C21,HO,Energy Control C21,Leak-free sequence valve with external drain,Hydraulic,Pressure control,-,blocked,F7,The feature that makes it leak-free (and the symbol at its drain end) is not legible at the chart's resolution; not implemented without identification
+HO-C22,HO,Energy Control C22,Relief / unloading valve with external hydraulic pilot and internal drain,Hydraulic,Pressure control,fl.hyd.unloading,validated,F7,External pilot port X
+HO-C23,HO,Energy Control C23,Reducing valve,Hydraulic,Pressure control,fl.hyd.reducing.drain,validated,F7,"Verify drawing matches during F7; existing = direct operated, pilot from outlet; The chart's reducing valve has a drain to the reservoir, which the existing fl.hyd.reducing lacks"
+HO-C24,HO,Energy Control C24,Electrical unloading valve,Hydraulic,Pressure control,fl.hyd.unloading.sol,validated,F7,Solenoid without electrical terminals (as in the configurator)
+HO-C25,HO,Energy Control C25,Electrical proportional relief valve,Hydraulic,Pressure control,fl.hyd.relief.prop,validated,F7,Proportional solenoid without electrical terminals
 HO-C26,HO,Energy Control C26,Open centre valve,Hydraulic,Directional valves,fl.hyd.opencentre,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Composite; see Q3
 HO-C27,HO,Energy Control C27,Relief valve / electrical lowering valve,Hydraulic,Pressure control,fl.hyd.relief.lowering,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Composite; see Q3
 HO-C28,HO,Energy Control C28,Normally open solenoid check valve,Hydraulic,Directional valves,fl.hyd.sol.check.no,pending,F8,Seated 2/2
@@ -295,15 +295,15 @@ Y32-10.11.3,Y32,p18 cl.10.11.3,Typical centre conditions of three-position valve
 Y32-10.11.4,Y32,p18 cl.10.11.4,"Two-position, snap action with transition",Hydraulic+Pneumatic,Valves,dcv option 'transition',validated,F1,Q2; Director Q2: dialog change allowed
 Y32-10.12.1,Y32,p18 cl.10.12.1,"Infinite positioning between open and closed, normally closed",Hydraulic+Pneumatic,Valves,fl.*.valve.prop.nc,pending,F8,
 Y32-10.12.2,Y32,p18 cl.10.12.2,"Infinite positioning between open and closed, normally open",Hydraulic+Pneumatic,Valves,fl.*.valve.prop.no,pending,F8,
-Y32-10.13.1s,Y32,p18 cl.10.13.1,"Pressure relief, simplified",Hydraulic+Pneumatic,Valves,fl.*.relief.ansi,pending,F8,Director Q1: ANSI-style variant of fl.*.relief; becomes 'equivalent' if the ANSI drawing is identical. Pneumatic relief added (pending)
+Y32-10.13.1s,Y32,p18 cl.10.13.1,"Pressure relief, simplified",Hydraulic+Pneumatic,Valves,fl.hyd.relief.ansi; fl.pneu.relief.ansi,validated,F7,Director Q1: ANSI-style variant of fl.*.relief; becomes 'equivalent' if the ANSI drawing is identical. Pneumatic relief added (pending); Normal (port) form; simplified form's reservoir is the T port
 Y32-10.13.1n,Y32,p18 cl.10.13.1,"Pressure relief, normal",Hydraulic+Pneumatic,Valves,fl.*.relief,duplicate,-,"Same valve, explanatory form"
 Y32-10.13.1a,Y32,p18 cl.10.13.1,"Pressure relief, actuated (relieving)",Hydraulic+Pneumatic,Valves,fl.*.relief,duplicate,-,Same valve shown actuated
-Y32-10.13.2a,Y32,p18 cl.10.13.2,"Sequence valve, internal drain",Hydraulic+Pneumatic,Valves,fl.*.sequence,pending,F7,Hyd form = HO-C20
-Y32-10.13.2b,Y32,p18 cl.10.13.2,"Sequence valve, external drain",Hydraulic+Pneumatic,Valves,fl.*.sequence.drain,pending,F7,
-Y32-10.13.3a,Y32,p19 cl.10.13.3,Pressure reducing,Hydraulic+Pneumatic,Valves,fl.*.reducing.ansi,pending,F8,Director Q1: ANSI-style variant of fl.*.reducing; becomes 'equivalent' if the ANSI drawing is identical. Hyd existing; pneumatic regulator exists
-Y32-10.13.3b,Y32,p19 cl.10.13.3,Pressure reducing with external drain,Hydraulic,Valves,fl.hyd.reducing.drain,pending,F7,
-Y32-10.13.4,Y32,p19 cl.10.13.4,Pressure reducing and relieving,Hydraulic,Valves,fl.hyd.reducing.relieving,pending,F7,
-Y32-10.13.5,Y32,p19 cl.10.13.5,"Airline pressure regulator (adjustable, relieving)",Pneumatic,Valves,fl.pneu.regulator.relieving,pending,F7,
+Y32-10.13.2a,Y32,p18 cl.10.13.2,"Sequence valve, internal drain",Hydraulic+Pneumatic,Valves,fl.hyd.relief.ansi; fl.pneu.relief.ansi,equivalent,F7,Hyd form = HO-C20; Drawn identically to the ANSI relief valve; the outlet connection distinguishes a sequence valve
+Y32-10.13.2b,Y32,p18 cl.10.13.2,"Sequence valve, external drain",Hydraulic+Pneumatic,Valves,fl.hyd.sequence.drain; fl.pneu.sequence.drain,validated,F7,
+Y32-10.13.3a,Y32,p19 cl.10.13.3,Pressure reducing,Hydraulic+Pneumatic,Valves,fl.hyd.reducing.ansi; fl.pneu.reducing.ansi,validated,F7,Director Q1: ANSI-style variant of fl.*.reducing; becomes 'equivalent' if the ANSI drawing is identical. Hyd existing; pneumatic regulator exists
+Y32-10.13.3b,Y32,p19 cl.10.13.3,Pressure reducing with external drain,Hydraulic,Valves,fl.hyd.reducing.drain.ansi,validated,F7,
+Y32-10.13.4,Y32,p19 cl.10.13.4,Pressure reducing and relieving,Hydraulic,Valves,fl.hyd.reducing.relieving,validated,F7,Relieving path and drain to reservoir symbols
+Y32-10.13.5,Y32,p19 cl.10.13.5,"Airline pressure regulator (adjustable, relieving)",Pneumatic,Valves,fl.pneu.regulator.relieving,validated,F7,Vent to atmosphere drawn as in the source
 Y32-10.14,Y32,p19 cl.10.14,Infinite positioning three-way valves (four examples),Hydraulic+Pneumatic,Valves,dcv option 'proportional',validated,F1,Proportional bars; Q2; Director Q2: dialog change allowed; Three-way infinite-positioning valves: 3/2 valve types with the proportional option
 Y32-10.15,Y32,p19 cl.10.15,Infinite positioning four-way valves (four examples),Hydraulic+Pneumatic,Valves,dcv option 'proportional',validated,F1,Q2; Director Q2: dialog change allowed; Four-way: 4/2 and 4/3 with the proportional option
 Y32-10.16.1,Y32,p19 cl.10.16.1,"Flow control, adjustable, non-compensated",Hydraulic+Pneumatic,Valves,fl.*.throttle.adj.ansi,pending,F8,Director Q1: ANSI-style variant of fl.*.throttle.adj; becomes 'equivalent' if the ANSI drawing is identical.
