@@ -46,12 +46,12 @@ HO-S22,HO,Spool Controls S22,External pilot,Hydraulic+Pneumatic,Valve operators,
 HO-S18,HO,Spool Controls r18,Intermediate position,Hydraulic+Pneumatic,Directional valves,dcv option 'transition',validated,F1,Needs a valve-dialog option (GUI) - outside the allowed scope; see decision Q2; Director Q2: dialog change allowed; Two-position valves; dashed transition position
 HO-S19,HO,Spool Controls r19,Proportional spool (infinite positioning bars),Hydraulic+Pneumatic,Directional valves,dcv option 'proportional',validated,F1,Needs a valve-dialog option (GUI); see decision Q2; Director Q2: dialog change allowed; Bars along the envelopes
 HO-T01,HO,Energy Transformations r1,Fixed displacement pump,Hydraulic,Pumps & motors,fl.hyd.pump,existing,-,
-HO-T02,HO,Energy Transformations r2,Single-acting hand pump,Hydraulic,Pumps & motors,fl.hyd.pump.hand,pending,F5,
-HO-T03,HO,Energy Transformations r3,Double-acting hand pump,Hydraulic,Pumps & motors,fl.hyd.pump.hand2,pending,F5,"Composite (pump, checks, lever); external ports only"
-HO-T04,HO,Energy Transformations r4,Fixed displacement reversible motor without drain,Hydraulic,Pumps & motors,fl.hyd.motor.bidir,pending,F5,
-HO-T05,HO,Energy Transformations r5,Fixed displacement reversible pump with drain,Hydraulic,Pumps & motors,fl.hyd.pump.bidir.drain,pending,F5,
-HO-T06,HO,Energy Transformations r6,Fixed displacement reversible motor with drain,Hydraulic,Pumps & motors,fl.hyd.motor.bidir.drain,pending,F5,
-HO-T07,HO,Energy Transformations r7,Rotary actuator,Hydraulic,Pumps & motors,fl.hyd.rotary,pending,F5,Also Y32 8.7.1 oscillator (same function)
+HO-T02,HO,Energy Transformations r2,Single-acting hand pump,Hydraulic,Pumps & motors,-,excluded,F5,"Director Q3: assembly (pump, checks, release valve, lever) inside an enclosure"
+HO-T03,HO,Energy Transformations r3,Double-acting hand pump,Hydraulic,Pumps & motors,-,excluded,F5,"Composite (pump, checks, lever); external ports only; Director Q3: assembly (pump, DCV, check, relief, filter, reservoir) in an enclosure"
+HO-T04,HO,Energy Transformations r4,Fixed displacement reversible motor without drain,Hydraulic,Pumps & motors,fl.hyd.motor.bidir,validated,F5,
+HO-T05,HO,Energy Transformations r5,Fixed displacement reversible pump with drain,Hydraulic,Pumps & motors,fl.hyd.pump.bidir.drain,validated,F5,"Drain drawn to a reservoir symbol, as in the chart"
+HO-T06,HO,Energy Transformations r6,Fixed displacement reversible motor with drain,Hydraulic,Pumps & motors,fl.hyd.motor.bidir.drain,validated,F5,
+HO-T07,HO,Energy Transformations r7,Rotary actuator,Hydraulic,Pumps & motors,fl.hyd.rotary,validated,F5,Also Y32 8.7.1 oscillator (same function); Port positions inferred from the chart's other rotary devices (not visible in its figure)
 HO-T08,HO,Energy Transformations r8,Single acting cylinder,Hydraulic+Pneumatic,Cylinders,fl.*.cyl.single.ret,pending,F6,No spring drawn (return by external force); distinct from existing spring-return fl.*.cyl.single
 HO-T09,HO,Energy Transformations r9,Double acting cylinder,Hydraulic+Pneumatic,Cylinders,fl.*.cyl.double,existing,-,
 HO-T10,HO,Energy Transformations r10,Double acting cylinder with variable damping at one end,Hydraulic+Pneumatic,Cylinders,fl.*.cyl.double.damp1,pending,F6,
@@ -233,34 +233,34 @@ Y32-7.11f,Y32,p11 cl.7.11,Composite: solenoid and pilot or manual override and p
 Y32-8.1,Y32,p12 cl.8.1,"Rotary device, basic symbol",Hydraulic+Pneumatic,Pumps & motors,element,convention,-,
 Y32-8.1.1,Y32,p12 cl.8.1.1,Rotary device with ports,Hydraulic+Pneumatic,Pumps & motors,element,convention,-,
 Y32-8.1.2,Y32,p12 cl.8.1.2,"Rotary device with shaft, control and drain (example)",Hydraulic+Pneumatic,Pumps & motors,element,convention,-,
-Y32-8.2.1.1,Y32,p12 cl.8.2.1.1,"Hydraulic pump, fixed, unidirectional",Hydraulic,Pumps & motors,fl.hyd.pump.ansi,pending,F5,Director Q1: ANSI-style variant of fl.hyd.pump; becomes 'equivalent' if the ANSI drawing is identical.
-Y32-8.2.1.2,Y32,p12 cl.8.2.1.2,"Hydraulic pump, fixed, bidirectional",Hydraulic,Pumps & motors,fl.hyd.pump.bidir,pending,F5,
-Y32-8.2.2.1s,Y32,p12 cl.8.2.2.1,"Hydraulic pump, variable, non-compensated, unidirectional (simplified)",Hydraulic,Pumps & motors,fl.hyd.pump.var.ansi,pending,F5,Director Q1: ANSI-style variant of fl.hyd.pump.var; becomes 'equivalent' if the ANSI drawing is identical.
-Y32-8.2.2.1c,Y32,p12 cl.8.2.2.1,"Hydraulic pump, variable, non-compensated, unidirectional (complete)",Hydraulic,Pumps & motors,fl.hyd.pump.var.full,pending,F5,
-Y32-8.2.2.2s,Y32,p12 cl.8.2.2.2,"Hydraulic pump, variable, non-compensated, bidirectional (simplified)",Hydraulic,Pumps & motors,fl.hyd.pump.var.bidir,pending,F5,
-Y32-8.2.2.2c,Y32,p12 cl.8.2.2.2,"Hydraulic pump, variable, non-compensated, bidirectional (complete)",Hydraulic,Pumps & motors,fl.hyd.pump.var.bidir.full,pending,F5,
-Y32-8.2.3.1s,Y32,p12 cl.8.2.3.1,"Hydraulic pump, variable, pressure compensated, unidirectional (simplified)",Hydraulic,Pumps & motors,fl.hyd.pump.pc,pending,F5,
-Y32-8.2.3.1c,Y32,p12 cl.8.2.3.1,"Hydraulic pump, variable, pressure compensated, unidirectional (complete)",Hydraulic,Pumps & motors,fl.hyd.pump.pc.full,pending,F5,
-Y32-8.2.3.2s,Y32,p12 cl.8.2.3.2,"Hydraulic pump, variable, pressure compensated, bidirectional (simplified)",Hydraulic,Pumps & motors,fl.hyd.pump.pc.bidir,pending,F5,
-Y32-8.2.3.2c,Y32,p12 cl.8.2.3.2,"Hydraulic pump, variable, pressure compensated, bidirectional (complete)",Hydraulic,Pumps & motors,fl.hyd.pump.pc.bidir.full,pending,F5,
-Y32-8.3.1,Y32,p12 cl.8.3.1,"Hydraulic motor, fixed, unidirectional (two orientations)",Hydraulic,Pumps & motors,fl.hyd.motor.ansi,pending,F5,Director Q1: ANSI-style variant of fl.hyd.motor; becomes 'equivalent' if the ANSI drawing is identical.
-Y32-8.3.1.2,Y32,p12 cl.8.3.1.2,"Hydraulic motor, fixed, bidirectional",Hydraulic,Pumps & motors,fl.hyd.motor.bidir,duplicate,F5,Same as HO-T04
-Y32-8.3.2.1,Y32,p12 cl.8.3.2.1,"Hydraulic motor, variable, unidirectional",Hydraulic,Pumps & motors,fl.hyd.motor.var,pending,F5,
-Y32-8.3.2.2,Y32,p12 cl.8.3.2.2,"Hydraulic motor, variable, bidirectional",Hydraulic,Pumps & motors,fl.hyd.motor.var.bidir,pending,F5,
-Y32-8.4.1c,Y32,p13 cl.8.4.1,"Pump-motor: pump in one direction, motor in the other (complete)",Hydraulic,Pumps & motors,fl.hyd.pumpmotor.rev.full,pending,F5,
-Y32-8.4.1s,Y32,p13 cl.8.4.1,"Pump-motor: pump in one direction, motor in the other (simplified)",Hydraulic,Pumps & motors,fl.hyd.pumpmotor.rev,pending,F5,
-Y32-8.4.2c,Y32,p13 cl.8.4.2,"Pump-motor: one flow direction, pump or motor (complete)",Hydraulic,Pumps & motors,fl.hyd.pumpmotor.full,pending,F5,
-Y32-8.4.2s,Y32,p13 cl.8.4.2,"Pump-motor: one flow direction, pump or motor (simplified)",Hydraulic,Pumps & motors,fl.hyd.pumpmotor,pending,F5,
-Y32-8.4.3c,Y32,p13 cl.8.4.3,"Pump-motor: both flow directions, variable, pressure compensated (complete)",Hydraulic,Pumps & motors,fl.hyd.pumpmotor.bidir.pc.full,pending,F5,
-Y32-8.4.3s,Y32,p13 cl.8.4.3,"Pump-motor: both flow directions, variable, pressure compensated (simplified)",Hydraulic,Pumps & motors,fl.hyd.pumpmotor.bidir.pc,pending,F5,
-Y32-8.5.1,Y32,p13 cl.8.5.1,"Compressor, fixed displacement",Pneumatic,Pumps & motors,fl.pneu.compressor.ansi,pending,F5,Director Q1: ANSI-style variant of fl.pneu.compressor; becomes 'equivalent' if the ANSI drawing is identical.
-Y32-8.5.2,Y32,p13 cl.8.5.2,"Vacuum pump, fixed displacement",Pneumatic,Pumps & motors,fl.pneu.vacuumpump,pending,F5,
-Y32-8.6.1,Y32,p13 cl.8.6.1,"Pneumatic motor, unidirectional",Pneumatic,Pumps & motors,fl.pneu.motor.ansi,pending,F5,Director Q1: ANSI-style variant of fl.pneu.motor; becomes 'equivalent' if the ANSI drawing is identical.
-Y32-8.6.2,Y32,p13 cl.8.6.2,"Pneumatic motor, bidirectional",Pneumatic,Pumps & motors,fl.pneu.motor.bidir,pending,F5,
-Y32-8.7.1,Y32,p13 cl.8.7.1,"Oscillator, hydraulic",Hydraulic,Pumps & motors,fl.hyd.rotary,duplicate,F5,Same as HO-T07 rotary actuator
-Y32-8.7.2,Y32,p13 cl.8.7.2,"Oscillator, pneumatic",Pneumatic,Pumps & motors,fl.pneu.rotary,pending,F5,
-Y32-8.8.1,Y32,p13 cl.8.8.1,Electric motor (prime mover),Hydraulic+Pneumatic,Pumps & motors,fl.*.primemover.electric,pending,F5,"Mechanical prime mover (shaft only), not an electrical device; el.motor remains the electrical symbol"
-Y32-8.8.2,Y32,p13 cl.8.8.2,Heat engine (e.g. internal combustion engine),Hydraulic+Pneumatic,Pumps & motors,fl.*.primemover.engine,pending,F5,
+Y32-8.2.1.1,Y32,p12 cl.8.2.1.1,"Hydraulic pump, fixed, unidirectional",Hydraulic,Pumps & motors,fl.hyd.pump.ansi,validated,F5,Director Q1: ANSI-style variant of fl.hyd.pump; becomes 'equivalent' if the ANSI drawing is identical.; ANSI simplified form has no drive shaft
+Y32-8.2.1.2,Y32,p12 cl.8.2.1.2,"Hydraulic pump, fixed, bidirectional",Hydraulic,Pumps & motors,fl.hyd.pump.bidir,validated,F5,
+Y32-8.2.2.1s,Y32,p12 cl.8.2.2.1,"Hydraulic pump, variable, non-compensated, unidirectional (simplified)",Hydraulic,Pumps & motors,fl.hyd.pump.var.ansi,validated,F5,Director Q1: ANSI-style variant of fl.hyd.pump.var; becomes 'equivalent' if the ANSI drawing is identical.
+Y32-8.2.2.1c,Y32,p12 cl.8.2.2.1,"Hydraulic pump, variable, non-compensated, unidirectional (complete)",Hydraulic,Pumps & motors,fl.hyd.pump.var.full,validated,F5,"Control box, shaft with rotation, drain to reservoir"
+Y32-8.2.2.2s,Y32,p12 cl.8.2.2.2,"Hydraulic pump, variable, non-compensated, bidirectional (simplified)",Hydraulic,Pumps & motors,fl.hyd.pump.var.bidir,validated,F5,
+Y32-8.2.2.2c,Y32,p12 cl.8.2.2.2,"Hydraulic pump, variable, non-compensated, bidirectional (complete)",Hydraulic,Pumps & motors,fl.hyd.pump.var.bidir.full,validated,F5,
+Y32-8.2.3.1s,Y32,p12 cl.8.2.3.1,"Hydraulic pump, variable, pressure compensated, unidirectional (simplified)",Hydraulic,Pumps & motors,fl.hyd.pump.pc,validated,F5,
+Y32-8.2.3.1c,Y32,p12 cl.8.2.3.1,"Hydraulic pump, variable, pressure compensated, unidirectional (complete)",Hydraulic,Pumps & motors,fl.hyd.pump.pc.full,validated,F5,
+Y32-8.2.3.2s,Y32,p12 cl.8.2.3.2,"Hydraulic pump, variable, pressure compensated, bidirectional (simplified)",Hydraulic,Pumps & motors,fl.hyd.pump.pc.bidir,validated,F5,
+Y32-8.2.3.2c,Y32,p12 cl.8.2.3.2,"Hydraulic pump, variable, pressure compensated, bidirectional (complete)",Hydraulic,Pumps & motors,fl.hyd.pump.pc.bidir.full,validated,F5,
+Y32-8.3.1,Y32,p12 cl.8.3.1,"Hydraulic motor, fixed, unidirectional (two orientations)",Hydraulic,Pumps & motors,-,blocked,F5,"Director Q1: ANSI-style variant of fl.hyd.motor; becomes 'equivalent' if the ANSI drawing is identical.; The PDF draws this hydraulic motor with its energy triangles pointing OUT of the body - identical to the pump figures (8.2) and contrary to the same document's pneumatic motor (8.6.1, triangle pointing in). Reproduced as printed it would be indistinguishable from a pump, so it is not added; the ISO motors (fl.hyd.motor, fl.hyd.motor.bidir) cover the function"
+Y32-8.3.1.2,Y32,p12 cl.8.3.1.2,"Hydraulic motor, fixed, bidirectional",Hydraulic,Pumps & motors,-,blocked,F5,"Same as HO-T04; The PDF draws this hydraulic motor with its energy triangles pointing OUT of the body - identical to the pump figures (8.2) and contrary to the same document's pneumatic motor (8.6.1, triangle pointing in). Reproduced as printed it would be indistinguishable from a pump, so it is not added; the ISO motors (fl.hyd.motor, fl.hyd.motor.bidir) cover the function"
+Y32-8.3.2.1,Y32,p12 cl.8.3.2.1,"Hydraulic motor, variable, unidirectional",Hydraulic,Pumps & motors,-,blocked,F5,"The PDF draws this hydraulic motor with its energy triangles pointing OUT of the body - identical to the pump figures (8.2) and contrary to the same document's pneumatic motor (8.6.1, triangle pointing in). Reproduced as printed it would be indistinguishable from a pump, so it is not added; the ISO motors (fl.hyd.motor, fl.hyd.motor.bidir) cover the function"
+Y32-8.3.2.2,Y32,p12 cl.8.3.2.2,"Hydraulic motor, variable, bidirectional",Hydraulic,Pumps & motors,-,blocked,F5,"The PDF draws this hydraulic motor with its energy triangles pointing OUT of the body - identical to the pump figures (8.2) and contrary to the same document's pneumatic motor (8.6.1, triangle pointing in). Reproduced as printed it would be indistinguishable from a pump, so it is not added; the ISO motors (fl.hyd.motor, fl.hyd.motor.bidir) cover the function"
+Y32-8.4.1c,Y32,p13 cl.8.4.1,"Pump-motor: pump in one direction, motor in the other (complete)",Hydraulic,Pumps & motors,fl.hyd.pumpmotor.rev.full,validated,F5,Rotation arrow both ways
+Y32-8.4.1s,Y32,p13 cl.8.4.1,"Pump-motor: pump in one direction, motor in the other (simplified)",Hydraulic,Pumps & motors,fl.hyd.pumpmotor.rev,validated,F5,
+Y32-8.4.2c,Y32,p13 cl.8.4.2,"Pump-motor: one flow direction, pump or motor (complete)",Hydraulic,Pumps & motors,fl.hyd.pumpmotor.full,validated,F5,
+Y32-8.4.2s,Y32,p13 cl.8.4.2,"Pump-motor: one flow direction, pump or motor (simplified)",Hydraulic,Pumps & motors,fl.hyd.pumpmotor,validated,F5,
+Y32-8.4.3c,Y32,p13 cl.8.4.3,"Pump-motor: both flow directions, variable, pressure compensated (complete)",Hydraulic,Pumps & motors,fl.hyd.pumpmotor.bidir.pc.full,validated,F5,
+Y32-8.4.3s,Y32,p13 cl.8.4.3,"Pump-motor: both flow directions, variable, pressure compensated (simplified)",Hydraulic,Pumps & motors,fl.hyd.pumpmotor.bidir.pc,validated,F5,
+Y32-8.5.1,Y32,p13 cl.8.5.1,"Compressor, fixed displacement",Pneumatic,Pumps & motors,fl.pneu.compressor.ansi,validated,F5,Director Q1: ANSI-style variant of fl.pneu.compressor; becomes 'equivalent' if the ANSI drawing is identical.; ANSI simplified form has no drive shaft
+Y32-8.5.2,Y32,p13 cl.8.5.2,"Vacuum pump, fixed displacement",Pneumatic,Pumps & motors,fl.pneu.vacuumpump,validated,F5,
+Y32-8.6.1,Y32,p13 cl.8.6.1,"Pneumatic motor, unidirectional",Pneumatic,Pumps & motors,fl.pneu.motor.ansi,validated,F5,Director Q1: ANSI-style variant of fl.pneu.motor; becomes 'equivalent' if the ANSI drawing is identical.
+Y32-8.6.2,Y32,p13 cl.8.6.2,"Pneumatic motor, bidirectional",Pneumatic,Pumps & motors,-,blocked,F5,"Drawn with both triangles pointing out (as a bidirectional compressor), contrary to 8.6.1; not reproduced for the same reason as the hydraulic motors"
+Y32-8.7.1,Y32,p13 cl.8.7.1,"Oscillator, hydraulic",Hydraulic,Pumps & motors,fl.hyd.rotary.ansi,validated,F5,Same as HO-T07 rotary actuator; ANSI oscillator (dome) differs from the ISO rotary actuator
+Y32-8.7.2,Y32,p13 cl.8.7.2,"Oscillator, pneumatic",Pneumatic,Pumps & motors,fl.pneu.rotary,validated,F5,
+Y32-8.8.1,Y32,p13 cl.8.8.1,Electric motor (prime mover),Hydraulic+Pneumatic,Pumps & motors,el.motor,equivalent,F5,"Mechanical prime mover (shaft only), not an electrical device; el.motor remains the electrical symbol; The PDF marks it IEC; same circle-with-M as the existing electric motor"
+Y32-8.8.2,Y32,p13 cl.8.8.2,Heat engine (e.g. internal combustion engine),Hydraulic+Pneumatic,Pumps & motors,-,blocked,F5,Mechanical-only component (no fluid or electrical connection). Only drafting elements may be terminal-less (director Q5) and a fictitious terminal is ruled out - needs a director decision on mechanical components
 Y32-9.1.1,Y32,p13 cl.9.1.1,Pressure indicator / recorder (three forms),Hydraulic+Pneumatic,Measurement,fl.*.pressure.indicator.ansi,pending,F9,Director Q1: ANSI-style variant of fl.*.pressure.indicator; becomes 'equivalent' if the ANSI drawing is identical.
 Y32-9.1.2,Y32,p13 cl.9.1.2,Temperature indicator (four forms),Hydraulic+Pneumatic,Measurement,fl.*.thermometer.ansi,pending,F9,Director Q1: ANSI-style variant of fl.*.thermometer; becomes 'equivalent' if the ANSI drawing is identical.
 Y32-9.1.3.1,Y32,p13 cl.9.1.3.1,"Flow meter, flow rate",Hydraulic+Pneumatic,Measurement,fl.*.flowmeter.ansi,pending,F9,Director Q1: ANSI-style variant of fl.*.flowmeter; becomes 'equivalent' if the ANSI drawing is identical.

@@ -917,13 +917,56 @@ F4 = {
     "Y32-5.6.1": ("validated", "fl.pneu.lubricator", ""),
     "Y32-5.6.2": ("validated", "fl.pneu.lubricator.drain", ""),
 }
+MOTOR_ERR = "The PDF draws this hydraulic motor with its energy triangles pointing OUT of the body - identical to the pump figures (8.2) and contrary to the same document's pneumatic motor (8.6.1, triangle pointing in). Reproduced as printed it would be indistinguishable from a pump, so it is not added; the ISO motors (fl.hyd.motor, fl.hyd.motor.bidir) cover the function"
+F5 = {
+    "HO-T02": ("excluded", "-", "Director Q3: assembly (pump, checks, release valve, lever) inside an enclosure"),
+    "HO-T03": ("excluded", "-", "Director Q3: assembly (pump, DCV, check, relief, filter, reservoir) in an enclosure"),
+    "HO-T04": ("validated", "fl.hyd.motor.bidir", ""),
+    "HO-T05": ("validated", "fl.hyd.pump.bidir.drain", "Drain drawn to a reservoir symbol, as in the chart"),
+    "HO-T06": ("validated", "fl.hyd.motor.bidir.drain", ""),
+    "HO-T07": ("validated", "fl.hyd.rotary",
+               "Port positions inferred from the chart's other rotary devices (not visible in its figure)"),
+    "Y32-8.2.1.1": ("validated", "fl.hyd.pump.ansi", "ANSI simplified form has no drive shaft"),
+    "Y32-8.2.1.2": ("validated", "fl.hyd.pump.bidir", ""),
+    "Y32-8.2.2.1s": ("validated", "fl.hyd.pump.var.ansi", ""),
+    "Y32-8.2.2.1c": ("validated", "fl.hyd.pump.var.full", "Control box, shaft with rotation, drain to reservoir"),
+    "Y32-8.2.2.2s": ("validated", "fl.hyd.pump.var.bidir", ""),
+    "Y32-8.2.2.2c": ("validated", "fl.hyd.pump.var.bidir.full", ""),
+    "Y32-8.2.3.1s": ("validated", "fl.hyd.pump.pc", ""),
+    "Y32-8.2.3.1c": ("validated", "fl.hyd.pump.pc.full", ""),
+    "Y32-8.2.3.2s": ("validated", "fl.hyd.pump.pc.bidir", ""),
+    "Y32-8.2.3.2c": ("validated", "fl.hyd.pump.pc.bidir.full", ""),
+    "Y32-8.3.1": ("blocked", "-", MOTOR_ERR),
+    "Y32-8.3.1.2": ("blocked", "-", MOTOR_ERR),
+    "Y32-8.3.2.1": ("blocked", "-", MOTOR_ERR),
+    "Y32-8.3.2.2": ("blocked", "-", MOTOR_ERR),
+    "Y32-8.4.1c": ("validated", "fl.hyd.pumpmotor.rev.full", "Rotation arrow both ways"),
+    "Y32-8.4.1s": ("validated", "fl.hyd.pumpmotor.rev", ""),
+    "Y32-8.4.2c": ("validated", "fl.hyd.pumpmotor.full", ""),
+    "Y32-8.4.2s": ("validated", "fl.hyd.pumpmotor", ""),
+    "Y32-8.4.3c": ("validated", "fl.hyd.pumpmotor.bidir.pc.full", ""),
+    "Y32-8.4.3s": ("validated", "fl.hyd.pumpmotor.bidir.pc", ""),
+    "Y32-8.5.1": ("validated", "fl.pneu.compressor.ansi", "ANSI simplified form has no drive shaft"),
+    "Y32-8.5.2": ("validated", "fl.pneu.vacuumpump", ""),
+    "Y32-8.6.1": ("validated", "fl.pneu.motor.ansi", ""),
+    "Y32-8.6.2": ("blocked", "-", "Drawn with both triangles pointing out (as a bidirectional compressor), "
+                                  "contrary to 8.6.1; not reproduced for the same reason as the hydraulic motors"),
+    "Y32-8.7.1": ("validated", "fl.hyd.rotary.ansi", "ANSI oscillator (dome) differs from the ISO rotary actuator"),
+    "Y32-8.7.2": ("validated", "fl.pneu.rotary", ""),
+    "Y32-8.8.1": ("equivalent", "el.motor", "The PDF marks it IEC; same circle-with-M as the existing electric motor"),
+    "Y32-8.8.2": ("blocked", "-", "Mechanical-only component (no fluid or electrical connection). Only drafting "
+                                  "elements may be terminal-less (director Q5) and a fictitious terminal is ruled "
+                                  "out - needs a director decision on mechanical components"),
+}
 for k, (st, tgt, note) in F2.items():
+    PROGRESS[k] = (st, tgt, note)
+for k, (st, tgt, note) in F5.items():
     PROGRESS[k] = (st, tgt, note)
 for k, (st, tgt, note) in F4.items():
     PROGRESS[k] = (st, tgt, note)
 for k, (st, tgt, note) in F3.items():
     PROGRESS[k] = (st, tgt, note)
-BATCH_OF = {**{k: "F2" for k in F2}, **{k: "F3" for k in F3}, **{k: "F4" for k in F4}}
+BATCH_OF = {**{k: "F2" for k in F2}, **{k: "F3" for k in F3}, **{k: "F4" for k in F4}, **{k: "F5" for k in F5}}
 for r in R:
     if r["key"] in PROGRESS:
         st, tgt, note = PROGRESS[r["key"]]

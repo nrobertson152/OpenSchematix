@@ -16,7 +16,7 @@ import weakref
 from functools import lru_cache
 
 from .base import Geometry, SymbolDef, Terminal, validate_geometry, LINE_WIDTHS, PORT_TYPES, port_domain  # noqa: F401
-from . import drafting, electrical, fluid, fluid_conditioning, fluid_lines, fluid_storage, general
+from . import drafting, electrical, fluid, fluid_conditioning, fluid_lines, fluid_rotary, fluid_storage, general
 
 CATEGORY_ORDER = ["Electrical", "Electronic", "Hydraulic", "Pneumatic", "General"]
 
@@ -27,7 +27,7 @@ _OWNER = None                            # weakref to the project whose symbols 
 
 
 def _register_all():
-    for mod in (electrical, fluid, general, fluid_lines, fluid_storage, fluid_conditioning, drafting):
+    for mod in (electrical, fluid, general, fluid_lines, fluid_storage, fluid_conditioning, fluid_rotary, drafting):
         for sym in mod.symbols():
             if sym.id in _REGISTRY:
                 raise ValueError(f"duplicate symbol id {sym.id}")
