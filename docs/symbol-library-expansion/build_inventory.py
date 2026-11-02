@@ -1174,16 +1174,29 @@ E3 = {
                    "bidirectional TVS / Zener symbol, so it is no longer ambiguous"),
     "ECL-DIO3.9": ("validated", "el.rectifier.block", "Terminals AC1, AC2, +, -"),
     "ECL-DIO3.10": ("validated", "el.rectifier.bridge", "Terminals AC1, AC2, +, -"),
-    "ECL-DIO4.4": ("duplicate", "ECL-DIO3.7", "Outline style of row 3"),
-    "ECL-DIO4.5": ("duplicate", "el.tvs.bidir", "Outline style of row 3"),
+    "ECL-DIO4.4": ("duplicate", "ECL-DIO3.7", ""),
+    "ECL-DIO4.5": ("duplicate", "el.tvs.bidir", ""),
     "ECL-DIO4.6": ("validated", "el.converter.acdc", "DC polarity not marked in the source: terminals DC1, DC2"),
 }
 for k, (st, tgt, note) in E3.items():
     PROGRESS[k] = (st, tgt, note)
+E4 = {
+    "ECL-TRS1.2": ("validated", "el.npn.photo", "No base connection, as drawn (terminals C, E)"),
+    "ECL-TRS1.3": ("validated", "el.jfet.n", "Terminals G, D, S"),
+    "ECL-TRS1.4": ("validated", "el.nmos.env", "Body connected to the source, as drawn"),
+    "ECL-TRS1.5": ("validated", "el.nmos", "Arrow on the source lead"),
+    "ECL-TRS2.2": ("validated", "el.pnp.photo", "No base connection, as drawn (terminals C, E)"),
+    "ECL-TRS2.3": ("validated", "el.jfet.p", "Terminals G, D, S"),
+    "ECL-TRS2.4": ("validated", "el.pmos.env", "Body connected to the source, as drawn"),
+    "ECL-TRS2.5": ("validated", "el.pmos", "Arrow on the source lead"),
+    "ECL-TRS2.6": ("validated", "el.pmos.bubble", ""),
+}
+for k, (st, tgt, note) in E4.items():
+    PROGRESS[k] = (st, tgt, note)
 # History: decision 1 (2026-11-02) reopened Y32-8.3.1, -8.3.1.2, -8.3.2.1, -8.3.2.2 and -8.6.2; batch F5b completed
 # them, so the allowlist is empty again and those rows are protected like every other completed row.
 REOPENED: set = set()
-BATCH_OF = {**{k: "F2" for k in F2}, **{k: "F3" for k in F3}, **{k: "F4" for k in F4}, **{k: "F5" for k in F5}, **{k: "F5b" for k in F5B}, **{k: "F6" for k in F6}, **{k: "F7" for k in F7}, **{k: "F8a" for k in F8A}, **{k: "F8b" for k in F8B}, **{k: "F9" for k in F9}, **{k: "F10" for k in F10}, **{k: "E1" for k in E1}, **{k: "E2" for k in E2}, **{k: "E3" for k in E3}}
+BATCH_OF = {**{k: "F2" for k in F2}, **{k: "F3" for k in F3}, **{k: "F4" for k in F4}, **{k: "F5" for k in F5}, **{k: "F5b" for k in F5B}, **{k: "F6" for k in F6}, **{k: "F7" for k in F7}, **{k: "F8a" for k in F8A}, **{k: "F8b" for k in F8B}, **{k: "F9" for k in F9}, **{k: "F10" for k in F10}, **{k: "E1" for k in E1}, **{k: "E2" for k in E2}, **{k: "E3" for k in E3}, **{k: "E4" for k in E4}}
 for r in R:
     if r["key"] in PROGRESS:
         st, tgt, note = PROGRESS[r["key"]]

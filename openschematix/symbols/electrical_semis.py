@@ -1,6 +1,7 @@
 """Diodes, thyristors and rectifiers (symbol-library expansion, batch E3).
 
-Source: ECL = "Electric Components Library" (ElCompLib2017.svg, CC0 1.0), section "Diodes (semiconductor)".
+Source: ECL = "Electric Components Library" (ElCompLib2017.svg, CC0 1.0), sections "Diodes (semiconductor)" and
+"Transistors" (batch E4: transistors drawn like the existing el.npn - envelope circle centred at x = 2).
 Redrawn natively in the style of the existing el.diode (outline triangle; the source's filled and outline rows are
 the same symbols). Two-terminal parts horizontal, anode / main terminal 2 on the left, terminals at x = -20 / +20.
 """
@@ -8,7 +9,7 @@ from __future__ import annotations
 
 import math
 
-from .base import IEC, IEEE, Geometry, SymbolDef, Terminal as T, arrow, line, poly, polyline, rect, text
+from .base import IEC, IEEE, Geometry, SymbolDef, Terminal as T, arrow, arrowhead, circle, line, poly, polyline, rect, text
 
 EL = "Electronic"
 G = "Semiconductors"
@@ -97,4 +98,64 @@ def symbols():
                                   T("DC2", 30, 10, "r")]), keywords=("rectifier", "power supply"),
                   notes="The source marks the AC side with ~ and the DC side with a bar; it does not mark the DC "
                         "polarity, so the DC terminals are not named + and -."))
+    # ---------------------------------------------------------------- E4: transistors
+    env = [circle(2, 0, 14, w="thin")]
+    q = "Q"
+    for npn in (True, False):
+        p = env + [line(-6, -9, -6, 9), polyline([(-6, -4), (10, -12), (10, -20)]), polyline([(-6, 4), (10, 12), (10, 20)])]
+        p += [arrowhead((8, 11), (-6, 4), length=5, half_width=2.2)] if npn else \
+             [arrowhead((-4, 5), (10, 12), length=5, half_width=2.2)]
+        p += arrow(-20, -18, -12, -10, head=3.5) + arrow(-14, -22, -6, -14, head=3.5)
+        kind = "NPN" if npn else "PNP"
+        add(SymbolDef(f"el.{kind.lower()}.photo", f"Phototransistor, {kind}", EL, G, IEEE,
+                      f"{kind} phototransistor: light acts as the base drive (no base connection). C collector, "
+                      "E emitter.", q, Geometry(p, [T("C", 10, -20, "u"), T("E", 10, 20, "d")]),
+                      keywords=("light", "optical", "sensor")))
+    for n in (True, False):
+        ch = "N" if n else "P"
+        gy = 10 if n else -10                      # gate at the source end: source below for N, above for P
+        p = env + [line(-2, -12, -2, 12, w="thick"), polyline([(-2, -10), (10, -10), (10, -20)]),
+                   polyline([(-2, 10), (10, 10), (10, 20)]), line(-20, gy, -2, gy)]
+        p.append(arrowhead((-2, gy), (-12, gy), length=5, half_width=2.2) if n else
+                 arrowhead((-12, gy), (-2, gy), length=5, half_width=2.2))
+        terms = [T("G", -20, gy, "l"), T("D", 10, -20 if n else 20, "u" if n else "d"),
+                 T("S", 10, 20 if n else -20, "d" if n else "u")]
+        add(SymbolDef(f"el.jfet.{ch.lower()}", f"JFET, {ch}-channel", EL, G, IEEE,
+                      f"Junction field-effect transistor, {ch}-channel. G gate, D drain, S source.", q,
+                      Geometry(p, terms), keywords=("fet", "jfet")))
+
+    def mos_core(n):
+        """Enhancement MOSFET: gate plate, broken channel; source below for N, above for P."""
+        sy = 9 if n else -9
+        return [line(-8, -9, -8, 9), line(-4, -12, -4, -6), line(-4, -3, -4, 3), line(-4, 6, -4, 12),
+                polyline([(-4, -9), (10, -9), (10, -20)]), polyline([(-4, 9), (10, 9), (10, 20)])], sy
+
+    for n in (True, False):
+        ch = "N" if n else "P"
+        core, sy = mos_core(n)
+        dterm = T("D", 10, -20 if n else 20, "u" if n else "d")
+        sterm = T("S", 10, 20 if n else -20, "d" if n else "u")
+        # with envelope: body connected to the source, arrow in (N) or out (P)
+        gy = 10 if n else -10
+        p = env + core + [line(-20, gy, -8, gy), line(-4, 0, 10, 0), line(10, 0, 10, sy)]
+        p.append(arrowhead((-4, 0), (6, 0), length=5, half_width=2.2) if n else
+                 arrowhead((7, 0), (-3, 0), length=5, half_width=2.2))
+        add(SymbolDef(f"el.{ch.lower()}mos.env", f"MOSFET, {ch}-channel, enhancement", EL, G, IEEE,
+                      f"Enhancement-mode {ch}-channel MOSFET in an envelope, body connected to the source. G gate, "
+                      "D drain, S source.", q, Geometry(p, [T("G", -20, gy, "l"), dterm, sterm]),
+                      keywords=("fet", "mosfet", "nmos" if n else "pmos")))
+        # without envelope: arrow on the source lead, out (N) or in (P)
+        p = core + [line(-20, 0, -8, 0)]
+        p.append(arrowhead((7, sy), (-1, sy), length=5, half_width=2.2) if n else
+                 arrowhead((-1, sy), (7, sy), length=5, half_width=2.2))
+        add(SymbolDef(f"el.{ch.lower()}mos", f"MOSFET, {ch}-channel, enhancement (no envelope)", EL, G, IEEE,
+                      f"Enhancement-mode {ch}-channel MOSFET, compact form with the arrow on the source. G gate, "
+                      "D drain, S source.", q, Geometry(p, [T("G", -20, 0, "l"), dterm, sterm]),
+                      keywords=("fet", "mosfet", "nmos" if n else "pmos")))
+    core, sy = mos_core(False)
+    add(SymbolDef("el.pmos.bubble", "MOSFET, P-channel (gate-bubble form)", EL, G, IEEE,
+                  "P-channel MOSFET, logic (gate-bubble) form. G gate, D drain, S source.", q,
+                  Geometry(core + [line(-20, 0, -14, 0), circle(-11, 0, 2.5)],
+                           [T("G", -20, 0, "l"), T("D", 10, 20, "d"), T("S", 10, -20, "u")]),
+                  keywords=("fet", "mosfet", "pmos")))
     return s
