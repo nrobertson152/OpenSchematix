@@ -48,6 +48,10 @@ def symbols():
         _mark("gen.mark.solenoids.opposed", "Solenoids working in opposite directions", "General", ISO,
               "Two windings acting in opposite directions.",
               [line(-6, -6, -2, 6), line(6, -6, 2, 6)], ("solenoid", "winding")),
+        _mark("gen.mark.buswidth", "Bus width marker", "General", GENERIC,
+              "Short slash drawn across a wire to show that it is a bus; write the number of lines beside it "
+              "(source: ECL basic logic blocks). Place it over the wire; it does not connect.",
+              [line(-4, 6, 4, -6)], ("bus", "width", "multi-line")),
         _mark("gen.coupling", "Shaft coupling", "General", ISO,
               "Mechanical coupling between two shafts.",
               [line(-10, -2, -2, -2), line(-10, 2, -2, 2), line(-2, -6, -2, 6),

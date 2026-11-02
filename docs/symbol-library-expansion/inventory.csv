@@ -340,39 +340,39 @@ ECL-OTH2.2,ECL,Other things r2 #2,Crystal (quartz resonator),Electronic,Passive,
 ECL-OTH2.3,ECL,Other things r2 #3,Loudspeaker,Electronic,Transducers,el.speaker,pending,E8,
 ECL-OTH2.4,ECL,Other things r2 #4,DC motor with brushes (horizontal),Electrical,Machines,ECL-OTH1.6,duplicate,E8,Rotated drawing of r1 #6
 ECL-OTH2.5,ECL,Other things r2 #5,"Ammeter, pictorial (illustration)",Electrical,Measurement,-,blocked,-,Pictorial illustration
-ECL-BAS1.1,ECL,Basic logic blocks r1 #1,"AND gate, 2 inputs",Electronic,Logic,el.logic.and2,pending,E7,Distinctive-shape (ANSI/IEEE 91) style
-ECL-BAS1.2,ECL,Basic logic blocks r1 #2,"NAND gate, 2 inputs",Electronic,Logic,el.logic.nand2,pending,E7,Distinctive-shape (ANSI/IEEE 91) style
-ECL-BAS1.3,ECL,Basic logic blocks r1 #3,"OR gate, 2 inputs",Electronic,Logic,el.logic.or2,pending,E7,Distinctive-shape (ANSI/IEEE 91) style
-ECL-BAS1.4,ECL,Basic logic blocks r1 #4,"NOR gate, 2 inputs",Electronic,Logic,el.logic.nor2,pending,E7,Distinctive-shape (ANSI/IEEE 91) style
-ECL-BAS1.5,ECL,Basic logic blocks r1 #5,"XOR gate, 2 inputs",Electronic,Logic,el.logic.xor2,pending,E7,Distinctive-shape (ANSI/IEEE 91) style
-ECL-BAS1.6,ECL,Basic logic blocks r1 #6,"XNOR gate, 2 inputs",Electronic,Logic,el.logic.xnor2,pending,E7,Distinctive-shape (ANSI/IEEE 91) style
-ECL-BAS2.1,ECL,Basic logic blocks r2 #1,"AND gate, 3 inputs",Electronic,Logic,el.logic.and3,pending,E7,Distinctive-shape (ANSI/IEEE 91) style
-ECL-BAS2.2,ECL,Basic logic blocks r2 #2,"NAND gate, 3 inputs",Electronic,Logic,el.logic.nand3,pending,E7,Distinctive-shape (ANSI/IEEE 91) style
-ECL-BAS2.3,ECL,Basic logic blocks r2 #3,"OR gate, 3 inputs",Electronic,Logic,el.logic.or3,pending,E7,Distinctive-shape (ANSI/IEEE 91) style
-ECL-BAS2.4,ECL,Basic logic blocks r2 #4,"NOR gate, 3 inputs",Electronic,Logic,el.logic.nor3,pending,E7,Distinctive-shape (ANSI/IEEE 91) style
-ECL-BAS2.5,ECL,Basic logic blocks r2 #5,"XOR gate, 3 inputs",Electronic,Logic,el.logic.xor3,pending,E7,Distinctive-shape (ANSI/IEEE 91) style
-ECL-BAS2.6,ECL,Basic logic blocks r2 #6,"XNOR gate, 3 inputs",Electronic,Logic,el.logic.xnor3,pending,E7,Distinctive-shape (ANSI/IEEE 91) style
-ECL-BAS3.1,ECL,Basic logic blocks r3 #1,"AND gate, 4 inputs",Electronic,Logic,el.logic.and4,pending,E7,Distinctive-shape (ANSI/IEEE 91) style
-ECL-BAS3.2,ECL,Basic logic blocks r3 #2,"NAND gate, 4 inputs",Electronic,Logic,el.logic.nand4,pending,E7,Distinctive-shape (ANSI/IEEE 91) style
-ECL-BAS3.3,ECL,Basic logic blocks r3 #3,"OR gate, 4 inputs",Electronic,Logic,el.logic.or4,pending,E7,Distinctive-shape (ANSI/IEEE 91) style
-ECL-BAS3.4,ECL,Basic logic blocks r3 #4,"NOR gate, 4 inputs",Electronic,Logic,el.logic.nor4,pending,E7,Distinctive-shape (ANSI/IEEE 91) style
-ECL-BAS3.5,ECL,Basic logic blocks r3 #5,"XOR gate, 4 inputs",Electronic,Logic,el.logic.xor4,pending,E7,Distinctive-shape (ANSI/IEEE 91) style
-ECL-BAS3.6,ECL,Basic logic blocks r3 #6,"XNOR gate, 4 inputs",Electronic,Logic,el.logic.xnor4,pending,E7,Distinctive-shape (ANSI/IEEE 91) style
-ECL-BAS4.1,ECL,Basic logic blocks r4 #1,"AND gate, wide input bar (5 inputs)",Electronic,Logic,el.logic.and5,pending,E7,Extended input bar drawing; 5 input leads shown
-ECL-BAS4.2,ECL,Basic logic blocks r4 #2,"NAND gate, wide input bar (5 inputs)",Electronic,Logic,el.logic.nand5,pending,E7,Extended input bar drawing; 5 input leads shown
-ECL-BAS4.3,ECL,Basic logic blocks r4 #3,"OR gate, wide input bar (5 inputs)",Electronic,Logic,el.logic.or5,pending,E7,Extended input bar drawing; 5 input leads shown
-ECL-BAS4.4,ECL,Basic logic blocks r4 #4,"NOR gate, wide input bar (5 inputs)",Electronic,Logic,el.logic.nor5,pending,E7,Extended input bar drawing; 5 input leads shown
-ECL-BAS4.5,ECL,Basic logic blocks r4 #5,"XOR gate, wide input bar (5 inputs)",Electronic,Logic,el.logic.xor5,pending,E7,Extended input bar drawing; 5 input leads shown
-ECL-BAS4.6,ECL,Basic logic blocks r4 #6,"XNOR gate, wide input bar (5 inputs)",Electronic,Logic,el.logic.xnor5,pending,E7,Extended input bar drawing; 5 input leads shown
-ECL-BAS1.7,ECL,Basic logic blocks r1 #7,NOT gate (inverter),Electronic,Logic,el.logic.not,pending,E7,
-ECL-BAS2.7,ECL,Basic logic blocks r2 #7,"D latch (D, E, Q, /Q)",Electronic,Logic,el.logic.dlatch,pending,E7,
-ECL-BAS3.7,ECL,Basic logic blocks r3 #7,"D flip-flop, edge triggered (D, clock, Q, /Q)",Electronic,Logic,el.logic.dff,pending,E7,
-ECL-BAS4.7,ECL,Basic logic blocks r4 #7,"JK flip-flop (J, clock, K, Q, /Q)",Electronic,Logic,el.logic.jkff,pending,E7,
-ECL-BAS1.8,ECL,Basic logic blocks r1 #8,Full adder (vertical pin layout),Electronic,Logic,el.logic.fulladder,pending,E7,
+ECL-BAS1.1,ECL,Basic logic blocks r1 #1,"AND gate, 2 inputs",Electronic,Logic,el.logic.and2,validated,E7,"Distinctive-shape (ANSI/IEEE 91) style; Inputs A..E, output Y"
+ECL-BAS1.2,ECL,Basic logic blocks r1 #2,"NAND gate, 2 inputs",Electronic,Logic,el.logic.nand2,validated,E7,"Distinctive-shape (ANSI/IEEE 91) style; Inputs A..E, output Y"
+ECL-BAS1.3,ECL,Basic logic blocks r1 #3,"OR gate, 2 inputs",Electronic,Logic,el.logic.or2,validated,E7,"Distinctive-shape (ANSI/IEEE 91) style; Inputs A..E, output Y"
+ECL-BAS1.4,ECL,Basic logic blocks r1 #4,"NOR gate, 2 inputs",Electronic,Logic,el.logic.nor2,validated,E7,"Distinctive-shape (ANSI/IEEE 91) style; Inputs A..E, output Y"
+ECL-BAS1.5,ECL,Basic logic blocks r1 #5,"XOR gate, 2 inputs",Electronic,Logic,el.logic.xor2,validated,E7,"Distinctive-shape (ANSI/IEEE 91) style; Inputs A..E, output Y"
+ECL-BAS1.6,ECL,Basic logic blocks r1 #6,"XNOR gate, 2 inputs",Electronic,Logic,el.logic.xnor2,validated,E7,"Distinctive-shape (ANSI/IEEE 91) style; Inputs A..E, output Y"
+ECL-BAS2.1,ECL,Basic logic blocks r2 #1,"AND gate, 3 inputs",Electronic,Logic,el.logic.and3,validated,E7,"Distinctive-shape (ANSI/IEEE 91) style; Inputs A..E, output Y"
+ECL-BAS2.2,ECL,Basic logic blocks r2 #2,"NAND gate, 3 inputs",Electronic,Logic,el.logic.nand3,validated,E7,"Distinctive-shape (ANSI/IEEE 91) style; Inputs A..E, output Y"
+ECL-BAS2.3,ECL,Basic logic blocks r2 #3,"OR gate, 3 inputs",Electronic,Logic,el.logic.or3,validated,E7,"Distinctive-shape (ANSI/IEEE 91) style; Inputs A..E, output Y"
+ECL-BAS2.4,ECL,Basic logic blocks r2 #4,"NOR gate, 3 inputs",Electronic,Logic,el.logic.nor3,validated,E7,"Distinctive-shape (ANSI/IEEE 91) style; Inputs A..E, output Y"
+ECL-BAS2.5,ECL,Basic logic blocks r2 #5,"XOR gate, 3 inputs",Electronic,Logic,el.logic.xor3,validated,E7,"Distinctive-shape (ANSI/IEEE 91) style; Inputs A..E, output Y"
+ECL-BAS2.6,ECL,Basic logic blocks r2 #6,"XNOR gate, 3 inputs",Electronic,Logic,el.logic.xnor3,validated,E7,"Distinctive-shape (ANSI/IEEE 91) style; Inputs A..E, output Y"
+ECL-BAS3.1,ECL,Basic logic blocks r3 #1,"AND gate, 4 inputs",Electronic,Logic,el.logic.and4,validated,E7,"Distinctive-shape (ANSI/IEEE 91) style; Inputs A..E, output Y"
+ECL-BAS3.2,ECL,Basic logic blocks r3 #2,"NAND gate, 4 inputs",Electronic,Logic,el.logic.nand4,validated,E7,"Distinctive-shape (ANSI/IEEE 91) style; Inputs A..E, output Y"
+ECL-BAS3.3,ECL,Basic logic blocks r3 #3,"OR gate, 4 inputs",Electronic,Logic,el.logic.or4,validated,E7,"Distinctive-shape (ANSI/IEEE 91) style; Inputs A..E, output Y"
+ECL-BAS3.4,ECL,Basic logic blocks r3 #4,"NOR gate, 4 inputs",Electronic,Logic,el.logic.nor4,validated,E7,"Distinctive-shape (ANSI/IEEE 91) style; Inputs A..E, output Y"
+ECL-BAS3.5,ECL,Basic logic blocks r3 #5,"XOR gate, 4 inputs",Electronic,Logic,el.logic.xor4,validated,E7,"Distinctive-shape (ANSI/IEEE 91) style; Inputs A..E, output Y"
+ECL-BAS3.6,ECL,Basic logic blocks r3 #6,"XNOR gate, 4 inputs",Electronic,Logic,el.logic.xnor4,validated,E7,"Distinctive-shape (ANSI/IEEE 91) style; Inputs A..E, output Y"
+ECL-BAS4.1,ECL,Basic logic blocks r4 #1,"AND gate, wide input bar (5 inputs)",Electronic,Logic,el.logic.and5,validated,E7,"Extended input bar drawing; 5 input leads shown; Inputs A..E, output Y; extended input bar"
+ECL-BAS4.2,ECL,Basic logic blocks r4 #2,"NAND gate, wide input bar (5 inputs)",Electronic,Logic,el.logic.nand5,validated,E7,"Extended input bar drawing; 5 input leads shown; Inputs A..E, output Y; extended input bar"
+ECL-BAS4.3,ECL,Basic logic blocks r4 #3,"OR gate, wide input bar (5 inputs)",Electronic,Logic,el.logic.or5,validated,E7,"Extended input bar drawing; 5 input leads shown; Inputs A..E, output Y; extended input bar"
+ECL-BAS4.4,ECL,Basic logic blocks r4 #4,"NOR gate, wide input bar (5 inputs)",Electronic,Logic,el.logic.nor5,validated,E7,"Extended input bar drawing; 5 input leads shown; Inputs A..E, output Y; extended input bar"
+ECL-BAS4.5,ECL,Basic logic blocks r4 #5,"XOR gate, wide input bar (5 inputs)",Electronic,Logic,el.logic.xor5,validated,E7,"Extended input bar drawing; 5 input leads shown; Inputs A..E, output Y; extended input bar"
+ECL-BAS4.6,ECL,Basic logic blocks r4 #6,"XNOR gate, wide input bar (5 inputs)",Electronic,Logic,el.logic.xnor5,validated,E7,"Extended input bar drawing; 5 input leads shown; Inputs A..E, output Y; extended input bar"
+ECL-BAS1.7,ECL,Basic logic blocks r1 #7,NOT gate (inverter),Electronic,Logic,el.logic.not,validated,E7,
+ECL-BAS2.7,ECL,Basic logic blocks r2 #7,"D latch (D, E, Q, /Q)",Electronic,Logic,el.logic.dlatch,validated,E7,"D, E, Q, /Q"
+ECL-BAS3.7,ECL,Basic logic blocks r3 #7,"D flip-flop, edge triggered (D, clock, Q, /Q)",Electronic,Logic,el.logic.dff,validated,E7,"D, CLK, Q, /Q"
+ECL-BAS4.7,ECL,Basic logic blocks r4 #7,"JK flip-flop (J, clock, K, Q, /Q)",Electronic,Logic,el.logic.jkff,validated,E7,"J, CLK, K, Q, /Q"
+ECL-BAS1.8,ECL,Basic logic blocks r1 #8,Full adder (vertical pin layout),Electronic,Logic,el.logic.fulladder,validated,E7,"CIN, A, B, Y, COUT"
 ECL-BAS1.9,ECL,Basic logic blocks r1 #9,Full adder (horizontal pin layout),Electronic,Logic,ECL-BAS1.8,duplicate,E7,"Same function, other pin placement"
-ECL-BAS3.8,ECL,Basic logic blocks r3 #8,"Multiplexer, 2 to 1",Electronic,Logic,el.logic.mux2,pending,E7,Select input drawn on the notch; flag: source shows no select-pin label
+ECL-BAS3.8,ECL,Basic logic blocks r3 #8,"Multiplexer, 2 to 1",Electronic,Logic,-,blocked,E7,Select input drawn on the notch; flag: source shows no select-pin label; The source draws no select input; a 2-to-1 multiplexer cannot be used without one and adding it would be invented - left out until a complete drawing is available
 ECL-BAS2.9,ECL,Basic logic blocks r2 #9,Bus with branches (bus ripper),Electronic,Logic,-,convention,-,"Wire/bus drawing, not a component"
-ECL-BAS3.9,ECL,Basic logic blocks r3 #9,"Bus width marker, 4 lines (two forms)",General,Drafting,gen.mark.buswidth,annotation,E7,
+ECL-BAS3.9,ECL,Basic logic blocks r3 #9,"Bus width marker, 4 lines (two forms)",General,Drafting,gen.mark.buswidth,validated,E7,Drafting element (Q5): the slash; the line count is a text label
 ECL-SRC1.1,ECL,"Sources, connectors r1 #1",DC voltage source (+/- marked),Electrical,Sources,el.source.dc,validated,E2,Existing el.source.v drawn differently; compare in E2; Polarity marks inside the circle; differs from el.source.v
 ECL-SRC1.2,ECL,"Sources, connectors r1 #2",AC voltage source,Electrical,Sources,el.source.ac,existing,E2,
 ECL-SRC1.3,ECL,"Sources, connectors r1 #3",Current source,Electrical,Sources,el.source.i,validated,E2,
@@ -502,8 +502,8 @@ ECL-MEC2.2,ECL,Mechanical switches r2 #2,Relay: coil with contact drawn closed,E
 ECL-MEC3.2,ECL,Mechanical switches r3 #2,"Switch, two pole, linked (DPST)",Electrical,Switching (IEC),el.switch.dpst,validated,E6,
 ECL-MEC1.3,ECL,Mechanical switches r1 #3,Relay: coil with two linked make contacts,Electrical,Switching (IEC),el.relay.2no,validated,E6,"Contacts 13-14, 23-24, coil A1-A2"
 ECL-MEC2.3,ECL,Mechanical switches r2 #3,"Rotary selector switch, four positions",Electrical,Switching (IEC),el.switch.rotary4,validated,E6,"Common C, positions 1-4"
-ECL-SEM1.1,ECL,Semiconductor devices r1 #1,Schmitt trigger inverter,Electronic,Logic,el.logic.schmitt.not,pending,E7,
-ECL-SEM2.1,ECL,Semiconductor devices r2 #1,Schmitt trigger buffer,Electronic,Logic,el.logic.schmitt,pending,E7,
+ECL-SEM1.1,ECL,Semiconductor devices r1 #1,Schmitt trigger inverter,Electronic,Logic,el.logic.schmitt.not,validated,E7,
+ECL-SEM2.1,ECL,Semiconductor devices r2 #1,Schmitt trigger buffer,Electronic,Logic,el.logic.schmitt,validated,E7,
 ECL-SEM1.2,ECL,Semiconductor devices r1 #2,Operational amplifier,Electronic,Integrated,el.opamp,existing,E8,
 ECL-SEM1.3,ECL,Semiconductor devices r1 #3,Operational amplifier with supply pins (+ input on top),Electronic,Integrated,el.opamp.supply,pending,E8,
 ECL-SEM1.4,ECL,Semiconductor devices r1 #4,Operational amplifier with supply pins (- input on top),Electronic,Integrated,el.opamp.supply.inv,pending,E8,
