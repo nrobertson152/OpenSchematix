@@ -60,20 +60,20 @@ HO-T12,HO,Energy Transformations r12,Double acting telescopic cylinder,Hydraulic
 HO-T13,HO,Energy Transformations r13,Single acting telescopic cylinder,Hydraulic+Pneumatic,Cylinders,fl.hyd.cyl.tele.single; fl.pneu.cyl.tele.single,validated,F6,
 HO-T14,HO,Energy Transformations r14,Double acting double rod cylinder,Hydraulic+Pneumatic,Cylinders,fl.*.cyl.doublerod,existing,-,
 HO-T15,HO,Energy Transformations r15,Accumulator with gas pre-charge,Hydraulic,Reservoirs & accumulators,fl.hyd.accumulator.gas,validated,F3,Existing fl.hyd.accumulator is the general form without gas mark
-HO-C01,HO,Energy Control C01,Adjustable 3-way flow control with reverse flow check,Hydraulic,Flow control,fl.hyd.flow.3way.check,pending,F8,
-HO-C02,HO,Energy Control C02,Adjustable 3-way flow control with reverse flow check (with T port),Hydraulic,Flow control,fl.hyd.flow.3way.check.t,pending,F8,Second form shows an additional tank connection
-HO-C03,HO,Energy Control C03,Adjustable 3-way flow control,Hydraulic,Flow control,fl.hyd.flow.3way,pending,F8,
-HO-C04,HO,Energy Control C04,Flow divider,Hydraulic,Flow control,fl.hyd.divider,pending,F8,
-HO-C05,HO,Energy Control C05,Spool type flow divider,Hydraulic,Flow control,fl.hyd.divider.spool,pending,F8,
-HO-C06,HO,Energy Control C06,Rotary flow divider,Hydraulic,Flow control,fl.hyd.divider.rotary,pending,F8,
-HO-C07,HO,Energy Control C07,Lowering valve with reverse flow check,Hydraulic,Flow control,fl.hyd.lowering.check,pending,F8,
+HO-C01,HO,Energy Control C01,Adjustable 3-way flow control with reverse flow check,Hydraulic,Flow control,fl.hyd.flow.3way.check,validated,F8b,"The chart's dash-dot cartridge outline is not drawn (centre-line style deferred, director D3); drawn as the chart draws it (no reservoir line)"
+HO-C02,HO,Energy Control C02,Adjustable 3-way flow control with reverse flow check (with T port),Hydraulic,Flow control,fl.hyd.flow.3way.check.t,validated,F8b,"Second form shows an additional tank connection; The chart's dash-dot cartridge outline is not drawn (centre-line style deferred, director D3); excess flow ends in a reservoir symbol"
+HO-C03,HO,Energy Control C03,Adjustable 3-way flow control,Hydraulic,Flow control,fl.hyd.flow.3way,validated,F8b,"Excess flow ends in a reservoir symbol, as drawn"
+HO-C04,HO,Energy Control C04,Flow divider,Hydraulic,Flow control,-,blocked,F8b,"Only an inlet and one outlet are legible at the chart's resolution; a divider needs a second outlet, which is not invented"
+HO-C05,HO,Energy Control C05,Spool type flow divider,Hydraulic,Flow control,fl.hyd.divider.spool,validated,F8b,"The chart's dash-dot cartridge outline is not drawn (centre-line style deferred, director D3)"
+HO-C06,HO,Energy Control C06,Rotary flow divider,Hydraulic,Flow control,fl.hyd.divider.rotary,validated,F8b,"Two coupled reversible motor sections, ports A1/B1 and A2/B2"
+HO-C07,HO,Energy Control C07,Lowering valve with reverse flow check,Hydraulic,Flow control,fl.hyd.lowering.check,validated,F8b,"Fixed (non-adjustable) compensated restriction, as drawn"
 HO-C08,HO,Energy Control C08,Throttle with reverse flow check,Hydraulic,Non-return & flow,fl.hyd.flow.oneway,existing,F8,Matches existing one-way flow control valve
 HO-C09,HO,Energy Control C09,Pilot operated check valve without drain,Hydraulic,Non-return & flow,fl.hyd.check.pilot; fl.pneu.check.pilot,validated,F8a,"Same as Y32 10.9.3; The chart's dash-dot cartridge outline is not drawn (centre-line style deferred, director D3)"
 HO-C10,HO,Energy Control C10,Pilot operated check valve with drain,Hydraulic,Non-return & flow,fl.hyd.check.pilot.drain,validated,F8a,"The chart's dash-dot cartridge outline is not drawn (centre-line style deferred, director D3); drain to a reservoir symbol"
 HO-C11,HO,Energy Control C11,Check valve with spring,Hydraulic,Non-return & flow,fl.hyd.check.spring,existing,F8,
 HO-C12,HO,Energy Control C12,Shuttle valve,Hydraulic,Non-return & flow,fl.hyd.shuttle,existing,F8,
 HO-C13,HO,Energy Control C13,Logic element (cartridge),Hydraulic,Cartridge valves,fl.hyd.logic,validated,F8a,Ports A and B as drawn; the chart shows no control (X) line
-HO-C14,HO,Energy Control C14,Priority valve,Hydraulic,Flow control,fl.hyd.priority,pending,F8,
+HO-C14,HO,Energy Control C14,Priority valve,Hydraulic,Flow control,fl.hyd.priority,validated,F8b,"The chart's dash-dot cartridge outline is not drawn (centre-line style deferred, director D3); ports P, CF, EF and load-sensing pilot LS"
 HO-C15,HO,Energy Control C15,"Steering unit, open centre",Hydraulic,Steering,fl.hyd.steer.oc,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Composite; see Q3
 HO-C16,HO,Energy Control C16,"Steering unit, closed centre",Hydraulic,Steering,fl.hyd.steer.cc,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Composite; see Q3
 HO-C17,HO,Energy Control C17,"Steering unit, closed centre with LS (with priority valve)",Hydraulic,Steering,fl.hyd.steer.ls,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Composite; see Q3
@@ -87,14 +87,14 @@ HO-C24,HO,Energy Control C24,Electrical unloading valve,Hydraulic,Pressure contr
 HO-C25,HO,Energy Control C25,Electrical proportional relief valve,Hydraulic,Pressure control,fl.hyd.relief.prop,validated,F7,Proportional solenoid without electrical terminals
 HO-C26,HO,Energy Control C26,Open centre valve,Hydraulic,Directional valves,fl.hyd.opencentre,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Composite; see Q3
 HO-C27,HO,Energy Control C27,Relief valve / electrical lowering valve,Hydraulic,Pressure control,fl.hyd.relief.lowering,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Composite; see Q3
-HO-C28,HO,Energy Control C28,Normally open solenoid check valve,Hydraulic,Directional valves,fl.hyd.sol.check.no,pending,F8,Seated 2/2
-HO-C29,HO,Energy Control C29,Normally closed solenoid check valve,Hydraulic,Directional valves,fl.hyd.sol.check.nc,pending,F8,Seated 2/2
-HO-C30,HO,Energy Control C30,Solenoid operated 6-port diverter / changeover valve,Hydraulic,Directional valves,fl.hyd.diverter6,pending,F8,6-port valve: not expressible by the configurator (port layouts 2-5)
-HO-C31,HO,Energy Control C31,Solenoid diverter valve with external drain,Hydraulic,Directional valves,fl.hyd.diverter6.drain,pending,F8,
+HO-C28,HO,Energy Control C28,Normally open solenoid check valve,Hydraulic,Directional valves,fl.hyd.sol.check.no,validated,F8b,Seated 2/2; Solenoid without electrical terminals
+HO-C29,HO,Energy Control C29,Normally closed solenoid check valve,Hydraulic,Directional valves,fl.hyd.sol.check.nc,validated,F8b,Seated 2/2; Solenoid without electrical terminals
+HO-C30,HO,Energy Control C30,Solenoid operated 6-port diverter / changeover valve,Hydraulic,Directional valves,fl.hyd.diverter6,validated,F8b,"6-port valve: not expressible by the configurator (port layouts 2-5); Ports P, T, A1/B1 (spring position), A2/B2 (energised)"
+HO-C31,HO,Energy Control C31,Solenoid diverter valve with external drain,Hydraulic,Directional valves,-,blocked,F8b,The flow paths of the energised position and the drain connection are not legible at the chart's resolution; not implemented without identification
 HO-C32,HO,Energy Control C32,Direct acting solenoid directional valve (spool form 1),Hydraulic,Directional valves,fl.hyd.dcv,existing,F1,Reachable with existing configurator; verify spool form against PATTERNS; Spool form 1 centre is not legible at the source's resolution (float or tandem); both centres are available in the configurator
 HO-C33,HO,Energy Control C33,Direct acting solenoid directional valve (spool form 2),Hydraulic,Directional valves,fl.hyd.dcv,existing,F1,"May need a new centre PATTERN; Spool form 2 = closed centre, available in the configurator"
 HO-C34,HO,Energy Control C34,Pilot operated solenoid directional valve,Hydraulic,Directional valves,dcv operator 'solenoid.and.pilot.int',validated,F1,Needs 3 operators per side (solenoid+pilot+spring); see Q2; With spring as a second operator
-HO-C35,HO,Energy Control C35,Direct acting seated solenoid directional valve,Hydraulic,Directional valves,fl.hyd.dcv.seated,pending,F8,Seated 3-way with poppet marks; distinct from spool valve
+HO-C35,HO,Energy Control C35,Direct acting seated solenoid directional valve,Hydraulic,Directional valves,fl.hyd.dcv.seated,validated,F8b,Seated 3-way with poppet marks; distinct from spool valve; Seat marks drawn as in the chart
 HO-C36,HO,Energy Control C36,Direct acting proportional solenoid directional valve,Hydraulic,Directional valves,dcv operator 'solenoid.prop'; fl.hyd.op.solenoid.prop; fl.pneu.op.solenoid.prop; dcv option 'proportional',validated,F1,Proportional bars; see Q2; Director Q2: dialog change allowed
 HO-C37,HO,Energy Control C37,Pilot operated proportional solenoid directional valve,Hydraulic,Directional valves,dcv operator 'solenoid.and.pilot.int'; dcv operator 'solenoid.prop'; dcv option 'proportional',validated,F1,"Proportional bars + 3 operators; see Q2; Director Q2: dialog change allowed; Three operators per side (spring, pilot stage, proportional solenoid)"
 HO-C38,HO,Energy Control C38,Series directional control valve,Hydraulic,Mobile valves,fl.hyd.mobile.series,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Composite; see Q3
@@ -281,20 +281,20 @@ Y32-10.9.3,Y32,p17 cl.10.9.3,"Check, pilot-operated to open",Hydraulic+Pneumatic
 Y32-10.9.4,Y32,p17 cl.10.9.4,"Check, pilot-operated to close",Hydraulic+Pneumatic,Valves,fl.hyd.check.pilotclose; fl.pneu.check.pilotclose,validated,F8a,
 Y32-10.9.5.1nc,Y32,p17 cl.10.9.5.1,"Two-way valve, two position, normally closed",Hydraulic+Pneumatic,Valves,fl.*.dcv (2/2),existing,F1,Configurator 2/2 with spring; verify geometry
 Y32-10.9.5.1no,Y32,p17 cl.10.9.5.1,"Two-way valve, two position, normally open",Hydraulic+Pneumatic,Valves,fl.*.dcv (2/2),existing,F1,
-Y32-10.9.5.2nc,Y32,p17 cl.10.9.5.2,"Two-way valve, infinite position, normally closed",Hydraulic+Pneumatic,Valves,fl.*.valve.2way.prop.nc,pending,F8,
-Y32-10.9.5.2no,Y32,p17 cl.10.9.5.2,"Two-way valve, infinite position, normally open",Hydraulic+Pneumatic,Valves,fl.*.valve.2way.prop.no,pending,F8,
+Y32-10.9.5.2nc,Y32,p17 cl.10.9.5.2,"Two-way valve, infinite position, normally closed",Hydraulic+Pneumatic,Valves,fl.hyd.valve.2way.prop.nc; fl.pneu.valve.2way.prop.nc,validated,F8b,
+Y32-10.9.5.2no,Y32,p17 cl.10.9.5.2,"Two-way valve, infinite position, normally open",Hydraulic+Pneumatic,Valves,fl.hyd.valve.2way.prop.no; fl.pneu.valve.2way.prop.no,validated,F8b,
 Y32-10.10.1.1,Y32,p17 cl.10.10.1.1,"Three-way, two position, normally open",Hydraulic+Pneumatic,Valves,fl.*.dcv (3/2),existing,F1,Verify
 Y32-10.10.1.2,Y32,p17 cl.10.10.1.2,"Three-way, two position, normally closed",Hydraulic+Pneumatic,Valves,fl.*.dcv (3/2),existing,F1,Verify
-Y32-10.10.1.3,Y32,p17 cl.10.10.1.3,"Three-way distributor (pressure first to one port, then the other)",Hydraulic+Pneumatic,Valves,fl.*.valve.3way.distributor,pending,F8,Port arrangement not expressible by the 3-port configurator layout
-Y32-10.10.1.4,Y32,p17 cl.10.10.1.4,Three-way two-pressure valve,Hydraulic+Pneumatic,Valves,fl.*.valve.3way.twopressure,pending,F8,
+Y32-10.10.1.3,Y32,p17 cl.10.10.1.3,"Three-way distributor (pressure first to one port, then the other)",Hydraulic+Pneumatic,Valves,fl.hyd.valve.3way.distributor; fl.pneu.valve.3way.distributor,validated,F8b,Port arrangement not expressible by the 3-port configurator layout; Inlet pressure-source marker not part of the symbol
+Y32-10.10.1.4,Y32,p17 cl.10.10.1.4,Three-way two-pressure valve,Hydraulic+Pneumatic,Valves,fl.hyd.valve.3way.twopressure; fl.pneu.valve.3way.twopressure,validated,F8b,Inlet pressure-source markers not part of the symbol
 Y32-10.10.2.1,Y32,p17 cl.10.10.2.1,Double check valve without cross bleed,Hydraulic+Pneumatic,Valves,fl.hyd.doublecheck; fl.pneu.doublecheck,validated,F8a,Inlet names as the existing shuttle valve
 Y32-10.10.2.2,Y32,p17 cl.10.10.2.2,Double check valve with cross bleed,Hydraulic+Pneumatic,Valves,fl.hyd.doublecheck.bleed; fl.pneu.doublecheck.bleed,validated,F8a,Outlet arrow both ways (reverse flow permitted)
 Y32-10.11.1,Y32,p18 cl.10.11.1,"Four-way, two position (normal and actuated; two forms)",Hydraulic+Pneumatic,Valves,fl.*.dcv (4/2),existing,F1,Second form is a 5-connection drawing; check against pneumatic 5/2
 Y32-10.11.2,Y32,p18 cl.10.11.2,"Four-way, three position (normal, actuated left, actuated right)",Hydraulic+Pneumatic,Valves,fl.*.dcv (4/3),existing,F1,Actuated states are the same valve shifted; drawn only in the normal state
 Y32-10.11.3,Y32,p18 cl.10.11.3,Typical centre conditions of three-position valves (8 shown),Hydraulic+Pneumatic,Valves,dcv pattern 'b-t'; dcv pattern 'apt'; dcv pattern 'ab'; dcv pattern 'a-t'; dcv pattern 'ab-pt',validated,F1,"Add each missing centre condition as a configurator flow pattern; Five new centre conditions; the other three (closed, open, 5-port closed) already existed"
 Y32-10.11.4,Y32,p18 cl.10.11.4,"Two-position, snap action with transition",Hydraulic+Pneumatic,Valves,dcv option 'transition',validated,F1,Q2; Director Q2: dialog change allowed
-Y32-10.12.1,Y32,p18 cl.10.12.1,"Infinite positioning between open and closed, normally closed",Hydraulic+Pneumatic,Valves,fl.*.valve.prop.nc,pending,F8,
-Y32-10.12.2,Y32,p18 cl.10.12.2,"Infinite positioning between open and closed, normally open",Hydraulic+Pneumatic,Valves,fl.*.valve.prop.no,pending,F8,
+Y32-10.12.1,Y32,p18 cl.10.12.1,"Infinite positioning between open and closed, normally closed",Hydraulic+Pneumatic,Valves,fl.hyd.valve.prop.nc,validated,F8b,Hydraulic only: Y32.10 draws the outlet to a reservoir symbol
+Y32-10.12.2,Y32,p18 cl.10.12.2,"Infinite positioning between open and closed, normally open",Hydraulic+Pneumatic,Valves,fl.hyd.valve.prop.no,validated,F8b,Hydraulic only: Y32.10 draws the outlet to a reservoir symbol
 Y32-10.13.1s,Y32,p18 cl.10.13.1,"Pressure relief, simplified",Hydraulic+Pneumatic,Valves,fl.hyd.relief.ansi; fl.pneu.relief.ansi,validated,F7,Director Q1: ANSI-style variant of fl.*.relief; becomes 'equivalent' if the ANSI drawing is identical. Pneumatic relief added (pending); Normal (port) form; simplified form's reservoir is the T port
 Y32-10.13.1n,Y32,p18 cl.10.13.1,"Pressure relief, normal",Hydraulic+Pneumatic,Valves,fl.*.relief,duplicate,-,"Same valve, explanatory form"
 Y32-10.13.1a,Y32,p18 cl.10.13.1,"Pressure relief, actuated (relieving)",Hydraulic+Pneumatic,Valves,fl.*.relief,duplicate,-,Same valve shown actuated
@@ -306,10 +306,10 @@ Y32-10.13.4,Y32,p19 cl.10.13.4,Pressure reducing and relieving,Hydraulic,Valves,
 Y32-10.13.5,Y32,p19 cl.10.13.5,"Airline pressure regulator (adjustable, relieving)",Pneumatic,Valves,fl.pneu.regulator.relieving,validated,F7,Vent to atmosphere drawn as in the source
 Y32-10.14,Y32,p19 cl.10.14,Infinite positioning three-way valves (four examples),Hydraulic+Pneumatic,Valves,dcv option 'proportional',validated,F1,Proportional bars; Q2; Director Q2: dialog change allowed; Three-way infinite-positioning valves: 3/2 valve types with the proportional option
 Y32-10.15,Y32,p19 cl.10.15,Infinite positioning four-way valves (four examples),Hydraulic+Pneumatic,Valves,dcv option 'proportional',validated,F1,Q2; Director Q2: dialog change allowed; Four-way: 4/2 and 4/3 with the proportional option
-Y32-10.16.1,Y32,p19 cl.10.16.1,"Flow control, adjustable, non-compensated",Hydraulic+Pneumatic,Valves,fl.*.throttle.adj.ansi,pending,F8,Director Q1: ANSI-style variant of fl.*.throttle.adj; becomes 'equivalent' if the ANSI drawing is identical.
-Y32-10.16.2,Y32,p19 cl.10.16.2,"Flow control, adjustable with bypass",Hydraulic+Pneumatic,Valves,fl.*.flow.oneway.ansi,pending,F8,Director Q1: ANSI-style variant of fl.*.flow.oneway; becomes 'equivalent' if the ANSI drawing is identical.
-Y32-10.16.3,Y32,p19 cl.10.16.3,"Flow control, adjustable and pressure compensated with bypass",Hydraulic+Pneumatic,Valves,fl.*.flow.pc.bypass,pending,F8,
-Y32-10.16.4,Y32,p19 cl.10.16.4,"Flow control, adjustable, temperature and pressure compensated",Hydraulic+Pneumatic,Valves,fl.*.flow.tpc.bypass,pending,F8,
+Y32-10.16.1,Y32,p19 cl.10.16.1,"Flow control, adjustable, non-compensated",Hydraulic+Pneumatic,Valves,fl.hyd.throttle.adj.ansi; fl.pneu.throttle.adj.ansi,validated,F8b,Director Q1: ANSI-style variant of fl.*.throttle.adj; becomes 'equivalent' if the ANSI drawing is identical.; Differs from the ISO throttle (no restriction arcs); the dashed (pilot-line) form is the same symbol on a pilot line
+Y32-10.16.2,Y32,p19 cl.10.16.2,"Flow control, adjustable with bypass",Hydraulic+Pneumatic,Valves,fl.hyd.flow.oneway.ansi; fl.pneu.flow.oneway.ansi,validated,F8b,"Director Q1: ANSI-style variant of fl.*.flow.oneway; becomes 'equivalent' if the ANSI drawing is identical.; Differs from the ISO one-way flow control (box, plain restriction, check below)"
+Y32-10.16.3,Y32,p19 cl.10.16.3,"Flow control, adjustable and pressure compensated with bypass",Hydraulic+Pneumatic,Valves,fl.hyd.flow.pc.bypass; fl.pneu.flow.pc.bypass,validated,F8b,
+Y32-10.16.4,Y32,p19 cl.10.16.4,"Flow control, adjustable, temperature and pressure compensated",Hydraulic+Pneumatic,Valves,fl.hyd.flow.tpc.bypass; fl.pneu.flow.tpc.bypass,validated,F8b,Bypass check drawn as in the source
 Y32-11.1,Y32,p19 cl.11.1,Component enclosure,Hydraulic+Pneumatic,Composite,-,blocked,F2,Same as HO-B03; Director decision 3 (2026-11-02): the centre-line (dash-dot) line style is deferred to a separate issue/PR; not simulated with dashed lines. Component enclosure: centre-line style not available; see HO-B03
 Y32-11.2c,Y32,p20 cl.11.2,"Airline accessories (FRL), composite",Pneumatic,Composite,fl.pneu.frl.full,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Q3
 Y32-11.2s,Y32,p20 cl.11.2,"Airline accessories (FRL), simplified",Pneumatic,Composite,fl.pneu.frl,pending,F10,Single defined symbol with ports

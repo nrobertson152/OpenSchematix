@@ -1030,10 +1030,45 @@ F8A = {
 }
 for k, (st, tgt, note) in F8A.items():
     PROGRESS[k] = (st, tgt, note)
+F8B = {
+    "HO-C01": ("validated", "fl.hyd.flow.3way.check", ENCL + "; drawn as the chart draws it (no reservoir line)"),
+    "HO-C02": ("validated", "fl.hyd.flow.3way.check.t", ENCL + "; excess flow ends in a reservoir symbol"),
+    "HO-C03": ("validated", "fl.hyd.flow.3way", "Excess flow ends in a reservoir symbol, as drawn"),
+    "HO-C04": ("blocked", "-", "Only an inlet and one outlet are legible at the chart's resolution; a divider needs a "
+                               "second outlet, which is not invented"),
+    "HO-C05": ("validated", "fl.hyd.divider.spool", ENCL),
+    "HO-C06": ("validated", "fl.hyd.divider.rotary", "Two coupled reversible motor sections, ports A1/B1 and A2/B2"),
+    "HO-C07": ("validated", "fl.hyd.lowering.check", "Fixed (non-adjustable) compensated restriction, as drawn"),
+    "HO-C14": ("validated", "fl.hyd.priority", ENCL + "; ports P, CF, EF and load-sensing pilot LS"),
+    "HO-C28": ("validated", "fl.hyd.sol.check.no", "Solenoid without electrical terminals"),
+    "HO-C29": ("validated", "fl.hyd.sol.check.nc", "Solenoid without electrical terminals"),
+    "HO-C30": ("validated", "fl.hyd.diverter6", "Ports P, T, A1/B1 (spring position), A2/B2 (energised)"),
+    "HO-C31": ("blocked", "-", "The flow paths of the energised position and the drain connection are not legible "
+                               "at the chart's resolution; not implemented without identification"),
+    "HO-C35": ("validated", "fl.hyd.dcv.seated", "Seat marks drawn as in the chart"),
+    "Y32-10.9.5.2nc": ("validated", both("valve.2way.prop.nc"), ""),
+    "Y32-10.9.5.2no": ("validated", both("valve.2way.prop.no"), ""),
+    "Y32-10.10.1.3": ("validated", both("valve.3way.distributor"), "Inlet pressure-source marker not part of the symbol"),
+    "Y32-10.10.1.4": ("validated", both("valve.3way.twopressure"),
+                      "Inlet pressure-source markers not part of the symbol"),
+    "Y32-10.12.1": ("validated", "fl.hyd.valve.prop.nc",
+                    "Hydraulic only: Y32.10 draws the outlet to a reservoir symbol"),
+    "Y32-10.12.2": ("validated", "fl.hyd.valve.prop.no",
+                    "Hydraulic only: Y32.10 draws the outlet to a reservoir symbol"),
+    "Y32-10.16.1": ("validated", both("throttle.adj.ansi"),
+                    "Differs from the ISO throttle (no restriction arcs); the dashed (pilot-line) form is the same "
+                    "symbol on a pilot line"),
+    "Y32-10.16.2": ("validated", both("flow.oneway.ansi"), "Differs from the ISO one-way flow control (box, plain "
+                                                           "restriction, check below)"),
+    "Y32-10.16.3": ("validated", both("flow.pc.bypass"), ""),
+    "Y32-10.16.4": ("validated", both("flow.tpc.bypass"), "Bypass check drawn as in the source"),
+}
+for k, (st, tgt, note) in F8B.items():
+    PROGRESS[k] = (st, tgt, note)
 # Rows deliberately reopened by a director decision (completed -> pending). The write guard below allows
 # exactly these; any other completed row that would fall back to pending is refused.
 REOPENED = {"Y32-8.3.1", "Y32-8.3.1.2", "Y32-8.3.2.1", "Y32-8.3.2.2", "Y32-8.6.2"}   # decision 1, 2026-11-02
-BATCH_OF = {**{k: "F2" for k in F2}, **{k: "F3" for k in F3}, **{k: "F4" for k in F4}, **{k: "F5" for k in F5}, **{k: "F5b" for k in REOPENED}, **{k: "F6" for k in F6}, **{k: "F7" for k in F7}, **{k: "F8a" for k in F8A}}
+BATCH_OF = {**{k: "F2" for k in F2}, **{k: "F3" for k in F3}, **{k: "F4" for k in F4}, **{k: "F5" for k in F5}, **{k: "F5b" for k in REOPENED}, **{k: "F6" for k in F6}, **{k: "F7" for k in F7}, **{k: "F8a" for k in F8A}, **{k: "F8b" for k in F8B}}
 for r in R:
     if r["key"] in PROGRESS:
         st, tgt, note = PROGRESS[r["key"]]
