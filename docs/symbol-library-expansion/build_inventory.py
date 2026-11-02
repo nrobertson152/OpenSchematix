@@ -870,21 +870,39 @@ F2 = {
                 "Drawing identical to the flow-direction marker (3.5); the flow-direction symbols note this use"),
     "Y32-9.3.2": ("validated", "fl.pneu.silencer", "Muffler; prefix Z (purchasable)"),
 }
+F3 = {
+    "HO-B22": ("validated", "fl.hyd.tank.above", "Below-level form = existing fl.hyd.tank"),
+    "HO-T15": ("validated", "fl.hyd.accumulator.gas", ""),
+    "Y32-4.1a": ("validated", "fl.hyd.tank.vented.ansi; fl.hyd.tank.vented.below.ansi",
+                 "Complete vented reservoir, connection ending above or below the fluid level"),
+    "Y32-4.1b": ("validated", "fl.hyd.tank.pressurized; fl.hyd.tank.pressurized.below", ""),
+    "Y32-4.1.1a": ("duplicate", "fl.hyd.tank.vented.ansi; fl.hyd.tank.pressurized",
+                   "Examples of connections above the fluid level; covered by the complete reservoir symbols"),
+    "Y32-4.1.1c": ("validated", "fl.hyd.tank.bottom", ""),
+    "Y32-4.1.2": ("equivalent", "fl.hyd.tank", "ANSI simplified reservoir is drawn like the ISO one"),
+    "Y32-4.1.2.2": ("equivalent", "fl.hyd.tank.above", "Same drawing as the ISO form (HO-B22)"),
+    "Y32-4.1.2.3": ("validated", "fl.hyd.manifold.vented", ""),
+    "Y32-4.2": ("validated", "fl.hyd.accumulator.ansi", "ANSI general accumulator has no separating element"),
+    "Y32-4.2.1": ("validated", "fl.hyd.accumulator.spring", ""),
+    "Y32-4.2.2": ("equivalent", "fl.hyd.accumulator.gas", "Same drawing as the ISO gas-charged accumulator (HO-T15)"),
+    "Y32-4.2.3": ("validated", "fl.hyd.accumulator.weight", ""),
+    "Y32-4.3": ("validated", "fl.pneu.receiver.ansi", "ANSI receiver is inline (two ports); ISO has one top port"),
+}
 for k, (st, tgt, note) in F2.items():
     PROGRESS[k] = (st, tgt, note)
-for r in R:
-    if r["key"] in F2 and F2[r["key"]][0] in ("validated", "equivalent"):
-        r["batch"] = "F2"
+for k, (st, tgt, note) in F3.items():
+    PROGRESS[k] = (st, tgt, note)
+BATCH_OF = {**{k: "F2" for k in F2}, **{k: "F3" for k in F3}}
 for r in R:
     if r["key"] in PROGRESS:
         st, tgt, note = PROGRESS[r["key"]]
         r["status"], r["target"] = st, tgt
         if note:
             r["notes"] = (r["notes"] + "; " if r["notes"] else "") + note
-        if st == "validated" and r["key"] not in F2:
+        if r["key"] in BATCH_OF:
+            r["batch"] = BATCH_OF[r["key"]]
+        elif st == "validated":
             r["batch"] = "F1"
-        elif r["key"] in F2 and st in ("validated", "equivalent", "duplicate"):
-            r["batch"] = "F2"
 assert not set(PROGRESS) - {r["key"] for r in R}, set(PROGRESS) - {r["key"] for r in R}
 
 # =============================================================== write

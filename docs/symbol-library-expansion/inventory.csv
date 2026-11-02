@@ -20,7 +20,7 @@ HO-B18,HO,Basic Symbols r18,Throttle,Hydraulic+Pneumatic,Non-return & flow,fl.*.
 HO-B19,HO,Basic Symbols r19,Plugged port,Hydraulic+Pneumatic,Lines & connections,fl.hyd.port.plugged; fl.pneu.port.plugged,validated,F2,ISO and ANSI (Y32 3.9.1) drawings are identical
 HO-B20,HO,Basic Symbols r20,Rotary union,Hydraulic+Pneumatic,Lines & connections,fl.hyd.rotaryunion; fl.pneu.rotaryunion,validated,F2,
 HO-B21,HO,Basic Symbols r21,Detent,Hydraulic+Pneumatic,Valve operators,dcv operator 'detent'; fl.hyd.op.detent; fl.pneu.op.detent,validated,F1,"Director: detents and spool controls go in the configurator, optionally also standalone; One notch per switching position; marker on the rest position"
-HO-B22,HO,Basic Symbols r22,Return above / below fluid level,Hydraulic,Reservoirs,fl.hyd.tank.above / existing fl.hyd.tank,pending,F3,Below-level form = existing fl.hyd.tank
+HO-B22,HO,Basic Symbols r22,Return above / below fluid level,Hydraulic,Reservoirs,fl.hyd.tank.above,validated,F3,Below-level form = existing fl.hyd.tank; Below-level form = existing fl.hyd.tank
 HO-B23,HO,Basic Symbols r23,Check valve,Hydraulic+Pneumatic,Non-return & flow,fl.*.check,existing,-,
 HO-B24,HO,Basic Symbols r24,Shut-off valve,Hydraulic+Pneumatic,Non-return & flow,fl.*.shutoff,pending,F8,
 HO-S01,HO,Spool Controls S01,"General symbol (manual, general)",Hydraulic+Pneumatic,Valve operators,dcv operator 'manual'; fl.hyd.op.manual; fl.pneu.op.manual,validated,F1,Existing configurator operator; Operator existed; standalone element added
@@ -59,7 +59,7 @@ HO-T11,HO,Energy Transformations r11,Double acting cylinder with variable dampin
 HO-T12,HO,Energy Transformations r12,Double acting telescopic cylinder,Hydraulic+Pneumatic,Cylinders,fl.*.cyl.tele.double,pending,F6,
 HO-T13,HO,Energy Transformations r13,Single acting telescopic cylinder,Hydraulic+Pneumatic,Cylinders,fl.*.cyl.tele.single,pending,F6,
 HO-T14,HO,Energy Transformations r14,Double acting double rod cylinder,Hydraulic+Pneumatic,Cylinders,fl.*.cyl.doublerod,existing,-,
-HO-T15,HO,Energy Transformations r15,Accumulator with gas pre-charge,Hydraulic,Reservoirs & accumulators,fl.hyd.accumulator.gas,pending,F3,Existing fl.hyd.accumulator is the general form without gas mark
+HO-T15,HO,Energy Transformations r15,Accumulator with gas pre-charge,Hydraulic,Reservoirs & accumulators,fl.hyd.accumulator.gas,validated,F3,Existing fl.hyd.accumulator is the general form without gas mark
 HO-C01,HO,Energy Control C01,Adjustable 3-way flow control with reverse flow check,Hydraulic,Flow control,fl.hyd.flow.3way.check,pending,F8,
 HO-C02,HO,Energy Control C02,Adjustable 3-way flow control with reverse flow check (with T port),Hydraulic,Flow control,fl.hyd.flow.3way.check.t,pending,F8,Second form shows an additional tank connection
 HO-C03,HO,Energy Control C03,Adjustable 3-way flow control,Hydraulic,Flow control,fl.hyd.flow.3way,pending,F8,
@@ -126,7 +126,7 @@ HO-M13,HO,Measuring M13,Micro switch (mechanically operated electric switch),Hyd
 Y32-2.4.1,Y32,p3 cl.2.4.1,Solid line - main,Hydraulic+Pneumatic,Lines,editor / element,convention,-,
 Y32-2.4.2,Y32,p3 cl.2.4.2,Dash line - pilot,Hydraulic+Pneumatic,Lines,editor / element,convention,-,
 Y32-2.4.3,Y32,p3 cl.2.4.3,Dotted line - exhaust or drain,Hydraulic+Pneumatic,Lines,editor / element,convention,-,Dotted exhaust line: the editor has solid and dashed wire styles only
-Y32-2.4.4,Y32,p3 cl.2.4.4,Center line - enclosure outline,Hydraulic+Pneumatic,Lines,-,blocked,-,Centre (dash-dot) line style not available; see HO-B03
+Y32-2.4.4,Y32,p3 cl.2.4.4,Center line - enclosure outline,Hydraulic+Pneumatic,Lines,-,blocked,F2,Centre (dash-dot) line style not available; see HO-B03
 Y32-2.4.5,Y32,p3 cl.2.4.5,Sensing line,Hydraulic+Pneumatic,Lines,editor / element,convention,-,
 Y32-2.4.6,Y32,p3 cl.2.4.6,Lines crossing,Hydraulic+Pneumatic,Lines,editor / element,convention,-,
 Y32-2.4.7,Y32,p3 cl.2.4.7,Lines joining,Hydraulic+Pneumatic,Lines,editor / element,convention,-,
@@ -159,20 +159,20 @@ Y32-3.9.4b,Y32,p5 cl.3.9.4,"Quick disconnect with two checks, disconnected",Hydr
 Y32-3.9.5a,Y32,p5 cl.3.9.5,"Quick disconnect with one check, connected",Hydraulic+Pneumatic,Lines & connections,fl.hyd.qd.1check; fl.pneu.qd.1check,validated,F2,"Disconnected form: two halves, each with its own port; Check drawn in the right-hand half, as in the source"
 Y32-3.9.5b,Y32,p5 cl.3.9.5,"Quick disconnect with one check, disconnected",Hydraulic+Pneumatic,Lines & connections,fl.hyd.qd.1check.apart; fl.pneu.qd.1check.apart,validated,F2,"Disconnected form: two halves, each with its own port"
 Y32-3.11,Y32,p4-5 cl.3.11,Rotating coupling,Hydraulic+Pneumatic,Lines & connections,fl.hyd.rotaryunion.ansi; fl.pneu.rotaryunion.ansi,validated,F2,"Director Q1: ANSI-style variant of fl.*.rotaryunion; becomes 'equivalent' if the ANSI drawing is identical. Ambiguous layout: the circle-with-lines figure sits under 3.9.4 on p4; treated as the 3.11 figure; Figure printed under the 3.9.4 heading on page 4 (3.11 has none): three passages, ports 1a-3b"
-Y32-4.1a,Y32,p5 cl.4.1a,"Reservoir, vented",Hydraulic,Reservoirs & accumulators,fl.hyd.tank.ansi,pending,F3,Director Q1: ANSI-style variant of fl.hyd.tank; becomes 'equivalent' if the ANSI drawing is identical.
-Y32-4.1b,Y32,p5 cl.4.1b,"Reservoir, pressurized",Hydraulic,Reservoirs & accumulators,fl.hyd.tank.pressurized,pending,F3,
-Y32-4.1.1a,Y32,p5 cl.4.1.1a,Reservoir with connecting lines above fluid level,Hydraulic,Reservoirs & accumulators,fl.hyd.tank.above,pending,F3,3 example forms
+Y32-4.1a,Y32,p5 cl.4.1a,"Reservoir, vented",Hydraulic,Reservoirs & accumulators,fl.hyd.tank.vented.ansi; fl.hyd.tank.vented.below.ansi,validated,F3,"Director Q1: ANSI-style variant of fl.hyd.tank; becomes 'equivalent' if the ANSI drawing is identical.; Complete vented reservoir, connection ending above or below the fluid level"
+Y32-4.1b,Y32,p5 cl.4.1b,"Reservoir, pressurized",Hydraulic,Reservoirs & accumulators,fl.hyd.tank.pressurized; fl.hyd.tank.pressurized.below,validated,F3,
+Y32-4.1.1a,Y32,p5 cl.4.1.1a,Reservoir with connecting lines above fluid level,Hydraulic,Reservoirs & accumulators,fl.hyd.tank.vented.ansi; fl.hyd.tank.pressurized,duplicate,F3,3 example forms; Examples of connections above the fluid level; covered by the complete reservoir symbols
 Y32-4.1.1b,Y32,p5 cl.4.1.1b,Reservoir with connecting lines below fluid level,Hydraulic,Reservoirs & accumulators,fl.hyd.tank,existing,F3,
-Y32-4.1.1c,Y32,p5 cl.4.1.1c,Reservoir with bottom connection,Hydraulic,Reservoirs & accumulators,fl.hyd.tank.bottom,pending,F3,
-Y32-4.1.2,Y32,p5 cl.4.1.2,"Reservoir, simplified symbol",Hydraulic,Reservoirs & accumulators,fl.hyd.tank.ansi,pending,F3,Director Q1: ANSI-style variant of fl.hyd.tank; becomes 'equivalent' if the ANSI drawing is identical.
+Y32-4.1.1c,Y32,p5 cl.4.1.1c,Reservoir with bottom connection,Hydraulic,Reservoirs & accumulators,fl.hyd.tank.bottom,validated,F3,
+Y32-4.1.2,Y32,p5 cl.4.1.2,"Reservoir, simplified symbol",Hydraulic,Reservoirs & accumulators,fl.hyd.tank,equivalent,F3,Director Q1: ANSI-style variant of fl.hyd.tank; becomes 'equivalent' if the ANSI drawing is identical.; ANSI simplified reservoir is drawn like the ISO one
 Y32-4.1.2.1,Y32,p5 cl.4.1.2.1,"Simplified reservoir, return below fluid level",Hydraulic,Reservoirs & accumulators,fl.hyd.tank,existing,F3,
-Y32-4.1.2.2,Y32,p5 cl.4.1.2.2,"Simplified reservoir, return above fluid level",Hydraulic,Reservoirs & accumulators,fl.hyd.tank.above.ansi,pending,F3,Director Q1: ANSI-style variant of fl.hyd.tank.above; becomes 'equivalent' if the ANSI drawing is identical. HO-B22
-Y32-4.1.2.3,Y32,p5 cl.4.1.2.3,Vented manifold,Hydraulic,Reservoirs & accumulators,fl.hyd.manifold.vented,pending,F3,
-Y32-4.2,Y32,p5 cl.4.2,Accumulator,Hydraulic,Reservoirs & accumulators,fl.hyd.accumulator.ansi,pending,F3,Director Q1: ANSI-style variant of fl.hyd.accumulator; becomes 'equivalent' if the ANSI drawing is identical.
-Y32-4.2.1,Y32,p5 cl.4.2.1,"Accumulator, spring loaded",Hydraulic,Reservoirs & accumulators,fl.hyd.accumulator.spring,pending,F3,
-Y32-4.2.2,Y32,p5 cl.4.2.2,"Accumulator, gas charged",Hydraulic,Reservoirs & accumulators,fl.hyd.accumulator.gas.ansi,pending,F3,Director Q1: ANSI-style variant of fl.hyd.accumulator.gas; becomes 'equivalent' if the ANSI drawing is identical. HO-T15
-Y32-4.2.3,Y32,p5 cl.4.2.3,"Accumulator, weighted",Hydraulic,Reservoirs & accumulators,fl.hyd.accumulator.weight,pending,F3,
-Y32-4.3,Y32,p5 cl.4.3,Receiver,Pneumatic,Reservoirs & accumulators,fl.pneu.receiver.ansi,pending,F3,Director Q1: ANSI-style variant of fl.pneu.receiver; becomes 'equivalent' if the ANSI drawing is identical.
+Y32-4.1.2.2,Y32,p5 cl.4.1.2.2,"Simplified reservoir, return above fluid level",Hydraulic,Reservoirs & accumulators,fl.hyd.tank.above,equivalent,F3,Director Q1: ANSI-style variant of fl.hyd.tank.above; becomes 'equivalent' if the ANSI drawing is identical. HO-B22; Same drawing as the ISO form (HO-B22)
+Y32-4.1.2.3,Y32,p5 cl.4.1.2.3,Vented manifold,Hydraulic,Reservoirs & accumulators,fl.hyd.manifold.vented,validated,F3,
+Y32-4.2,Y32,p5 cl.4.2,Accumulator,Hydraulic,Reservoirs & accumulators,fl.hyd.accumulator.ansi,validated,F3,Director Q1: ANSI-style variant of fl.hyd.accumulator; becomes 'equivalent' if the ANSI drawing is identical.; ANSI general accumulator has no separating element
+Y32-4.2.1,Y32,p5 cl.4.2.1,"Accumulator, spring loaded",Hydraulic,Reservoirs & accumulators,fl.hyd.accumulator.spring,validated,F3,
+Y32-4.2.2,Y32,p5 cl.4.2.2,"Accumulator, gas charged",Hydraulic,Reservoirs & accumulators,fl.hyd.accumulator.gas,equivalent,F3,Director Q1: ANSI-style variant of fl.hyd.accumulator.gas; becomes 'equivalent' if the ANSI drawing is identical. HO-T15; Same drawing as the ISO gas-charged accumulator (HO-T15)
+Y32-4.2.3,Y32,p5 cl.4.2.3,"Accumulator, weighted",Hydraulic,Reservoirs & accumulators,fl.hyd.accumulator.weight,validated,F3,
+Y32-4.3,Y32,p5 cl.4.3,Receiver,Pneumatic,Reservoirs & accumulators,fl.pneu.receiver.ansi,validated,F3,Director Q1: ANSI-style variant of fl.pneu.receiver; becomes 'equivalent' if the ANSI drawing is identical.; ANSI receiver is inline (two ports); ISO has one top port
 Y32-4.4,Y32,p5 cl.4.4,"Energy source (hydraulic, pneumatic)",Hydraulic+Pneumatic,Lines & connections,fl.hyd.flowdir; fl.pneu.flowdir,duplicate,F2,F2: 1-port source marker; Drawing identical to the flow-direction marker (3.5); the flow-direction symbols note this use
 Y32-5,Y32,p6 cl.5,"Fluid conditioner, general",Hydraulic+Pneumatic,Fluid conditioning,fl.*.conditioner,pending,F4,
 Y32-5.1.1a,Y32,p7 cl.5.1.1,Heater (inside triangles: introduction of heat),Hydraulic+Pneumatic,Fluid conditioning,fl.*.heater,pending,F4,
@@ -310,7 +310,7 @@ Y32-10.16.1,Y32,p19 cl.10.16.1,"Flow control, adjustable, non-compensated",Hydra
 Y32-10.16.2,Y32,p19 cl.10.16.2,"Flow control, adjustable with bypass",Hydraulic+Pneumatic,Valves,fl.*.flow.oneway.ansi,pending,F8,Director Q1: ANSI-style variant of fl.*.flow.oneway; becomes 'equivalent' if the ANSI drawing is identical.
 Y32-10.16.3,Y32,p19 cl.10.16.3,"Flow control, adjustable and pressure compensated with bypass",Hydraulic+Pneumatic,Valves,fl.*.flow.pc.bypass,pending,F8,
 Y32-10.16.4,Y32,p19 cl.10.16.4,"Flow control, adjustable, temperature and pressure compensated",Hydraulic+Pneumatic,Valves,fl.*.flow.tpc.bypass,pending,F8,
-Y32-11.1,Y32,p19 cl.11.1,Component enclosure,Hydraulic+Pneumatic,Composite,-,blocked,F10,Same as HO-B03; Component enclosure: centre-line style not available; see HO-B03
+Y32-11.1,Y32,p19 cl.11.1,Component enclosure,Hydraulic+Pneumatic,Composite,-,blocked,F2,Same as HO-B03; Component enclosure: centre-line style not available; see HO-B03
 Y32-11.2c,Y32,p20 cl.11.2,"Airline accessories (FRL), composite",Pneumatic,Composite,fl.pneu.frl.full,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Q3
 Y32-11.2s,Y32,p20 cl.11.2,"Airline accessories (FRL), simplified",Pneumatic,Composite,fl.pneu.frl,pending,F10,Single defined symbol with ports
 Y32-11.3.1.1,Y32,p21 cl.11.3.1.1,"Double pump, fixed, one inlet two outlets",Hydraulic,Composite,fl.hyd.pump.double,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Q3
