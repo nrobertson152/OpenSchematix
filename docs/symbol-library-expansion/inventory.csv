@@ -470,15 +470,15 @@ ECL-LIN6.3,ECL,Linear components r6 #3,Inductor with tap / sliding contact,Elect
 ECL-LIN6.4,ECL,Linear components r6 #4,Capacitor,Electronic,Passive,el.capacitor,existing,E1,
 ECL-LIN6.5,ECL,Linear components r6 #5,"Capacitor, polarised (curved plate)",Electronic,Passive,el.capacitor.pol,existing,E1,Checked: the existing polarised capacitor uses the curved plate
 ECL-LIN6.6,ECL,Linear components r6 #6,"Capacitor, polarised (rectangle plate)",Electronic,Passive,el.capacitor.pol.rect,validated,E1,Existing el.capacitor.pol (IEEE 315) - verify which plate form it uses; Checked: the open-rectangle plate form is not the existing symbol (which is curved)
-ECL-XFM1.1,ECL,Transformers r1 #1,"Transformer, iron core, dots same end (in phase)",Electrical,Transformers,el.transformer.dot,pending,E5,Existing el.transformer has no polarity dots; dotted variants are distinct
-ECL-XFM1.2,ECL,Transformers r1 #2,"Transformer, iron core, step-down, dots same end",Electrical,Transformers,el.transformer.dot.step,pending,E5,
-ECL-XFM1.3,ECL,Transformers r1 #3,"Transformer, centre-tapped secondary",Electrical,Transformers,el.transformer.ct,pending,E5,
-ECL-XFM1.4,ECL,Transformers r1 #4,"Transformer, two secondary windings",Electrical,Transformers,el.transformer.2sec,pending,E5,
-ECL-XFM2.1,ECL,Transformers r2 #1,"Transformer, iron core, dots opposite ends (inverting)",Electrical,Transformers,el.transformer.inv,pending,E5,
-ECL-XFM2.2,ECL,Transformers r2 #2,"Transformer, step-down, dots opposite ends",Electrical,Transformers,el.transformer.inv.step,pending,E5,
-ECL-XFM2.3,ECL,Transformers r2 #3,"Transformer, centre-tapped secondary, dots opposite ends",Electrical,Transformers,el.transformer.ct.inv,pending,E5,
-ECL-XFM2.4,ECL,Transformers r2 #4,Autotransformer (tapped single winding),Electrical,Transformers,el.autotransformer,pending,E5,
-ECL-XFM2.5,ECL,Transformers r2 #5,Autotransformer with core,Electrical,Transformers,el.autotransformer.core,pending,E5,
+ECL-XFM1.1,ECL,Transformers r1 #1,"Transformer, iron core, dots same end (in phase)",Electrical,Transformers,el.transformer.dot,validated,E5,Existing el.transformer has no polarity dots; dotted variants are distinct; Existing el.transformer geometry plus polarity dots
+ECL-XFM1.2,ECL,Transformers r1 #2,"Transformer, iron core, step-down, dots same end",Electrical,Transformers,el.transformer.dot.step,validated,E5,Fewer secondary turns drawn
+ECL-XFM1.3,ECL,Transformers r1 #3,"Transformer, centre-tapped secondary",Electrical,Transformers,el.transformer.ct,validated,E5,Tap terminal CT
+ECL-XFM1.4,ECL,Transformers r1 #4,"Transformer, two secondary windings",Electrical,Transformers,el.transformer.2sec,validated,E5,Terminals S1-S2 and S3-S4
+ECL-XFM2.1,ECL,Transformers r2 #1,"Transformer, iron core, dots opposite ends (inverting)",Electrical,Transformers,el.transformer.inv,validated,E5,
+ECL-XFM2.2,ECL,Transformers r2 #2,"Transformer, step-down, dots opposite ends",Electrical,Transformers,el.transformer.inv.step,validated,E5,
+ECL-XFM2.3,ECL,Transformers r2 #3,"Transformer, centre-tapped secondary, dots opposite ends",Electrical,Transformers,el.transformer.ct.inv,validated,E5,
+ECL-XFM2.4,ECL,Transformers r2 #4,Autotransformer (tapped single winding),Electrical,Transformers,el.autotransformer,validated,E5,"Terminals 1, 2, tap 3"
+ECL-XFM2.5,ECL,Transformers r2 #5,Autotransformer with core,Electrical,Transformers,el.autotransformer.core,validated,E5,"Terminals 1, 2, tap 3"
 ECL-TRS1.1,ECL,Transistors r1 #1,NPN bipolar transistor,Electronic,Semiconductors,el.npn,existing,E4,
 ECL-TRS1.2,ECL,Transistors r1 #2,NPN phototransistor,Electronic,Semiconductors,el.npn.photo,validated,E4,"No base connection, as drawn (terminals C, E)"
 ECL-TRS1.3,ECL,Transistors r1 #3,N-channel JFET,Electronic,Semiconductors,el.jfet.n,validated,E4,"Terminals G, D, S"
@@ -495,13 +495,13 @@ ECL-TRS2.6,ECL,Transistors r2 #6,"P-channel MOSFET, gate bubble form",Electronic
 ECL-TRS2.7,ECL,Transistors r2 #7,"P-channel MOSFET, depletion, in envelope",Electronic,Semiconductors,el.pmos.depl.env,blocked,E4,Director Q4: unlabelled/ambiguous drawing left out until identified. Gate/channel line style needs confirming against the source before implementation (Q4)
 ECL-MEC1.1,ECL,Mechanical switches r1 #1,"Switch, single pole, open (make)",Electrical,Switching (IEC),el.contact.no.iec,existing,E6,Same function as existing make contact; ECL draws terminal circles
 ECL-MEC2.1,ECL,Mechanical switches r2 #1,"Switch, single pole, drawn closed",Electrical,Switching (IEC),el.switch.closed,blocked,E6,Director Q4: unlabelled/ambiguous drawing left out until identified. Blade resting on contact: break (NC) contact or a make contact drawn actuated? Q4
-ECL-MEC3.1,ECL,Mechanical switches r3 #1,"Switch, single pole double throw (changeover)",Electrical,Switching (IEC),el.switch.spdt,pending,E6,
+ECL-MEC3.1,ECL,Mechanical switches r3 #1,"Switch, single pole double throw (changeover)",Electrical,Switching (IEC),el.switch.spdt,validated,E6,"Terminals C, A, B"
 ECL-MEC4.1,ECL,Mechanical switches r4 #1,"Changeover switch, centre/blade to common (second position drawing)",Electrical,Switching (IEC),el.switch.spdt,duplicate,E6,Same switch drawn in another position
-ECL-MEC1.2,ECL,Mechanical switches r1 #2,Relay: coil with one make contact (linked),Electrical,Switching (IEC),el.relay.no,pending,E6,Coil and contact linked by a dashed line
+ECL-MEC1.2,ECL,Mechanical switches r1 #2,Relay: coil with one make contact (linked),Electrical,Switching (IEC),el.relay.no,validated,E6,"Coil and contact linked by a dashed line; Contact 13-14, coil A1-A2"
 ECL-MEC2.2,ECL,Mechanical switches r2 #2,Relay: coil with contact drawn closed,Electrical,Switching (IEC),el.relay.nc,blocked,E6,Director Q4: unlabelled/ambiguous drawing left out until identified. As r2 #1 (Q4)
-ECL-MEC3.2,ECL,Mechanical switches r3 #2,"Switch, two pole, linked (DPST)",Electrical,Switching (IEC),el.switch.dpst,pending,E6,
-ECL-MEC1.3,ECL,Mechanical switches r1 #3,Relay: coil with two linked make contacts,Electrical,Switching (IEC),el.relay.2no,pending,E6,
-ECL-MEC2.3,ECL,Mechanical switches r2 #3,"Rotary selector switch, four positions",Electrical,Switching (IEC),el.switch.rotary4,pending,E6,
+ECL-MEC3.2,ECL,Mechanical switches r3 #2,"Switch, two pole, linked (DPST)",Electrical,Switching (IEC),el.switch.dpst,validated,E6,
+ECL-MEC1.3,ECL,Mechanical switches r1 #3,Relay: coil with two linked make contacts,Electrical,Switching (IEC),el.relay.2no,validated,E6,"Contacts 13-14, 23-24, coil A1-A2"
+ECL-MEC2.3,ECL,Mechanical switches r2 #3,"Rotary selector switch, four positions",Electrical,Switching (IEC),el.switch.rotary4,validated,E6,"Common C, positions 1-4"
 ECL-SEM1.1,ECL,Semiconductor devices r1 #1,Schmitt trigger inverter,Electronic,Logic,el.logic.schmitt.not,pending,E7,
 ECL-SEM2.1,ECL,Semiconductor devices r2 #1,Schmitt trigger buffer,Electronic,Logic,el.logic.schmitt,pending,E7,
 ECL-SEM1.2,ECL,Semiconductor devices r1 #2,Operational amplifier,Electronic,Integrated,el.opamp,existing,E8,
