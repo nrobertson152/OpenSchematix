@@ -820,18 +820,71 @@ PROGRESS = {
     "Y32-11.4.7s": ("validated", "dcv operator 'detent'; dcv operator 'solenoid.and.pilot.ext'",
                     "Throttled exhausts are drawn separately (not a configurator feature)"),
 }
+
+
+def both(*ids):
+    return "; ".join(f"fl.{m}.{i}" for i in ids for m in ("hyd", "pneu"))
+
+
+F2 = {
+    "HO-B03": ("blocked", "-", "A component enclosure needs a centre-line (dash-dot) line style; wires and drawing "
+                               "shapes only have solid and dashed. Adding a line style is an engine / file-format "
+                               "change outside this PR - reported as a limitation"),
+    "HO-B04": ("validated", both("hose"), ""),
+    "HO-B05": ("blocked", "-", "The 'union' figures are not legible enough at the chart's resolution to tell what is "
+                               "drawn (junction with fitting circle?); not implemented without identification"),
+    "HO-B07": ("validated", both("port.closed"), ""),
+    "HO-B08": ("validated", "gen.arrow.move; gen.arrow.move.both",
+               "Single and double-headed arrows; the third arrow form in the chart is not legible and is left out"),
+    "HO-B09": ("validated", "gen.arrow.rotation", "Mirror the element for the opposite direction"),
+    "HO-B10": ("validated", "gen.arrow.adjust", ""),
+    "HO-B11": ("validated", "gen.mark.electric", ""),
+    "HO-B12": ("validated", "gen.mark.solenoids.opposed", ""),
+    "HO-B13": ("validated", "gen.arrow.rotation.shaft", "Mirror for the second form"),
+    "HO-B14": ("validated", "fl.pneu.mark.energy", ""),
+    "HO-B15": ("validated", "fl.hyd.mark.energy", ""),
+    "HO-B16": ("validated", both("testpoint"), ""),
+    "HO-B19": ("validated", both("port.plugged"), "ISO and ANSI (Y32 3.9.1) drawings are identical"),
+    "HO-B20": ("validated", both("rotaryunion"), ""),
+    "HO-S20": ("validated", "gen.coupling", "Shaft coupling, drafting element"),
+    "Y32-2.4.4": ("blocked", "-", "Centre (dash-dot) line style not available; see HO-B03"),
+    "Y32-11.1": ("blocked", "-", "Component enclosure: centre-line style not available; see HO-B03"),
+    "Y32-2.10": ("validated", "gen.mark.compensated", ""),
+    "Y32-2.11": ("validated", "gen.mark.temperature", ""),
+    "Y32-3.5.1": ("validated", "fl.pneu.flowdir; fl.pneu.flowdir.both", "One-way and two-way forms"),
+    "Y32-3.5.2": ("validated", "fl.hyd.flowdir; fl.hyd.flowdir.both", "One-way and two-way forms"),
+    "Y32-3.6.1": ("validated", "fl.pneu.exhaust", ""),
+    "Y32-3.6.2": ("validated", "fl.pneu.exhaust.port", ""),
+    "Y32-3.8": ("validated", both("hose.ansi"), "ANSI form differs from ISO (end dots, no line stubs)"),
+    "Y32-3.9.1": ("equivalent", both("port.plugged"),
+                  "First form identical to the ISO plugged port; the second form needs the centre-line style"),
+    "Y32-3.9.3a": ("validated", both("qd.open"), ""),
+    "Y32-3.9.3b": ("validated", both("qd.open.apart"), "Halves drawn apart; ports 1 and 2 are separate"),
+    "Y32-3.9.4a": ("validated", both("qd.2check"), ""),
+    "Y32-3.9.4b": ("validated", both("qd.2check.apart"), ""),
+    "Y32-3.9.5a": ("validated", both("qd.1check"), "Check drawn in the right-hand half, as in the source"),
+    "Y32-3.9.5b": ("validated", both("qd.1check.apart"), ""),
+    "Y32-3.11": ("validated", both("rotaryunion.ansi"),
+                 "Figure printed under the 3.9.4 heading on page 4 (3.11 has none): three passages, ports 1a-3b"),
+    "Y32-4.4": ("duplicate", both("flowdir"),
+                "Drawing identical to the flow-direction marker (3.5); the flow-direction symbols note this use"),
+    "Y32-9.3.2": ("validated", "fl.pneu.silencer", "Muffler; prefix Z (purchasable)"),
+}
+for k, (st, tgt, note) in F2.items():
+    PROGRESS[k] = (st, tgt, note)
+for r in R:
+    if r["key"] in F2 and F2[r["key"]][0] in ("validated", "equivalent"):
+        r["batch"] = "F2"
 for r in R:
     if r["key"] in PROGRESS:
         st, tgt, note = PROGRESS[r["key"]]
         r["status"], r["target"] = st, tgt
         if note:
             r["notes"] = (r["notes"] + "; " if r["notes"] else "") + note
-        if st == "validated":
+        if st == "validated" and r["key"] not in F2:
             r["batch"] = "F1"
-for r in R:
-    if r["key"] == "HO-S20":
-        r.update(status="annotation", target="gen.coupling", batch="F2",
-                 notes="Shaft coupling: mechanical drafting element, not a valve operator")
+        elif r["key"] in F2 and st in ("validated", "equivalent", "duplicate"):
+            r["batch"] = "F2"
 assert not set(PROGRESS) - {r["key"] for r in R}, set(PROGRESS) - {r["key"] for r in R}
 
 # =============================================================== write

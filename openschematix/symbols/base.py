@@ -31,6 +31,7 @@ IEC = "IEC 60617 style"
 IEEE = "IEEE 315 / ANSI Y32.2 style"
 NEMA = "NEMA / JIC ladder style (IEEE 315)"
 ISO = "ISO 1219-1 style"
+ANSI = "ANSI Y32.10 style"
 GENERIC = "Generic"
 
 

@@ -1,24 +1,24 @@
 key,source,location,source_name,category,group,target,status,batch,notes
 HO-B01,HO,Basic Symbols r1,Pressure or return line,Hydraulic+Pneumatic,Lines,wire style solid,convention,-,
 HO-B02,HO,Basic Symbols r2,Pilot line,Hydraulic+Pneumatic,Lines,wire style dashed,convention,-,
-HO-B03,HO,Basic Symbols r3,Two or more functions in one unit (enclosure line),General,Drafting,gen.enclosure,annotation,F2,Dash-dot component enclosure; also Y32 11.1
-HO-B04,HO,Basic Symbols r4,Flexible hose,Hydraulic+Pneumatic,Lines & connections,fl.*.hose,pending,F2,
-HO-B05,HO,Basic Symbols r5,Union,Hydraulic+Pneumatic,Lines & connections,fl.*.union,pending,F2,Source shows two variants side by side; drawn as the left (with ports) form
+HO-B03,HO,Basic Symbols r3,Two or more functions in one unit (enclosure line),General,Drafting,-,blocked,F2,Dash-dot component enclosure; also Y32 11.1; A component enclosure needs a centre-line (dash-dot) line style; wires and drawing shapes only have solid and dashed. Adding a line style is an engine / file-format change outside this PR - reported as a limitation
+HO-B04,HO,Basic Symbols r4,Flexible hose,Hydraulic+Pneumatic,Lines & connections,fl.hyd.hose; fl.pneu.hose,validated,F2,
+HO-B05,HO,Basic Symbols r5,Union,Hydraulic+Pneumatic,Lines & connections,-,blocked,F2,Source shows two variants side by side; drawn as the left (with ports) form; The 'union' figures are not legible enough at the chart's resolution to tell what is drawn (junction with fitting circle?); not implemented without identification
 HO-B06,HO,Basic Symbols r6,"Cross (lines crossing, bridged and plain)",Hydraulic+Pneumatic,Lines,editor crossings,convention,-,Wire crossing/junction rules are editor behaviour
-HO-B07,HO,Basic Symbols r7,Closed connection,Hydraulic+Pneumatic,Lines & connections,fl.*.port.closed,pending,F2,
-HO-B08,HO,Basic Symbols r8,Direction of movement (linear arrows),General,Drafting,gen.arrow.move,annotation,F2,
-HO-B09,HO,Basic Symbols r9,Direction of rotation,General,Drafting,gen.arrow.rotation,annotation,F2,
-HO-B10,HO,Basic Symbols r10,Regulation possible (adjustability arrow),General,Drafting,gen.arrow.adjust,annotation,F2,Same meaning as Y32 2.9
-HO-B11,HO,Basic Symbols r11,Electric (energy type),General,Drafting,gen.mark.electric,annotation,F2,
-HO-B12,HO,Basic Symbols r12,Solenoids working in opposite directions,General,Drafting,gen.mark.solenoids.opposed,annotation,F2,
-HO-B13,HO,Basic Symbols r13,Direction of rotation looking at shaft,General,Drafting,gen.arrow.rotation.shaft,annotation,F2,"Two forms shown (CW, CCW)"
-HO-B14,HO,Basic Symbols r14,"Pneumatic (energy direction, hollow)",Pneumatic,Drafting,fl.pneu.mark.energy,annotation,F2,Same as Y32 2.5.2 / 4.4
-HO-B15,HO,Basic Symbols r15,"Hydraulic (energy direction, filled)",Hydraulic,Drafting,fl.hyd.mark.energy,annotation,F2,
-HO-B16,HO,Basic Symbols r16,Test point,Hydraulic+Pneumatic,Lines & connections,fl.*.testpoint,pending,F2,
+HO-B07,HO,Basic Symbols r7,Closed connection,Hydraulic+Pneumatic,Lines & connections,fl.hyd.port.closed; fl.pneu.port.closed,validated,F2,
+HO-B08,HO,Basic Symbols r8,Direction of movement (linear arrows),General,Drafting,gen.arrow.move; gen.arrow.move.both,validated,F2,Single and double-headed arrows; the third arrow form in the chart is not legible and is left out
+HO-B09,HO,Basic Symbols r9,Direction of rotation,General,Drafting,gen.arrow.rotation,validated,F2,Mirror the element for the opposite direction
+HO-B10,HO,Basic Symbols r10,Regulation possible (adjustability arrow),General,Drafting,gen.arrow.adjust,validated,F2,Same meaning as Y32 2.9
+HO-B11,HO,Basic Symbols r11,Electric (energy type),General,Drafting,gen.mark.electric,validated,F2,
+HO-B12,HO,Basic Symbols r12,Solenoids working in opposite directions,General,Drafting,gen.mark.solenoids.opposed,validated,F2,
+HO-B13,HO,Basic Symbols r13,Direction of rotation looking at shaft,General,Drafting,gen.arrow.rotation.shaft,validated,F2,"Two forms shown (CW, CCW); Mirror for the second form"
+HO-B14,HO,Basic Symbols r14,"Pneumatic (energy direction, hollow)",Pneumatic,Drafting,fl.pneu.mark.energy,validated,F2,Same as Y32 2.5.2 / 4.4
+HO-B15,HO,Basic Symbols r15,"Hydraulic (energy direction, filled)",Hydraulic,Drafting,fl.hyd.mark.energy,validated,F2,
+HO-B16,HO,Basic Symbols r16,Test point,Hydraulic+Pneumatic,Lines & connections,fl.hyd.testpoint; fl.pneu.testpoint,validated,F2,
 HO-B17,HO,Basic Symbols r17,Spring,Hydraulic+Pneumatic,Valve operators,dcv operator 'spring'; fl.hyd.op.spring; fl.pneu.op.spring,validated,F1,Already a configurator operator; standalone element added with F1; Operator existed; standalone element added
 HO-B18,HO,Basic Symbols r18,Throttle,Hydraulic+Pneumatic,Non-return & flow,fl.*.throttle,existing,-,
-HO-B19,HO,Basic Symbols r19,Plugged port,Hydraulic+Pneumatic,Lines & connections,fl.*.port.plugged,pending,F2,
-HO-B20,HO,Basic Symbols r20,Rotary union,Hydraulic+Pneumatic,Lines & connections,fl.*.rotaryunion,pending,F2,
+HO-B19,HO,Basic Symbols r19,Plugged port,Hydraulic+Pneumatic,Lines & connections,fl.hyd.port.plugged; fl.pneu.port.plugged,validated,F2,ISO and ANSI (Y32 3.9.1) drawings are identical
+HO-B20,HO,Basic Symbols r20,Rotary union,Hydraulic+Pneumatic,Lines & connections,fl.hyd.rotaryunion; fl.pneu.rotaryunion,validated,F2,
 HO-B21,HO,Basic Symbols r21,Detent,Hydraulic+Pneumatic,Valve operators,dcv operator 'detent'; fl.hyd.op.detent; fl.pneu.op.detent,validated,F1,"Director: detents and spool controls go in the configurator, optionally also standalone; One notch per switching position; marker on the rest position"
 HO-B22,HO,Basic Symbols r22,Return above / below fluid level,Hydraulic,Reservoirs,fl.hyd.tank.above / existing fl.hyd.tank,pending,F3,Below-level form = existing fl.hyd.tank
 HO-B23,HO,Basic Symbols r23,Check valve,Hydraulic+Pneumatic,Non-return & flow,fl.*.check,existing,-,
@@ -40,7 +40,7 @@ HO-S14,HO,Spool Controls S14,Direct pilot operated,Hydraulic+Pneumatic,Valve ope
 HO-S15,HO,Spool Controls S15,Pneumatic / hydraulic operated,Hydraulic+Pneumatic,Valve operators,dcv operator 'pilot.applied'; fl.hyd.op.pilot.applied; fl.pneu.op.pilot.applied,validated,F1,New operator + standalone operator element; Pilot terminal on the box's outer edge (the source draws no line)
 HO-S16,HO,Spool Controls S16,Electric motor,Hydraulic+Pneumatic,Valve operators,dcv operator 'motor'; fl.hyd.op.motor; fl.pneu.op.motor,validated,F1,New operator + standalone operator element
 HO-S17,HO,Spool Controls S17,Other control unit (not electric motor),Hydraulic+Pneumatic,Valve operators,dcv operator 'motor.other'; fl.hyd.op.motor.other; fl.pneu.op.motor.other,validated,F1,New operator + standalone operator element
-HO-S20,HO,Spool Controls S20,Coupling,Hydraulic+Pneumatic,Valve operators,gen.coupling,annotation,F2,"Shaft coupling: mechanical drafting element, not a valve operator"
+HO-S20,HO,Spool Controls S20,Coupling,Hydraulic+Pneumatic,Valve operators,gen.coupling,validated,F2,"New operator + standalone operator element; Shaft coupling, drafting element"
 HO-S21,HO,Spool Controls S21,Internal pilot,Hydraulic+Pneumatic,Valve operators,dcv operator 'pilot.internal'; fl.hyd.op.pilot.internal; fl.pneu.op.pilot.internal,validated,F1,"New operator + standalone operator element; Configurator form: box with triangle, no pilot port (Y32 7.7.2). The source's dashed line from P is drawn by the user when the valve is drawn by hand"
 HO-S22,HO,Spool Controls S22,External pilot,Hydraulic+Pneumatic,Valve operators,dcv operator 'pilot'; fl.hyd.op.pilot; fl.pneu.op.pilot,validated,F1,New operator + standalone operator element; External pilot = existing pilot operator with port X / 12
 HO-S18,HO,Spool Controls r18,Intermediate position,Hydraulic+Pneumatic,Directional valves,dcv option 'transition',validated,F1,Needs a valve-dialog option (GUI) - outside the allowed scope; see decision Q2; Director Q2: dialog change allowed; Two-position valves; dashed transition position
@@ -126,7 +126,7 @@ HO-M13,HO,Measuring M13,Micro switch (mechanically operated electric switch),Hyd
 Y32-2.4.1,Y32,p3 cl.2.4.1,Solid line - main,Hydraulic+Pneumatic,Lines,editor / element,convention,-,
 Y32-2.4.2,Y32,p3 cl.2.4.2,Dash line - pilot,Hydraulic+Pneumatic,Lines,editor / element,convention,-,
 Y32-2.4.3,Y32,p3 cl.2.4.3,Dotted line - exhaust or drain,Hydraulic+Pneumatic,Lines,editor / element,convention,-,Dotted exhaust line: the editor has solid and dashed wire styles only
-Y32-2.4.4,Y32,p3 cl.2.4.4,Center line - enclosure outline,Hydraulic+Pneumatic,Lines,editor / element,convention,-,
+Y32-2.4.4,Y32,p3 cl.2.4.4,Center line - enclosure outline,Hydraulic+Pneumatic,Lines,-,blocked,-,Centre (dash-dot) line style not available; see HO-B03
 Y32-2.4.5,Y32,p3 cl.2.4.5,Sensing line,Hydraulic+Pneumatic,Lines,editor / element,convention,-,
 Y32-2.4.6,Y32,p3 cl.2.4.6,Lines crossing,Hydraulic+Pneumatic,Lines,editor / element,convention,-,
 Y32-2.4.7,Y32,p3 cl.2.4.7,Lines joining,Hydraulic+Pneumatic,Lines,editor / element,convention,-,
@@ -141,24 +141,24 @@ Y32-10.6,Y32,p15 cl.10.6,"Ports, internally blocked (examples)",Hydraulic+Pneuma
 Y32-10.7,Y32,p15 cl.10.7,"Flow paths, internally open (examples)",Hydraulic+Pneumatic,Valve elements,editor / element,convention,-,
 Y32-10.8,Y32,p15 cl.10.8,"Flow paths, infinite positioning (examples)",Hydraulic+Pneumatic,Valve elements,editor / element,convention,-,
 Y32-2.9,Y32,p3 cl.2.9,Adjustable (45-degree arrow),General,Drafting,HO-B10,duplicate,F2,
-Y32-2.10,Y32,p4 cl.2.10,Pressure compensated (arrow parallel to short side),General,Drafting,gen.mark.compensated,annotation,F2,
-Y32-2.11,Y32,p4 cl.2.11,Temperature cause or effect (line ending in a dot),General,Drafting,gen.mark.temperature,annotation,F2,
+Y32-2.10,Y32,p4 cl.2.10,Pressure compensated (arrow parallel to short side),General,Drafting,gen.mark.compensated,validated,F2,
+Y32-2.11,Y32,p4 cl.2.11,Temperature cause or effect (line ending in a dot),General,Drafting,gen.mark.temperature,validated,F2,
 Y32-2.13,Y32,p4 cl.2.13,Rotating shaft with direction arrow,General,Drafting,HO-B09,duplicate,F2,
-Y32-3.5.1,Y32,p4 cl.3.5.1,"Flow direction, pneumatic",Pneumatic,Lines & connections,fl.pneu.flowdir,pending,F2,Inline 2-port marker
-Y32-3.5.2,Y32,p4 cl.3.5.2,"Flow direction, hydraulic",Hydraulic,Lines & connections,fl.hyd.flowdir,pending,F2,
-Y32-3.6.1,Y32,p4 cl.3.6.1,"Outlet to atmosphere, plain orifice, unconnectable",Pneumatic,Lines & connections,fl.pneu.exhaust,pending,F2,
-Y32-3.6.2,Y32,p4 cl.3.6.2,"Outlet to atmosphere, connectable orifice (thread)",Pneumatic,Lines & connections,fl.pneu.exhaust.port,pending,F2,
+Y32-3.5.1,Y32,p4 cl.3.5.1,"Flow direction, pneumatic",Pneumatic,Lines & connections,fl.pneu.flowdir; fl.pneu.flowdir.both,validated,F2,Inline 2-port marker; One-way and two-way forms
+Y32-3.5.2,Y32,p4 cl.3.5.2,"Flow direction, hydraulic",Hydraulic,Lines & connections,fl.hyd.flowdir; fl.hyd.flowdir.both,validated,F2,One-way and two-way forms
+Y32-3.6.1,Y32,p4 cl.3.6.1,"Outlet to atmosphere, plain orifice, unconnectable",Pneumatic,Lines & connections,fl.pneu.exhaust,validated,F2,
+Y32-3.6.2,Y32,p4 cl.3.6.2,"Outlet to atmosphere, connectable orifice (thread)",Pneumatic,Lines & connections,fl.pneu.exhaust.port,validated,F2,
 Y32-3.7,Y32,p4 cl.3.7,Line with fixed restriction,Hydraulic+Pneumatic,Non-return & flow,fl.*.throttle,blocked,-,The PDF figure is empty (only two plain line segments render); existing throttle covers the function
-Y32-3.8,Y32,p4 cl.3.8,"Line, flexible",Hydraulic+Pneumatic,Lines & connections,fl.*.hose.ansi,pending,F2,Director Q1: ANSI-style variant of fl.*.hose; becomes 'equivalent' if the ANSI drawing is identical.
+Y32-3.8,Y32,p4 cl.3.8,"Line, flexible",Hydraulic+Pneumatic,Lines & connections,fl.hyd.hose.ansi; fl.pneu.hose.ansi,validated,F2,"Director Q1: ANSI-style variant of fl.*.hose; becomes 'equivalent' if the ANSI drawing is identical.; ANSI form differs from ISO (end dots, no line stubs)"
 Y32-3.9,Y32,p4 cl.3.9,"Station: testing, measurement or power take-off",Hydraulic+Pneumatic,Lines & connections,HO-B16,duplicate,F2,
-Y32-3.9.1,Y32,p4 cl.3.9.1,Plugged port (two forms),Hydraulic+Pneumatic,Lines & connections,HO-B19,duplicate,F2,
-Y32-3.9.3a,Y32,p4 cl.3.9.3,"Quick disconnect without checks, connected",Hydraulic+Pneumatic,Lines & connections,fl.*.qd.open,pending,F2,"Disconnected form: two halves, each with its own port"
-Y32-3.9.3b,Y32,p4 cl.3.9.3,"Quick disconnect without checks, disconnected",Hydraulic+Pneumatic,Lines & connections,fl.*.qd.open.apart,pending,F2,"Disconnected form: two halves, each with its own port"
-Y32-3.9.4a,Y32,p5 cl.3.9.4,"Quick disconnect with two checks, connected",Hydraulic+Pneumatic,Lines & connections,fl.*.qd.2check,pending,F2,"Disconnected form: two halves, each with its own port"
-Y32-3.9.4b,Y32,p5 cl.3.9.4,"Quick disconnect with two checks, disconnected",Hydraulic+Pneumatic,Lines & connections,fl.*.qd.2check.apart,pending,F2,"Disconnected form: two halves, each with its own port"
-Y32-3.9.5a,Y32,p5 cl.3.9.5,"Quick disconnect with one check, connected",Hydraulic+Pneumatic,Lines & connections,fl.*.qd.1check,pending,F2,"Disconnected form: two halves, each with its own port"
-Y32-3.9.5b,Y32,p5 cl.3.9.5,"Quick disconnect with one check, disconnected",Hydraulic+Pneumatic,Lines & connections,fl.*.qd.1check.apart,pending,F2,"Disconnected form: two halves, each with its own port"
-Y32-3.11,Y32,p4-5 cl.3.11,Rotating coupling,Hydraulic+Pneumatic,Lines & connections,fl.*.rotaryunion.ansi,pending,F2,Director Q1: ANSI-style variant of fl.*.rotaryunion; becomes 'equivalent' if the ANSI drawing is identical. Ambiguous layout: the circle-with-lines figure sits under 3.9.4 on p4; treated as the 3.11 figure
+Y32-3.9.1,Y32,p4 cl.3.9.1,Plugged port (two forms),Hydraulic+Pneumatic,Lines & connections,fl.hyd.port.plugged; fl.pneu.port.plugged,equivalent,F2,First form identical to the ISO plugged port; the second form needs the centre-line style
+Y32-3.9.3a,Y32,p4 cl.3.9.3,"Quick disconnect without checks, connected",Hydraulic+Pneumatic,Lines & connections,fl.hyd.qd.open; fl.pneu.qd.open,validated,F2,"Disconnected form: two halves, each with its own port"
+Y32-3.9.3b,Y32,p4 cl.3.9.3,"Quick disconnect without checks, disconnected",Hydraulic+Pneumatic,Lines & connections,fl.hyd.qd.open.apart; fl.pneu.qd.open.apart,validated,F2,"Disconnected form: two halves, each with its own port; Halves drawn apart; ports 1 and 2 are separate"
+Y32-3.9.4a,Y32,p5 cl.3.9.4,"Quick disconnect with two checks, connected",Hydraulic+Pneumatic,Lines & connections,fl.hyd.qd.2check; fl.pneu.qd.2check,validated,F2,"Disconnected form: two halves, each with its own port"
+Y32-3.9.4b,Y32,p5 cl.3.9.4,"Quick disconnect with two checks, disconnected",Hydraulic+Pneumatic,Lines & connections,fl.hyd.qd.2check.apart; fl.pneu.qd.2check.apart,validated,F2,"Disconnected form: two halves, each with its own port"
+Y32-3.9.5a,Y32,p5 cl.3.9.5,"Quick disconnect with one check, connected",Hydraulic+Pneumatic,Lines & connections,fl.hyd.qd.1check; fl.pneu.qd.1check,validated,F2,"Disconnected form: two halves, each with its own port; Check drawn in the right-hand half, as in the source"
+Y32-3.9.5b,Y32,p5 cl.3.9.5,"Quick disconnect with one check, disconnected",Hydraulic+Pneumatic,Lines & connections,fl.hyd.qd.1check.apart; fl.pneu.qd.1check.apart,validated,F2,"Disconnected form: two halves, each with its own port"
+Y32-3.11,Y32,p4-5 cl.3.11,Rotating coupling,Hydraulic+Pneumatic,Lines & connections,fl.hyd.rotaryunion.ansi; fl.pneu.rotaryunion.ansi,validated,F2,"Director Q1: ANSI-style variant of fl.*.rotaryunion; becomes 'equivalent' if the ANSI drawing is identical. Ambiguous layout: the circle-with-lines figure sits under 3.9.4 on p4; treated as the 3.11 figure; Figure printed under the 3.9.4 heading on page 4 (3.11 has none): three passages, ports 1a-3b"
 Y32-4.1a,Y32,p5 cl.4.1a,"Reservoir, vented",Hydraulic,Reservoirs & accumulators,fl.hyd.tank.ansi,pending,F3,Director Q1: ANSI-style variant of fl.hyd.tank; becomes 'equivalent' if the ANSI drawing is identical.
 Y32-4.1b,Y32,p5 cl.4.1b,"Reservoir, pressurized",Hydraulic,Reservoirs & accumulators,fl.hyd.tank.pressurized,pending,F3,
 Y32-4.1.1a,Y32,p5 cl.4.1.1a,Reservoir with connecting lines above fluid level,Hydraulic,Reservoirs & accumulators,fl.hyd.tank.above,pending,F3,3 example forms
@@ -173,7 +173,7 @@ Y32-4.2.1,Y32,p5 cl.4.2.1,"Accumulator, spring loaded",Hydraulic,Reservoirs & ac
 Y32-4.2.2,Y32,p5 cl.4.2.2,"Accumulator, gas charged",Hydraulic,Reservoirs & accumulators,fl.hyd.accumulator.gas.ansi,pending,F3,Director Q1: ANSI-style variant of fl.hyd.accumulator.gas; becomes 'equivalent' if the ANSI drawing is identical. HO-T15
 Y32-4.2.3,Y32,p5 cl.4.2.3,"Accumulator, weighted",Hydraulic,Reservoirs & accumulators,fl.hyd.accumulator.weight,pending,F3,
 Y32-4.3,Y32,p5 cl.4.3,Receiver,Pneumatic,Reservoirs & accumulators,fl.pneu.receiver.ansi,pending,F3,Director Q1: ANSI-style variant of fl.pneu.receiver; becomes 'equivalent' if the ANSI drawing is identical.
-Y32-4.4,Y32,p5 cl.4.4,"Energy source (hydraulic, pneumatic)",Hydraulic+Pneumatic,Lines & connections,fl.*.source,pending,F2,F2: 1-port source marker
+Y32-4.4,Y32,p5 cl.4.4,"Energy source (hydraulic, pneumatic)",Hydraulic+Pneumatic,Lines & connections,fl.hyd.flowdir; fl.pneu.flowdir,duplicate,F2,F2: 1-port source marker; Drawing identical to the flow-direction marker (3.5); the flow-direction symbols note this use
 Y32-5,Y32,p6 cl.5,"Fluid conditioner, general",Hydraulic+Pneumatic,Fluid conditioning,fl.*.conditioner,pending,F4,
 Y32-5.1.1a,Y32,p7 cl.5.1.1,Heater (inside triangles: introduction of heat),Hydraulic+Pneumatic,Fluid conditioning,fl.*.heater,pending,F4,
 Y32-5.1.1b,Y32,p7 cl.5.1.1,"Heater, heating medium liquid (outside triangles filled)",Hydraulic+Pneumatic,Fluid conditioning,fl.*.heater.liquid,pending,F4,"Medium of heating/cooling lines: filled = liquid, hollow = gaseous (both forms shown)"
@@ -271,7 +271,7 @@ Y32-9.2.3,Y32,p15 cl.9.2.3,Pitot tube,Hydraulic+Pneumatic,Measurement,fl.*.pitot
 Y32-9.2.4a,Y32,p15 cl.9.2.4,"Nozzle, hydraulic",Hydraulic,Lines & connections,fl.hyd.nozzle,pending,F9,
 Y32-9.2.4b,Y32,p15 cl.9.2.4,"Nozzle, pneumatic",Pneumatic,Lines & connections,fl.pneu.nozzle,pending,F9,
 Y32-9.3.1,Y32,p15 cl.9.3.1,Pressure switch,Hydraulic+Pneumatic,Measurement,fl.*.pressure.switch.ansi,pending,F9,Director Q1: ANSI-style variant of fl.*.pressure.switch; becomes 'equivalent' if the ANSI drawing is identical.
-Y32-9.3.2,Y32,p15 cl.9.3.2,Muffler (silencer),Pneumatic,Lines & connections,fl.pneu.silencer,pending,F2,
+Y32-9.3.2,Y32,p15 cl.9.3.2,Muffler (silencer),Pneumatic,Lines & connections,fl.pneu.silencer,validated,F2,Muffler; prefix Z (purchasable)
 Y32-10.9.1s,Y32,p15 cl.10.9.1,"On-off (manual shut-off), simplified",Hydraulic+Pneumatic,Valves,fl.*.shutoff.ansi,pending,F8,Director Q1: ANSI-style variant of fl.*.shutoff; becomes 'equivalent' if the ANSI drawing is identical. Same as HO-B24
 Y32-10.9.1o,Y32,p16 cl.10.9.1,"On-off, composite, off",Hydraulic+Pneumatic,Valves,fl.*.valve.2way.manual,pending,F8,Detented manual 2/2; may map to configurator
 Y32-10.9.1n,Y32,p17 cl.10.9.1,"On-off, composite, on",Hydraulic+Pneumatic,Valves,fl.*.valve.2way.manual,duplicate,F8,Same valve shown actuated
@@ -310,7 +310,7 @@ Y32-10.16.1,Y32,p19 cl.10.16.1,"Flow control, adjustable, non-compensated",Hydra
 Y32-10.16.2,Y32,p19 cl.10.16.2,"Flow control, adjustable with bypass",Hydraulic+Pneumatic,Valves,fl.*.flow.oneway.ansi,pending,F8,Director Q1: ANSI-style variant of fl.*.flow.oneway; becomes 'equivalent' if the ANSI drawing is identical.
 Y32-10.16.3,Y32,p19 cl.10.16.3,"Flow control, adjustable and pressure compensated with bypass",Hydraulic+Pneumatic,Valves,fl.*.flow.pc.bypass,pending,F8,
 Y32-10.16.4,Y32,p19 cl.10.16.4,"Flow control, adjustable, temperature and pressure compensated",Hydraulic+Pneumatic,Valves,fl.*.flow.tpc.bypass,pending,F8,
-Y32-11.1,Y32,p19 cl.11.1,Component enclosure,Hydraulic+Pneumatic,Composite,gen.enclosure,duplicate,F10,Same as HO-B03
+Y32-11.1,Y32,p19 cl.11.1,Component enclosure,Hydraulic+Pneumatic,Composite,-,blocked,F10,Same as HO-B03; Component enclosure: centre-line style not available; see HO-B03
 Y32-11.2c,Y32,p20 cl.11.2,"Airline accessories (FRL), composite",Pneumatic,Composite,fl.pneu.frl.full,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Q3
 Y32-11.2s,Y32,p20 cl.11.2,"Airline accessories (FRL), simplified",Pneumatic,Composite,fl.pneu.frl,pending,F10,Single defined symbol with ports
 Y32-11.3.1.1,Y32,p21 cl.11.3.1.1,"Double pump, fixed, one inlet two outlets",Hydraulic,Composite,fl.hyd.pump.double,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Q3
