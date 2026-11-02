@@ -1097,10 +1097,23 @@ F9 = {
 }
 for k, (st, tgt, note) in F9.items():
     PROGRESS[k] = (st, tgt, note)
+D1 = ("Drawn with INWARD motor triangles, deliberately departing from the printed (outward, pump-like) figure "
+      "(director decision D1)")
+F5B = {
+    "Y32-8.3.1": ("validated", "fl.hyd.motor.ansi", D1 + "; the second printed orientation is the same symbol rotated"),
+    "Y32-8.3.1.2": ("validated", "fl.hyd.motor.bidir.ansi", D1 + "; differs from the ISO fl.hyd.motor.bidir (no shaft)"),
+    "Y32-8.3.2.1": ("validated", "fl.hyd.motor.var", D1),
+    "Y32-8.3.2.2": ("validated", "fl.hyd.motor.var.bidir", D1),
+    "Y32-8.6.2": ("validated", "fl.pneu.motor.bidir", D1),
+}
+for k, (st, tgt, note) in F5B.items():
+    PROGRESS[k] = (st, tgt, note)
 # Rows deliberately reopened by a director decision (completed -> pending). The write guard below allows
 # exactly these; any other completed row that would fall back to pending is refused.
-REOPENED = {"Y32-8.3.1", "Y32-8.3.1.2", "Y32-8.3.2.1", "Y32-8.3.2.2", "Y32-8.6.2"}   # decision 1, 2026-11-02
-BATCH_OF = {**{k: "F2" for k in F2}, **{k: "F3" for k in F3}, **{k: "F4" for k in F4}, **{k: "F5" for k in F5}, **{k: "F5b" for k in REOPENED}, **{k: "F6" for k in F6}, **{k: "F7" for k in F7}, **{k: "F8a" for k in F8A}, **{k: "F8b" for k in F8B}, **{k: "F9" for k in F9}}
+# History: decision 1 (2026-11-02) reopened Y32-8.3.1, -8.3.1.2, -8.3.2.1, -8.3.2.2 and -8.6.2; batch F5b completed
+# them, so the allowlist is empty again and those rows are protected like every other completed row.
+REOPENED: set = set()
+BATCH_OF = {**{k: "F2" for k in F2}, **{k: "F3" for k in F3}, **{k: "F4" for k in F4}, **{k: "F5" for k in F5}, **{k: "F5b" for k in F5B}, **{k: "F6" for k in F6}, **{k: "F7" for k in F7}, **{k: "F8a" for k in F8A}, **{k: "F8b" for k in F8B}, **{k: "F9" for k in F9}}
 for r in R:
     if r["key"] in PROGRESS:
         st, tgt, note = PROGRESS[r["key"]]

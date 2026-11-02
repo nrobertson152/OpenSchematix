@@ -120,7 +120,8 @@ are generated for visual comparison against the sources.
   simulated with dashed lines; no editor or file-format change in this PR.
 * **Inventory safety:** `build_inventory.py` is a read-only check by default; `--write` updates the CSV and is
   refused if any completed row would fall back to `pending` (except rows listed in `REOPENED` by a director
-  decision). `tests/test_bundled_symbol_library.py` fails if the CSV and the generator ever disagree.
+  decision). `tests/test_bundled_symbol_library.py` fails if the CSV and the generator ever disagree. The D1 rows
+  were the only ones ever listed; batch F5b completed them and the list is empty again.
 
 Scope note: because of Q2, `openschematix/gui/dialogs.py` (ValveDialog only) is the one non-library production
 file this PR may change. The changed-files guard test allows exactly that.

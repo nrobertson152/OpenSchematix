@@ -190,4 +190,26 @@ def symbols():
     add(sd("fl.pneu.motor.ansi", "Air motor, unidirectional (ANSI)", P, ANSI,
            "Pneumatic motor, one direction of rotation (simplified, no shaft).",
            body() + [tri_in_top(False)], [T("1", 0, -20, "u"), T("2", 0, 20, "d")], "M"))
+    # ---------------------------------------------------------------- batch F5b: ANSI motors (director decision D1)
+    # Y32.10 8.3.x and 8.6.2 print these motors with the triangles pointing OUT of the body, exactly like the
+    # pumps. They are drawn here with the triangles pointing IN (as Y32.10 8.6.1 and every other motor symbol),
+    # so that a motor can be told from a pump. This is a deliberate departure from the printed figures.
+    dep = ("Interpretation: Y32.10 prints this figure with outward (pump-like) triangles; drawn with inward motor "
+           "triangles by director decision D1.")
+    add(sd("fl.hyd.motor.ansi", "Motor, fixed, unidirectional (ANSI)", H, ANSI,
+           "Hydraulic motor, fixed displacement, one direction of rotation (simplified, no shaft); inlet A.",
+           body() + [tri_in_top()], ab(), "M", notes=dep + " Y32.10's second orientation is the same symbol rotated."))
+    add(sd("fl.hyd.motor.bidir.ansi", "Motor, fixed, bidirectional (ANSI)", H, ANSI,
+           "Hydraulic motor, fixed displacement, two directions of rotation (simplified, no shaft).",
+           body() + [tri_in_top(), tri_in_bottom()], ab(), "M", notes=dep))
+    add(sd("fl.hyd.motor.var", "Motor, variable, unidirectional (ANSI)", H, ANSI,
+           "Hydraulic motor, variable displacement, one direction of rotation (simplified, no shaft); inlet A.",
+           body() + [tri_in_top()] + variable(), ab(), "M", notes=dep))
+    add(sd("fl.hyd.motor.var.bidir", "Motor, variable, bidirectional (ANSI)", H, ANSI,
+           "Hydraulic motor, variable displacement, two directions of rotation (simplified, no shaft).",
+           body() + [tri_in_top(), tri_in_bottom()] + variable(), ab(), "M", notes=dep))
+    add(sd("fl.pneu.motor.bidir", "Air motor, bidirectional (ANSI)", P, ANSI,
+           "Pneumatic motor, two directions of rotation (simplified, no shaft).",
+           body() + [tri_in_top(False), tri_in_bottom(False)],
+           [T("2", 0, -20, "u", ptype="pneu.work"), T("4", 0, 20, "d", ptype="pneu.work")], "M", notes=dep))
     return s
