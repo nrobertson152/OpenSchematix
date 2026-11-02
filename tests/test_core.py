@@ -12,6 +12,7 @@ from openschematix.geometry import GRID, is_orthogonal, same, simplify_orthogona
 from openschematix.model import Component, Document, Wire
 from openschematix.settings import Settings
 from openschematix.symbols import validate_geometry
+from openschematix.symbols.base import is_drafting_element
 from openschematix.symbols.fluid import OPERATORS, PATTERNS, VALVE_TYPES, default_valve_params
 
 
@@ -26,7 +27,8 @@ def test_symbol_ids_unique_and_present():
 def test_symbol_geometry_valid(sym):
     g = sym.build(sym.default_params)
     assert validate_geometry(g) == []
-    assert g.terminals, "every symbol needs at least one terminal"
+    if not is_drafting_element(sym):
+        assert g.terminals, "every symbol needs at least one terminal (drafting elements excepted)"
     assert sym.convention and sym.description and sym.category
 
 

@@ -2,6 +2,19 @@
 
 All notable changes to this project are documented here. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- Directional-valve configurator: 28 more operators (detent with one notch per position, push-pull knob,
+  single and double acting pedal, plunger with and without stroke limit, roller, lever with roller, roller on
+  cam, push/pull and proportional solenoids, direct / applied / remote / internal pilot, released-pressure
+  pilots, solenoid-or-pilot and solenoid-operated pilot stages with internal or external supply, electric,
+  reversing and other drive units, pressure compensated, thermal with local or remote bulb, servo), five more
+  three-position centre conditions (ANSI Y32.10 10.11.3), a third operator per side, and proportional
+  (infinite-positioning) and transition-position options. Every operator is also available on its own in the
+  new "Valve operators" group of the hydraulic and pneumatic libraries. Existing valves are unchanged.
+
 ## [1.1.0] - 2026-11-01
 
 ### Fixed

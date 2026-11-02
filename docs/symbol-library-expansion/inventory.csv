@@ -1,0 +1,514 @@
+key,source,location,source_name,category,group,target,status,batch,notes
+HO-B01,HO,Basic Symbols r1,Pressure or return line,Hydraulic+Pneumatic,Lines,wire style solid,convention,-,
+HO-B02,HO,Basic Symbols r2,Pilot line,Hydraulic+Pneumatic,Lines,wire style dashed,convention,-,
+HO-B03,HO,Basic Symbols r3,Two or more functions in one unit (enclosure line),General,Drafting,gen.enclosure,annotation,F2,Dash-dot component enclosure; also Y32 11.1
+HO-B04,HO,Basic Symbols r4,Flexible hose,Hydraulic+Pneumatic,Lines & connections,fl.*.hose,pending,F2,
+HO-B05,HO,Basic Symbols r5,Union,Hydraulic+Pneumatic,Lines & connections,fl.*.union,pending,F2,Source shows two variants side by side; drawn as the left (with ports) form
+HO-B06,HO,Basic Symbols r6,"Cross (lines crossing, bridged and plain)",Hydraulic+Pneumatic,Lines,editor crossings,convention,-,Wire crossing/junction rules are editor behaviour
+HO-B07,HO,Basic Symbols r7,Closed connection,Hydraulic+Pneumatic,Lines & connections,fl.*.port.closed,pending,F2,
+HO-B08,HO,Basic Symbols r8,Direction of movement (linear arrows),General,Drafting,gen.arrow.move,annotation,F2,
+HO-B09,HO,Basic Symbols r9,Direction of rotation,General,Drafting,gen.arrow.rotation,annotation,F2,
+HO-B10,HO,Basic Symbols r10,Regulation possible (adjustability arrow),General,Drafting,gen.arrow.adjust,annotation,F2,Same meaning as Y32 2.9
+HO-B11,HO,Basic Symbols r11,Electric (energy type),General,Drafting,gen.mark.electric,annotation,F2,
+HO-B12,HO,Basic Symbols r12,Solenoids working in opposite directions,General,Drafting,gen.mark.solenoids.opposed,annotation,F2,
+HO-B13,HO,Basic Symbols r13,Direction of rotation looking at shaft,General,Drafting,gen.arrow.rotation.shaft,annotation,F2,"Two forms shown (CW, CCW)"
+HO-B14,HO,Basic Symbols r14,"Pneumatic (energy direction, hollow)",Pneumatic,Drafting,fl.pneu.mark.energy,annotation,F2,Same as Y32 2.5.2 / 4.4
+HO-B15,HO,Basic Symbols r15,"Hydraulic (energy direction, filled)",Hydraulic,Drafting,fl.hyd.mark.energy,annotation,F2,
+HO-B16,HO,Basic Symbols r16,Test point,Hydraulic+Pneumatic,Lines & connections,fl.*.testpoint,pending,F2,
+HO-B17,HO,Basic Symbols r17,Spring,Hydraulic+Pneumatic,Valve operators,dcv operator 'spring'; fl.hyd.op.spring; fl.pneu.op.spring,validated,F1,Already a configurator operator; standalone element added with F1; Operator existed; standalone element added
+HO-B18,HO,Basic Symbols r18,Throttle,Hydraulic+Pneumatic,Non-return & flow,fl.*.throttle,existing,-,
+HO-B19,HO,Basic Symbols r19,Plugged port,Hydraulic+Pneumatic,Lines & connections,fl.*.port.plugged,pending,F2,
+HO-B20,HO,Basic Symbols r20,Rotary union,Hydraulic+Pneumatic,Lines & connections,fl.*.rotaryunion,pending,F2,
+HO-B21,HO,Basic Symbols r21,Detent,Hydraulic+Pneumatic,Valve operators,dcv operator 'detent'; fl.hyd.op.detent; fl.pneu.op.detent,validated,F1,"Director: detents and spool controls go in the configurator, optionally also standalone; One notch per switching position; marker on the rest position"
+HO-B22,HO,Basic Symbols r22,Return above / below fluid level,Hydraulic,Reservoirs,fl.hyd.tank.above / existing fl.hyd.tank,pending,F3,Below-level form = existing fl.hyd.tank
+HO-B23,HO,Basic Symbols r23,Check valve,Hydraulic+Pneumatic,Non-return & flow,fl.*.check,existing,-,
+HO-B24,HO,Basic Symbols r24,Shut-off valve,Hydraulic+Pneumatic,Non-return & flow,fl.*.shutoff,pending,F8,
+HO-S01,HO,Spool Controls S01,"General symbol (manual, general)",Hydraulic+Pneumatic,Valve operators,dcv operator 'manual'; fl.hyd.op.manual; fl.pneu.op.manual,validated,F1,Existing configurator operator; Operator existed; standalone element added
+HO-S02,HO,Spool Controls S02,Push knob,Hydraulic+Pneumatic,Valve operators,dcv operator 'pushbutton'; fl.hyd.op.pushbutton; fl.pneu.op.pushbutton,validated,F1,Existing configurator operator; Operator existed; standalone element added
+HO-S03,HO,Spool Controls S03,Push-pull knob,Hydraulic+Pneumatic,Valve operators,dcv operator 'pushpull'; fl.hyd.op.pushpull; fl.pneu.op.pushpull,validated,F1,New operator + standalone operator element
+HO-S04,HO,Spool Controls S04,Lever,Hydraulic+Pneumatic,Valve operators,dcv operator 'lever'; fl.hyd.op.lever; fl.pneu.op.lever,validated,F1,Existing configurator operator; Operator existed; standalone element added
+HO-S05,HO,Spool Controls S05,Single acting pedal,Hydraulic+Pneumatic,Valve operators,dcv operator 'pedal'; fl.hyd.op.pedal; fl.pneu.op.pedal,validated,F1,New operator + standalone operator element
+HO-S06,HO,Spool Controls S06,Double acting pedal,Hydraulic+Pneumatic,Valve operators,dcv operator 'pedal2'; fl.hyd.op.pedal2; fl.pneu.op.pedal2,validated,F1,New operator + standalone operator element
+HO-S07,HO,Spool Controls S07,Plunger,Hydraulic+Pneumatic,Valve operators,dcv operator 'plunger'; fl.hyd.op.plunger; fl.pneu.op.plunger,validated,F1,New operator + standalone operator element
+HO-S08,HO,Spool Controls S08,Plunger with stroke limitation,Hydraulic+Pneumatic,Valve operators,dcv operator 'plunger.limited'; fl.hyd.op.plunger.limited; fl.pneu.op.plunger.limited,validated,F1,New operator + standalone operator element
+HO-S09,HO,Spool Controls S09,Spring,Hydraulic+Pneumatic,Valve operators,dcv operator 'spring'; fl.hyd.op.spring; fl.pneu.op.spring,validated,F1,Existing configurator operator; Operator existed; standalone element added
+HO-S10,HO,Spool Controls S10,Roller,Hydraulic+Pneumatic,Valve operators,dcv operator 'roller'; fl.hyd.op.roller; fl.pneu.op.roller,validated,F1,New operator + standalone operator element
+HO-S11,HO,Spool Controls S11,Lever with roller,Hydraulic+Pneumatic,Valve operators,dcv operator 'roller.lever'; fl.hyd.op.roller.lever; fl.pneu.op.roller.lever,validated,F1,New operator + standalone operator element; Arrow drawn as in the source (operating direction)
+HO-S12,HO,Spool Controls S12,Single solenoid,Hydraulic+Pneumatic,Valve operators,dcv operator 'solenoid'; fl.hyd.op.solenoid; fl.pneu.op.solenoid,validated,F1,Existing configurator operator; Operator existed; standalone element added
+HO-S13,HO,Spool Controls S13,Push/pull solenoid,Hydraulic+Pneumatic,Valve operators,dcv operator 'solenoid.pushpull'; fl.hyd.op.solenoid.pushpull; fl.pneu.op.solenoid.pushpull,validated,F1,New operator + standalone operator element
+HO-S14,HO,Spool Controls S14,Direct pilot operated,Hydraulic+Pneumatic,Valve operators,dcv operator 'pilot.direct'; fl.hyd.op.pilot.direct; fl.pneu.op.pilot.direct,validated,F1,New operator + standalone operator element; Pilot terminal X / 12 at the line end
+HO-S15,HO,Spool Controls S15,Pneumatic / hydraulic operated,Hydraulic+Pneumatic,Valve operators,dcv operator 'pilot.applied'; fl.hyd.op.pilot.applied; fl.pneu.op.pilot.applied,validated,F1,New operator + standalone operator element; Pilot terminal on the box's outer edge (the source draws no line)
+HO-S16,HO,Spool Controls S16,Electric motor,Hydraulic+Pneumatic,Valve operators,dcv operator 'motor'; fl.hyd.op.motor; fl.pneu.op.motor,validated,F1,New operator + standalone operator element
+HO-S17,HO,Spool Controls S17,Other control unit (not electric motor),Hydraulic+Pneumatic,Valve operators,dcv operator 'motor.other'; fl.hyd.op.motor.other; fl.pneu.op.motor.other,validated,F1,New operator + standalone operator element
+HO-S20,HO,Spool Controls S20,Coupling,Hydraulic+Pneumatic,Valve operators,gen.coupling,annotation,F2,"Shaft coupling: mechanical drafting element, not a valve operator"
+HO-S21,HO,Spool Controls S21,Internal pilot,Hydraulic+Pneumatic,Valve operators,dcv operator 'pilot.internal'; fl.hyd.op.pilot.internal; fl.pneu.op.pilot.internal,validated,F1,"New operator + standalone operator element; Configurator form: box with triangle, no pilot port (Y32 7.7.2). The source's dashed line from P is drawn by the user when the valve is drawn by hand"
+HO-S22,HO,Spool Controls S22,External pilot,Hydraulic+Pneumatic,Valve operators,dcv operator 'pilot'; fl.hyd.op.pilot; fl.pneu.op.pilot,validated,F1,New operator + standalone operator element; External pilot = existing pilot operator with port X / 12
+HO-S18,HO,Spool Controls r18,Intermediate position,Hydraulic+Pneumatic,Directional valves,dcv option 'transition',validated,F1,Needs a valve-dialog option (GUI) - outside the allowed scope; see decision Q2; Director Q2: dialog change allowed; Two-position valves; dashed transition position
+HO-S19,HO,Spool Controls r19,Proportional spool (infinite positioning bars),Hydraulic+Pneumatic,Directional valves,dcv option 'proportional',validated,F1,Needs a valve-dialog option (GUI); see decision Q2; Director Q2: dialog change allowed; Bars along the envelopes
+HO-T01,HO,Energy Transformations r1,Fixed displacement pump,Hydraulic,Pumps & motors,fl.hyd.pump,existing,-,
+HO-T02,HO,Energy Transformations r2,Single-acting hand pump,Hydraulic,Pumps & motors,fl.hyd.pump.hand,pending,F5,
+HO-T03,HO,Energy Transformations r3,Double-acting hand pump,Hydraulic,Pumps & motors,fl.hyd.pump.hand2,pending,F5,"Composite (pump, checks, lever); external ports only"
+HO-T04,HO,Energy Transformations r4,Fixed displacement reversible motor without drain,Hydraulic,Pumps & motors,fl.hyd.motor.bidir,pending,F5,
+HO-T05,HO,Energy Transformations r5,Fixed displacement reversible pump with drain,Hydraulic,Pumps & motors,fl.hyd.pump.bidir.drain,pending,F5,
+HO-T06,HO,Energy Transformations r6,Fixed displacement reversible motor with drain,Hydraulic,Pumps & motors,fl.hyd.motor.bidir.drain,pending,F5,
+HO-T07,HO,Energy Transformations r7,Rotary actuator,Hydraulic,Pumps & motors,fl.hyd.rotary,pending,F5,Also Y32 8.7.1 oscillator (same function)
+HO-T08,HO,Energy Transformations r8,Single acting cylinder,Hydraulic+Pneumatic,Cylinders,fl.*.cyl.single.ret,pending,F6,No spring drawn (return by external force); distinct from existing spring-return fl.*.cyl.single
+HO-T09,HO,Energy Transformations r9,Double acting cylinder,Hydraulic+Pneumatic,Cylinders,fl.*.cyl.double,existing,-,
+HO-T10,HO,Energy Transformations r10,Double acting cylinder with variable damping at one end,Hydraulic+Pneumatic,Cylinders,fl.*.cyl.double.damp1,pending,F6,
+HO-T11,HO,Energy Transformations r11,Double acting cylinder with variable damping at both ends,Hydraulic+Pneumatic,Cylinders,fl.*.cyl.double.damp2,pending,F6,
+HO-T12,HO,Energy Transformations r12,Double acting telescopic cylinder,Hydraulic+Pneumatic,Cylinders,fl.*.cyl.tele.double,pending,F6,
+HO-T13,HO,Energy Transformations r13,Single acting telescopic cylinder,Hydraulic+Pneumatic,Cylinders,fl.*.cyl.tele.single,pending,F6,
+HO-T14,HO,Energy Transformations r14,Double acting double rod cylinder,Hydraulic+Pneumatic,Cylinders,fl.*.cyl.doublerod,existing,-,
+HO-T15,HO,Energy Transformations r15,Accumulator with gas pre-charge,Hydraulic,Reservoirs & accumulators,fl.hyd.accumulator.gas,pending,F3,Existing fl.hyd.accumulator is the general form without gas mark
+HO-C01,HO,Energy Control C01,Adjustable 3-way flow control with reverse flow check,Hydraulic,Flow control,fl.hyd.flow.3way.check,pending,F8,
+HO-C02,HO,Energy Control C02,Adjustable 3-way flow control with reverse flow check (with T port),Hydraulic,Flow control,fl.hyd.flow.3way.check.t,pending,F8,Second form shows an additional tank connection
+HO-C03,HO,Energy Control C03,Adjustable 3-way flow control,Hydraulic,Flow control,fl.hyd.flow.3way,pending,F8,
+HO-C04,HO,Energy Control C04,Flow divider,Hydraulic,Flow control,fl.hyd.divider,pending,F8,
+HO-C05,HO,Energy Control C05,Spool type flow divider,Hydraulic,Flow control,fl.hyd.divider.spool,pending,F8,
+HO-C06,HO,Energy Control C06,Rotary flow divider,Hydraulic,Flow control,fl.hyd.divider.rotary,pending,F8,
+HO-C07,HO,Energy Control C07,Lowering valve with reverse flow check,Hydraulic,Flow control,fl.hyd.lowering.check,pending,F8,
+HO-C08,HO,Energy Control C08,Throttle with reverse flow check,Hydraulic,Non-return & flow,fl.hyd.flow.oneway,existing,F8,Matches existing one-way flow control valve
+HO-C09,HO,Energy Control C09,Pilot operated check valve without drain,Hydraulic,Non-return & flow,fl.hyd.check.pilot,pending,F8,Same as Y32 10.9.3
+HO-C10,HO,Energy Control C10,Pilot operated check valve with drain,Hydraulic,Non-return & flow,fl.hyd.check.pilot.drain,pending,F8,
+HO-C11,HO,Energy Control C11,Check valve with spring,Hydraulic,Non-return & flow,fl.hyd.check.spring,existing,F8,
+HO-C12,HO,Energy Control C12,Shuttle valve,Hydraulic,Non-return & flow,fl.hyd.shuttle,existing,F8,
+HO-C13,HO,Energy Control C13,Logic element (cartridge),Hydraulic,Cartridge valves,fl.hyd.logic,pending,F8,
+HO-C14,HO,Energy Control C14,Priority valve,Hydraulic,Flow control,fl.hyd.priority,pending,F8,
+HO-C15,HO,Energy Control C15,"Steering unit, open centre",Hydraulic,Steering,fl.hyd.steer.oc,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Composite; see Q3
+HO-C16,HO,Energy Control C16,"Steering unit, closed centre",Hydraulic,Steering,fl.hyd.steer.cc,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Composite; see Q3
+HO-C17,HO,Energy Control C17,"Steering unit, closed centre with LS (with priority valve)",Hydraulic,Steering,fl.hyd.steer.ls,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Composite; see Q3
+HO-C18,HO,Energy Control C18,Direct acting relief valve,Hydraulic,Pressure control,fl.hyd.relief,existing,F7,
+HO-C19,HO,Energy Control C19,Pilot operated relief valve,Hydraulic,Pressure control,fl.hyd.relief.pilot,pending,F7,
+HO-C20,HO,Energy Control C20,Sequence valve,Hydraulic,Pressure control,fl.hyd.sequence,pending,F7,Also Y32 10.13.2
+HO-C21,HO,Energy Control C21,Leak-free sequence valve with external drain,Hydraulic,Pressure control,fl.hyd.sequence.leakfree,pending,F7,
+HO-C22,HO,Energy Control C22,Relief / unloading valve with external hydraulic pilot and internal drain,Hydraulic,Pressure control,fl.hyd.unloading,pending,F7,
+HO-C23,HO,Energy Control C23,Reducing valve,Hydraulic,Pressure control,fl.hyd.reducing,existing,F7,"Verify drawing matches during F7; existing = direct operated, pilot from outlet"
+HO-C24,HO,Energy Control C24,Electrical unloading valve,Hydraulic,Pressure control,fl.hyd.unloading.sol,pending,F7,
+HO-C25,HO,Energy Control C25,Electrical proportional relief valve,Hydraulic,Pressure control,fl.hyd.relief.prop,pending,F7,
+HO-C26,HO,Energy Control C26,Open centre valve,Hydraulic,Directional valves,fl.hyd.opencentre,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Composite; see Q3
+HO-C27,HO,Energy Control C27,Relief valve / electrical lowering valve,Hydraulic,Pressure control,fl.hyd.relief.lowering,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Composite; see Q3
+HO-C28,HO,Energy Control C28,Normally open solenoid check valve,Hydraulic,Directional valves,fl.hyd.sol.check.no,pending,F8,Seated 2/2
+HO-C29,HO,Energy Control C29,Normally closed solenoid check valve,Hydraulic,Directional valves,fl.hyd.sol.check.nc,pending,F8,Seated 2/2
+HO-C30,HO,Energy Control C30,Solenoid operated 6-port diverter / changeover valve,Hydraulic,Directional valves,fl.hyd.diverter6,pending,F8,6-port valve: not expressible by the configurator (port layouts 2-5)
+HO-C31,HO,Energy Control C31,Solenoid diverter valve with external drain,Hydraulic,Directional valves,fl.hyd.diverter6.drain,pending,F8,
+HO-C32,HO,Energy Control C32,Direct acting solenoid directional valve (spool form 1),Hydraulic,Directional valves,fl.hyd.dcv,existing,F1,Reachable with existing configurator; verify spool form against PATTERNS; Spool form 1 centre is not legible at the source's resolution (float or tandem); both centres are available in the configurator
+HO-C33,HO,Energy Control C33,Direct acting solenoid directional valve (spool form 2),Hydraulic,Directional valves,fl.hyd.dcv,existing,F1,"May need a new centre PATTERN; Spool form 2 = closed centre, available in the configurator"
+HO-C34,HO,Energy Control C34,Pilot operated solenoid directional valve,Hydraulic,Directional valves,dcv operator 'solenoid.and.pilot.int',validated,F1,Needs 3 operators per side (solenoid+pilot+spring); see Q2; With spring as a second operator
+HO-C35,HO,Energy Control C35,Direct acting seated solenoid directional valve,Hydraulic,Directional valves,fl.hyd.dcv.seated,pending,F8,Seated 3-way with poppet marks; distinct from spool valve
+HO-C36,HO,Energy Control C36,Direct acting proportional solenoid directional valve,Hydraulic,Directional valves,dcv operator 'solenoid.prop'; fl.hyd.op.solenoid.prop; fl.pneu.op.solenoid.prop; dcv option 'proportional',validated,F1,Proportional bars; see Q2; Director Q2: dialog change allowed
+HO-C37,HO,Energy Control C37,Pilot operated proportional solenoid directional valve,Hydraulic,Directional valves,dcv operator 'solenoid.and.pilot.int'; dcv operator 'solenoid.prop'; dcv option 'proportional',validated,F1,"Proportional bars + 3 operators; see Q2; Director Q2: dialog change allowed; Three operators per side (spring, pilot stage, proportional solenoid)"
+HO-C38,HO,Energy Control C38,Series directional control valve,Hydraulic,Mobile valves,fl.hyd.mobile.series,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Composite; see Q3
+HO-C39,HO,Energy Control C39,Series directional control valve with negative overlap and valves in spool,Hydraulic,Mobile valves,fl.hyd.mobile.series.neg,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Composite; see Q3
+HO-C40,HO,Energy Control C40,Parallel directional control valve,Hydraulic,Mobile valves,fl.hyd.mobile.parallel,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Composite; Q3
+HO-C41,HO,Energy Control C41,Parallel directional control valve (second form),Hydraulic,Mobile valves,fl.hyd.mobile.parallel2,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Composite; Q3
+HO-C42,HO,Energy Control C42,Parallel directional control valve for use with LS pumps,Hydraulic,Mobile valves,fl.hyd.mobile.ls,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Composite; Q3
+HO-C43,HO,Energy Control C43,Parallel directional control valve for LS pumps with flow control function,Hydraulic,Mobile valves,fl.hyd.mobile.ls.flow,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Composite; Q3
+HO-F01,HO,Fluid Treatment F01,Breather with filter,Hydraulic,Fluid conditioning,fl.hyd.breather,pending,F4,
+HO-F02,HO,Fluid Treatment F02,Filter,Hydraulic,Fluid conditioning,fl.hyd.filter,existing,F4,
+HO-F03,HO,Fluid Treatment F03,Filter with indicator,Hydraulic,Fluid conditioning,fl.hyd.filter.indicator,pending,F4,
+HO-F04,HO,Fluid Treatment F04,Water / oil cooler,Hydraulic,Fluid conditioning,fl.hyd.cooler.liquid,pending,F4,
+HO-F05,HO,Fluid Treatment F05,Air / oil cooler,Hydraulic,Fluid conditioning,fl.hyd.cooler.air,pending,F4,
+HO-F06,HO,Fluid Treatment F06,Heater,Hydraulic,Fluid conditioning,fl.hyd.heater,pending,F4,
+HO-F07,HO,Fluid Treatment F07,Temperature controller,Hydraulic,Fluid conditioning,fl.hyd.tempcontrol,pending,F4,
+HO-M01,HO,Measuring M01,Pressure indicator,Hydraulic+Pneumatic,Measurement,fl.*.pressure.indicator,pending,F9,
+HO-M02,HO,Measuring M02,Pressure transducer,Hydraulic+Pneumatic,Measurement,fl.*.pressure.transducer,pending,F9,
+HO-M03,HO,Measuring M03,Pressure gauge,Hydraulic+Pneumatic,Measurement,fl.*.gauge,existing,F9,
+HO-M04,HO,Measuring M04,Differential pressure gauge,Hydraulic+Pneumatic,Measurement,fl.*.gauge.diff,pending,F9,
+HO-M05,HO,Measuring M05,Fluid level gauge,Hydraulic,Measurement,fl.hyd.level.gauge,pending,F9,
+HO-M06,HO,Measuring M06,Fluid level transducer,Hydraulic,Measurement,fl.hyd.level.transducer,pending,F9,
+HO-M07,HO,Measuring M07,Thermometer,Hydraulic+Pneumatic,Measurement,fl.*.thermometer,pending,F9,
+HO-M08,HO,Measuring M08,Flow indicator,Hydraulic+Pneumatic,Measurement,fl.*.flow.indicator,pending,F9,
+HO-M09,HO,Measuring M09,Flow meter,Hydraulic+Pneumatic,Measurement,fl.*.flowmeter,pending,F9,
+HO-M10,HO,Measuring M10,Tachometer,Hydraulic+Pneumatic,Measurement,fl.*.tachometer,pending,F9,
+HO-M11,HO,Measuring M11,Torque meter,Hydraulic+Pneumatic,Measurement,fl.*.torquemeter,pending,F9,
+HO-M12,HO,Measuring M12,Pressure switch,Hydraulic+Pneumatic,Measurement,fl.*.pressure.switch,pending,F9,
+HO-M13,HO,Measuring M13,Micro switch (mechanically operated electric switch),Hydraulic+Pneumatic,Measurement,fl.*.microswitch,pending,F9,
+Y32-2.4.1,Y32,p3 cl.2.4.1,Solid line - main,Hydraulic+Pneumatic,Lines,editor / element,convention,-,
+Y32-2.4.2,Y32,p3 cl.2.4.2,Dash line - pilot,Hydraulic+Pneumatic,Lines,editor / element,convention,-,
+Y32-2.4.3,Y32,p3 cl.2.4.3,Dotted line - exhaust or drain,Hydraulic+Pneumatic,Lines,editor / element,convention,-,Dotted exhaust line: the editor has solid and dashed wire styles only
+Y32-2.4.4,Y32,p3 cl.2.4.4,Center line - enclosure outline,Hydraulic+Pneumatic,Lines,editor / element,convention,-,
+Y32-2.4.5,Y32,p3 cl.2.4.5,Sensing line,Hydraulic+Pneumatic,Lines,editor / element,convention,-,
+Y32-2.4.6,Y32,p3 cl.2.4.6,Lines crossing,Hydraulic+Pneumatic,Lines,editor / element,convention,-,
+Y32-2.4.7,Y32,p3 cl.2.4.7,Lines joining,Hydraulic+Pneumatic,Lines,editor / element,convention,-,
+Y32-2.5,Y32,p3 cl.2.5,"Basic shapes (circle, triangle, arrow, square, rectangle)",Hydraulic+Pneumatic,Valve elements,editor / element,convention,-,
+Y32-3.1,Y32,p4 cl.3.1,"Line, working (main)",Hydraulic+Pneumatic,Lines,editor / element,convention,-,
+Y32-3.2,Y32,p4 cl.3.2,"Line, pilot",Hydraulic+Pneumatic,Lines,editor / element,convention,-,
+Y32-3.3,Y32,p4 cl.3.3,"Line, exhaust and liquid drain",Hydraulic+Pneumatic,Lines,editor / element,convention,-,Dotted exhaust line: the editor has solid and dashed wire styles only
+Y32-3.4,Y32,p4 cl.3.4,"Line, sensing",Hydraulic+Pneumatic,Lines,editor / element,convention,-,
+Y32-10.4,Y32,p15 cl.10.4,Envelopes,Hydraulic+Pneumatic,Valve elements,editor / element,convention,-,
+Y32-10.5,Y32,p15 cl.10.5,Ports,Hydraulic+Pneumatic,Valve elements,editor / element,convention,-,
+Y32-10.6,Y32,p15 cl.10.6,"Ports, internally blocked (examples)",Hydraulic+Pneumatic,Valve elements,editor / element,convention,-,
+Y32-10.7,Y32,p15 cl.10.7,"Flow paths, internally open (examples)",Hydraulic+Pneumatic,Valve elements,editor / element,convention,-,
+Y32-10.8,Y32,p15 cl.10.8,"Flow paths, infinite positioning (examples)",Hydraulic+Pneumatic,Valve elements,editor / element,convention,-,
+Y32-2.9,Y32,p3 cl.2.9,Adjustable (45-degree arrow),General,Drafting,HO-B10,duplicate,F2,
+Y32-2.10,Y32,p4 cl.2.10,Pressure compensated (arrow parallel to short side),General,Drafting,gen.mark.compensated,annotation,F2,
+Y32-2.11,Y32,p4 cl.2.11,Temperature cause or effect (line ending in a dot),General,Drafting,gen.mark.temperature,annotation,F2,
+Y32-2.13,Y32,p4 cl.2.13,Rotating shaft with direction arrow,General,Drafting,HO-B09,duplicate,F2,
+Y32-3.5.1,Y32,p4 cl.3.5.1,"Flow direction, pneumatic",Pneumatic,Lines & connections,fl.pneu.flowdir,pending,F2,Inline 2-port marker
+Y32-3.5.2,Y32,p4 cl.3.5.2,"Flow direction, hydraulic",Hydraulic,Lines & connections,fl.hyd.flowdir,pending,F2,
+Y32-3.6.1,Y32,p4 cl.3.6.1,"Outlet to atmosphere, plain orifice, unconnectable",Pneumatic,Lines & connections,fl.pneu.exhaust,pending,F2,
+Y32-3.6.2,Y32,p4 cl.3.6.2,"Outlet to atmosphere, connectable orifice (thread)",Pneumatic,Lines & connections,fl.pneu.exhaust.port,pending,F2,
+Y32-3.7,Y32,p4 cl.3.7,Line with fixed restriction,Hydraulic+Pneumatic,Non-return & flow,fl.*.throttle,blocked,-,The PDF figure is empty (only two plain line segments render); existing throttle covers the function
+Y32-3.8,Y32,p4 cl.3.8,"Line, flexible",Hydraulic+Pneumatic,Lines & connections,fl.*.hose.ansi,pending,F2,Director Q1: ANSI-style variant of fl.*.hose; becomes 'equivalent' if the ANSI drawing is identical.
+Y32-3.9,Y32,p4 cl.3.9,"Station: testing, measurement or power take-off",Hydraulic+Pneumatic,Lines & connections,HO-B16,duplicate,F2,
+Y32-3.9.1,Y32,p4 cl.3.9.1,Plugged port (two forms),Hydraulic+Pneumatic,Lines & connections,HO-B19,duplicate,F2,
+Y32-3.9.3a,Y32,p4 cl.3.9.3,"Quick disconnect without checks, connected",Hydraulic+Pneumatic,Lines & connections,fl.*.qd.open,pending,F2,"Disconnected form: two halves, each with its own port"
+Y32-3.9.3b,Y32,p4 cl.3.9.3,"Quick disconnect without checks, disconnected",Hydraulic+Pneumatic,Lines & connections,fl.*.qd.open.apart,pending,F2,"Disconnected form: two halves, each with its own port"
+Y32-3.9.4a,Y32,p5 cl.3.9.4,"Quick disconnect with two checks, connected",Hydraulic+Pneumatic,Lines & connections,fl.*.qd.2check,pending,F2,"Disconnected form: two halves, each with its own port"
+Y32-3.9.4b,Y32,p5 cl.3.9.4,"Quick disconnect with two checks, disconnected",Hydraulic+Pneumatic,Lines & connections,fl.*.qd.2check.apart,pending,F2,"Disconnected form: two halves, each with its own port"
+Y32-3.9.5a,Y32,p5 cl.3.9.5,"Quick disconnect with one check, connected",Hydraulic+Pneumatic,Lines & connections,fl.*.qd.1check,pending,F2,"Disconnected form: two halves, each with its own port"
+Y32-3.9.5b,Y32,p5 cl.3.9.5,"Quick disconnect with one check, disconnected",Hydraulic+Pneumatic,Lines & connections,fl.*.qd.1check.apart,pending,F2,"Disconnected form: two halves, each with its own port"
+Y32-3.11,Y32,p4-5 cl.3.11,Rotating coupling,Hydraulic+Pneumatic,Lines & connections,fl.*.rotaryunion.ansi,pending,F2,Director Q1: ANSI-style variant of fl.*.rotaryunion; becomes 'equivalent' if the ANSI drawing is identical. Ambiguous layout: the circle-with-lines figure sits under 3.9.4 on p4; treated as the 3.11 figure
+Y32-4.1a,Y32,p5 cl.4.1a,"Reservoir, vented",Hydraulic,Reservoirs & accumulators,fl.hyd.tank.ansi,pending,F3,Director Q1: ANSI-style variant of fl.hyd.tank; becomes 'equivalent' if the ANSI drawing is identical.
+Y32-4.1b,Y32,p5 cl.4.1b,"Reservoir, pressurized",Hydraulic,Reservoirs & accumulators,fl.hyd.tank.pressurized,pending,F3,
+Y32-4.1.1a,Y32,p5 cl.4.1.1a,Reservoir with connecting lines above fluid level,Hydraulic,Reservoirs & accumulators,fl.hyd.tank.above,pending,F3,3 example forms
+Y32-4.1.1b,Y32,p5 cl.4.1.1b,Reservoir with connecting lines below fluid level,Hydraulic,Reservoirs & accumulators,fl.hyd.tank,existing,F3,
+Y32-4.1.1c,Y32,p5 cl.4.1.1c,Reservoir with bottom connection,Hydraulic,Reservoirs & accumulators,fl.hyd.tank.bottom,pending,F3,
+Y32-4.1.2,Y32,p5 cl.4.1.2,"Reservoir, simplified symbol",Hydraulic,Reservoirs & accumulators,fl.hyd.tank.ansi,pending,F3,Director Q1: ANSI-style variant of fl.hyd.tank; becomes 'equivalent' if the ANSI drawing is identical.
+Y32-4.1.2.1,Y32,p5 cl.4.1.2.1,"Simplified reservoir, return below fluid level",Hydraulic,Reservoirs & accumulators,fl.hyd.tank,existing,F3,
+Y32-4.1.2.2,Y32,p5 cl.4.1.2.2,"Simplified reservoir, return above fluid level",Hydraulic,Reservoirs & accumulators,fl.hyd.tank.above.ansi,pending,F3,Director Q1: ANSI-style variant of fl.hyd.tank.above; becomes 'equivalent' if the ANSI drawing is identical. HO-B22
+Y32-4.1.2.3,Y32,p5 cl.4.1.2.3,Vented manifold,Hydraulic,Reservoirs & accumulators,fl.hyd.manifold.vented,pending,F3,
+Y32-4.2,Y32,p5 cl.4.2,Accumulator,Hydraulic,Reservoirs & accumulators,fl.hyd.accumulator.ansi,pending,F3,Director Q1: ANSI-style variant of fl.hyd.accumulator; becomes 'equivalent' if the ANSI drawing is identical.
+Y32-4.2.1,Y32,p5 cl.4.2.1,"Accumulator, spring loaded",Hydraulic,Reservoirs & accumulators,fl.hyd.accumulator.spring,pending,F3,
+Y32-4.2.2,Y32,p5 cl.4.2.2,"Accumulator, gas charged",Hydraulic,Reservoirs & accumulators,fl.hyd.accumulator.gas.ansi,pending,F3,Director Q1: ANSI-style variant of fl.hyd.accumulator.gas; becomes 'equivalent' if the ANSI drawing is identical. HO-T15
+Y32-4.2.3,Y32,p5 cl.4.2.3,"Accumulator, weighted",Hydraulic,Reservoirs & accumulators,fl.hyd.accumulator.weight,pending,F3,
+Y32-4.3,Y32,p5 cl.4.3,Receiver,Pneumatic,Reservoirs & accumulators,fl.pneu.receiver.ansi,pending,F3,Director Q1: ANSI-style variant of fl.pneu.receiver; becomes 'equivalent' if the ANSI drawing is identical.
+Y32-4.4,Y32,p5 cl.4.4,"Energy source (hydraulic, pneumatic)",Hydraulic+Pneumatic,Lines & connections,fl.*.source,pending,F2,F2: 1-port source marker
+Y32-5,Y32,p6 cl.5,"Fluid conditioner, general",Hydraulic+Pneumatic,Fluid conditioning,fl.*.conditioner,pending,F4,
+Y32-5.1.1a,Y32,p7 cl.5.1.1,Heater (inside triangles: introduction of heat),Hydraulic+Pneumatic,Fluid conditioning,fl.*.heater,pending,F4,
+Y32-5.1.1b,Y32,p7 cl.5.1.1,"Heater, heating medium liquid (outside triangles filled)",Hydraulic+Pneumatic,Fluid conditioning,fl.*.heater.liquid,pending,F4,"Medium of heating/cooling lines: filled = liquid, hollow = gaseous (both forms shown)"
+Y32-5.1.1c,Y32,p7 cl.5.1.1,"Heater, heating medium gaseous (outside triangles hollow)",Hydraulic+Pneumatic,Fluid conditioning,fl.*.heater.gas,pending,F4,"Medium of heating/cooling lines: filled = liquid, hollow = gaseous (both forms shown)"
+Y32-5.1.2a,Y32,p7 cl.5.1.2,Cooler (two drawing forms),Hydraulic+Pneumatic,Fluid conditioning,fl.*.cooler,pending,F4,
+Y32-5.1.2b,Y32,p7 cl.5.1.2,Cooler with coolant lines (liquid / gaseous),Hydraulic+Pneumatic,Fluid conditioning,fl.*.cooler.liquid,pending,F4,"Medium of heating/cooling lines: filled = liquid, hollow = gaseous (both forms shown)"
+Y32-5.1.3a,Y32,p7 cl.5.1.3,Temperature controller (two drawing forms),Hydraulic+Pneumatic,Fluid conditioning,fl.*.tempcontrol,pending,F4,
+Y32-5.1.3b,Y32,p7 cl.5.1.3,Temperature controller with medium lines (liquid / gaseous),Hydraulic+Pneumatic,Fluid conditioning,fl.*.tempcontrol.lines,pending,F4,"Medium of heating/cooling lines: filled = liquid, hollow = gaseous (both forms shown)"
+Y32-5.2,Y32,p7 cl.5.2,Filter - strainer,Hydraulic+Pneumatic,Fluid conditioning,fl.*.filter.ansi,pending,F4,Director Q1: ANSI-style variant of fl.*.filter; becomes 'equivalent' if the ANSI drawing is identical.
+Y32-5.3.1,Y32,p7 cl.5.3.1,Separator with manual drain,Hydraulic+Pneumatic,Fluid conditioning,fl.*.separator,pending,F4,
+Y32-5.3.2,Y32,p7 cl.5.3.2,Separator with automatic drain,Hydraulic+Pneumatic,Fluid conditioning,fl.*.separator.auto,pending,F4,
+Y32-5.4.1,Y32,p7 cl.5.4.1,Filter - separator with manual drain,Hydraulic+Pneumatic,Fluid conditioning,fl.*.filtersep,pending,F4,
+Y32-5.4.2,Y32,p7 cl.5.4.2,Filter - separator with automatic drain,Hydraulic+Pneumatic,Fluid conditioning,fl.*.filtersep.auto,pending,F4,
+Y32-5.5,Y32,p7 cl.5.5,Desiccator (chemical dryer),Pneumatic,Fluid conditioning,fl.pneu.dryer,pending,F4,
+Y32-5.6.1,Y32,p7 cl.5.6.1,"Lubricator, less drain",Pneumatic,Fluid conditioning,fl.pneu.lubricator,pending,F4,
+Y32-5.6.2,Y32,p7 cl.5.6.2,Lubricator with manual drain,Pneumatic,Fluid conditioning,fl.pneu.lubricator.drain,pending,F4,
+Y32-6.1.1,Y32,p7 cl.6.1.1,"Cylinder, single acting",Hydraulic+Pneumatic,Cylinders,fl.*.cyl.single.ret.ansi,pending,F6,Director Q1: ANSI-style variant of fl.*.cyl.single.ret; becomes 'equivalent' if the ANSI drawing is identical. Same as HO-T08
+Y32-6.1.2,Y32,p7 cl.6.1.2,"Cylinder, double acting",Hydraulic+Pneumatic,Cylinders,fl.*.cyl.double.ansi,pending,F6,Director Q1: ANSI-style variant of fl.*.cyl.double; becomes 'equivalent' if the ANSI drawing is identical.
+Y32-6.1.2.1,Y32,p7 cl.6.1.2.1,"Cylinder, double acting, single end rod",Hydraulic+Pneumatic,Cylinders,fl.*.cyl.double,existing,F6,
+Y32-6.1.2.2,Y32,p7 cl.6.1.2.2,"Cylinder, double acting, double end rod",Hydraulic+Pneumatic,Cylinders,fl.*.cyl.doublerod.ansi,pending,F6,Director Q1: ANSI-style variant of fl.*.cyl.doublerod; becomes 'equivalent' if the ANSI drawing is identical.
+Y32-6.1.2.3,Y32,p8 cl.6.1.2.3,"Cylinder, fixed cushion advance and retract",Hydraulic+Pneumatic,Cylinders,fl.*.cyl.cushion2,pending,F6,
+Y32-6.1.2.4,Y32,p8 cl.6.1.2.4,"Cylinder, adjustable cushion advance only",Hydraulic+Pneumatic,Cylinders,fl.*.cyl.cushion.adj1,pending,F6,
+Y32-6.1.2.5a,Y32,p8 cl.6.1.2.5,"Cylinder, rod diameter significant, non cushion",Hydraulic+Pneumatic,Cylinders,fl.*.cyl.bigrod,pending,F6,
+Y32-6.1.2.5b,Y32,p8 cl.6.1.2.5,"Cylinder, rod diameter significant, cushion advance and retract",Hydraulic+Pneumatic,Cylinders,fl.*.cyl.bigrod.cushion2,pending,F6,
+Y32-6.2,Y32,p8 cl.6.2,Pressure intensifier,Hydraulic+Pneumatic,Cylinders,fl.*.intensifier,pending,F6,
+Y32-6.3a,Y32,p8 cl.6.3,"Servo positioner, hydraulic (simplified)",Hydraulic,Cylinders,fl.hyd.servopositioner,pending,F6,
+Y32-6.3b,Y32,p8 cl.6.3,"Servo positioner, pneumatic (simplified)",Pneumatic,Cylinders,fl.pneu.servopositioner,pending,F6,
+Y32-6.4,Y32,p8 cl.6.4,Discrete positioner (combined cylinders),Hydraulic+Pneumatic,Cylinders,fl.*.cyl.multiposition,pending,F6,
+Y32-7.1,Y32,p8 cl.7.1,Spring,Hydraulic+Pneumatic,Valve operators,dcv operator 'spring',existing,F1,
+Y32-7.2,Y32,p8 cl.7.2,"Manual, general",Hydraulic+Pneumatic,Valve operators,dcv operator 'manual',existing,F1,
+Y32-7.2.1,Y32,p8 cl.7.2.1,Push button,Hydraulic+Pneumatic,Valve operators,dcv operator 'pushbutton',existing,F1,
+Y32-7.2.2,Y32,p8 cl.7.2.2,Lever,Hydraulic+Pneumatic,Valve operators,dcv operator 'lever',existing,F1,
+Y32-7.2.3,Y32,p8 cl.7.2.3,Pedal or treadle,Hydraulic+Pneumatic,Valve operators,dcv operator 'pedal',validated,F1,Director Q1: ANSI drawing of this operator is offered as an operator style where it differs. Same function as an HO spool control row; Same operator as HO-S05
+Y32-7.3,Y32,p8 cl.7.3,Mechanical (cam / roller; two forms),Hydraulic+Pneumatic,Valve operators,dcv operator 'cam'; fl.hyd.op.cam; fl.pneu.op.cam; dcv operator 'roller',validated,F1,"First form = roller, second = roller on cam"
+Y32-7.4,Y32,p8 cl.7.4,Detent,Hydraulic+Pneumatic,Valve operators,dcv operator 'detent',validated,F1,Director Q1: ANSI drawing of this operator is offered as an operator style where it differs. Same function as an HO spool control row; Same operator as HO-B21
+Y32-7.5,Y32,p8 cl.7.5,Pressure compensated,Hydraulic+Pneumatic,Valve operators,dcv operator 'compensated'; fl.hyd.op.compensated; fl.pneu.op.compensated,validated,F1,Box with arrow parallel to the short side (2.10); the arc beside it in the figure is not reproduced (meaning unclear)
+Y32-7.6.1,Y32,p8 cl.7.6.1,Solenoid (single winding),Hydraulic+Pneumatic,Valve operators,dcv operator 'solenoid',existing,F1,
+Y32-7.6.2,Y32,p8 cl.7.6.2,Reversing motor,Hydraulic+Pneumatic,Valve operators,dcv operator 'motor.reversing'; fl.hyd.op.motor.reversing; fl.pneu.op.motor.reversing,validated,F1,
+Y32-7.7.1,Y32,p8 cl.7.7.1,"Pilot pressure, remote supply",Hydraulic+Pneumatic,Valve operators,dcv operator 'pilot.remote'; fl.hyd.op.pilot.remote; fl.pneu.op.pilot.remote,validated,F1,Pilot line into an empty box
+Y32-7.7.2,Y32,p10 cl.7.7.2,"Pilot pressure, internal supply",Hydraulic+Pneumatic,Valve operators,dcv operator 'pilot.internal',validated,F1,Director Q1: ANSI drawing of this operator is offered as an operator style where it differs. Same function as an HO spool control row; Same operator as HO-S21
+Y32-7.7.3a,Y32,p10 cl.7.7.3,"Actuation by released pressure, by remote exhaust",Hydraulic+Pneumatic,Valve operators,dcv operator 'release.remote'; fl.hyd.op.release.remote; fl.pneu.op.release.remote,validated,F1,
+Y32-7.7.3b,Y32,p10 cl.7.7.3,"Actuation by released pressure, by internal return",Hydraulic+Pneumatic,Valve operators,dcv operator 'release.internal'; fl.hyd.op.release.internal; fl.pneu.op.release.internal,validated,F1,
+Y32-7.7.4,Y32,p10 cl.7.7.4,"Pilot controlled, spring centered (simplified and complete)",Hydraulic+Pneumatic,Valve operators,dcv operator 'pilot + spring',existing,F1,
+Y32-7.7.5,Y32,p10 cl.7.7.5,"Pilot differential (simplified, complete)",Hydraulic+Pneumatic,Valve operators,-,blocked,F1,Pilot differential figures are not legible enough to reproduce without guessing
+Y32-7.8.1a,Y32,p10 cl.7.8.1,"Solenoid or pilot, external pilot supply",Hydraulic+Pneumatic,Valve operators,dcv operator 'solenoid.or.pilot.ext'; fl.hyd.op.solenoid.or.pilot.ext; fl.pneu.op.solenoid.or.pilot.ext,validated,F1,Triangle fill follows the medium
+Y32-7.8.1b,Y32,p10 cl.7.8.1,"Solenoid or pilot, internal pilot supply and exhaust",Hydraulic+Pneumatic,Valve operators,dcv operator 'solenoid.or.pilot.int'; fl.hyd.op.solenoid.or.pilot.int; fl.pneu.op.solenoid.or.pilot.int,validated,F1,Triangle fill follows the medium
+Y32-7.8.2,Y32,p10 cl.7.8.2,Solenoid and pilot (two forms),Hydraulic+Pneumatic,Valve operators,dcv operator 'solenoid.and.pilot.ext'; fl.hyd.op.solenoid.and.pilot.ext; fl.pneu.op.solenoid.and.pilot.ext; dcv operator 'solenoid.and.pilot.int'; fl.hyd.op.solenoid.and.pilot.int; fl.pneu.op.solenoid.and.pilot.int,validated,F1,Pilot supply enters from above (terminal at the top)
+Y32-7.9.1,Y32,p10 cl.7.9.1,"Thermal, local sensing",Hydraulic+Pneumatic,Valve operators,dcv operator 'thermal'; fl.hyd.op.thermal; fl.pneu.op.thermal,validated,F1,
+Y32-7.9.2,Y32,p10 cl.7.9.2,"Thermal, with bulb for remote sensing",Hydraulic+Pneumatic,Valve operators,dcv operator 'thermal.bulb'; fl.hyd.op.thermal.bulb; fl.pneu.op.thermal.bulb,validated,F1,Bulb drawn outward; the source draws it below the valve
+Y32-7.10,Y32,p10 cl.7.10,Servo,Hydraulic+Pneumatic,Valve operators,dcv operator 'servo'; fl.hyd.op.servo; fl.pneu.op.servo,validated,F1,
+Y32-7.11a,Y32,p10 cl.7.11,Composite actuator: basic,Hydraulic+Pneumatic,Valve operators,dcv operator 'pilot.applied',validated,F1,Director Q1: ANSI drawing of this operator is offered as an operator style where it differs. Same function as an HO spool control row; Basic form = pilot-applied box
+Y32-7.11b,Y32,p10 cl.7.11,Composite actuator: and,Hydraulic+Pneumatic,Valve operators,dcv operator 'and',blocked,F1,Stacked (parallel) operator boxes are a further configurator layout feature not covered by the Q2 change; left out
+Y32-7.11c,Y32,p10 cl.7.11,Composite actuator: or,Hydraulic+Pneumatic,Valve operators,dcv operator 'or',blocked,F1,Stacked (parallel) operator boxes are a further configurator layout feature not covered by the Q2 change; left out
+Y32-7.11d,Y32,p10 cl.7.11,Composite actuator: and/or,Hydraulic+Pneumatic,Valve operators,dcv operator 'and/or',blocked,F1,Stacked (parallel) operator boxes are a further configurator layout feature not covered by the Q2 change; left out
+Y32-7.11e,Y32,p11 cl.7.11,Composite: solenoid and pilot or manual override and pilot,Hydraulic+Pneumatic,Valve operators,dcv operator 'and/or 2',blocked,F1,Stacked (parallel) operator boxes are a further configurator layout feature not covered by the Q2 change; left out
+Y32-7.11f,Y32,p11 cl.7.11,Composite: solenoid and pilot or manual override and pilot or manual override alone,Hydraulic+Pneumatic,Valve operators,dcv operator 'and/or 3',blocked,F1,Stacked (parallel) operator boxes are a further configurator layout feature not covered by the Q2 change; left out
+Y32-8.1,Y32,p12 cl.8.1,"Rotary device, basic symbol",Hydraulic+Pneumatic,Pumps & motors,element,convention,-,
+Y32-8.1.1,Y32,p12 cl.8.1.1,Rotary device with ports,Hydraulic+Pneumatic,Pumps & motors,element,convention,-,
+Y32-8.1.2,Y32,p12 cl.8.1.2,"Rotary device with shaft, control and drain (example)",Hydraulic+Pneumatic,Pumps & motors,element,convention,-,
+Y32-8.2.1.1,Y32,p12 cl.8.2.1.1,"Hydraulic pump, fixed, unidirectional",Hydraulic,Pumps & motors,fl.hyd.pump.ansi,pending,F5,Director Q1: ANSI-style variant of fl.hyd.pump; becomes 'equivalent' if the ANSI drawing is identical.
+Y32-8.2.1.2,Y32,p12 cl.8.2.1.2,"Hydraulic pump, fixed, bidirectional",Hydraulic,Pumps & motors,fl.hyd.pump.bidir,pending,F5,
+Y32-8.2.2.1s,Y32,p12 cl.8.2.2.1,"Hydraulic pump, variable, non-compensated, unidirectional (simplified)",Hydraulic,Pumps & motors,fl.hyd.pump.var.ansi,pending,F5,Director Q1: ANSI-style variant of fl.hyd.pump.var; becomes 'equivalent' if the ANSI drawing is identical.
+Y32-8.2.2.1c,Y32,p12 cl.8.2.2.1,"Hydraulic pump, variable, non-compensated, unidirectional (complete)",Hydraulic,Pumps & motors,fl.hyd.pump.var.full,pending,F5,
+Y32-8.2.2.2s,Y32,p12 cl.8.2.2.2,"Hydraulic pump, variable, non-compensated, bidirectional (simplified)",Hydraulic,Pumps & motors,fl.hyd.pump.var.bidir,pending,F5,
+Y32-8.2.2.2c,Y32,p12 cl.8.2.2.2,"Hydraulic pump, variable, non-compensated, bidirectional (complete)",Hydraulic,Pumps & motors,fl.hyd.pump.var.bidir.full,pending,F5,
+Y32-8.2.3.1s,Y32,p12 cl.8.2.3.1,"Hydraulic pump, variable, pressure compensated, unidirectional (simplified)",Hydraulic,Pumps & motors,fl.hyd.pump.pc,pending,F5,
+Y32-8.2.3.1c,Y32,p12 cl.8.2.3.1,"Hydraulic pump, variable, pressure compensated, unidirectional (complete)",Hydraulic,Pumps & motors,fl.hyd.pump.pc.full,pending,F5,
+Y32-8.2.3.2s,Y32,p12 cl.8.2.3.2,"Hydraulic pump, variable, pressure compensated, bidirectional (simplified)",Hydraulic,Pumps & motors,fl.hyd.pump.pc.bidir,pending,F5,
+Y32-8.2.3.2c,Y32,p12 cl.8.2.3.2,"Hydraulic pump, variable, pressure compensated, bidirectional (complete)",Hydraulic,Pumps & motors,fl.hyd.pump.pc.bidir.full,pending,F5,
+Y32-8.3.1,Y32,p12 cl.8.3.1,"Hydraulic motor, fixed, unidirectional (two orientations)",Hydraulic,Pumps & motors,fl.hyd.motor.ansi,pending,F5,Director Q1: ANSI-style variant of fl.hyd.motor; becomes 'equivalent' if the ANSI drawing is identical.
+Y32-8.3.1.2,Y32,p12 cl.8.3.1.2,"Hydraulic motor, fixed, bidirectional",Hydraulic,Pumps & motors,fl.hyd.motor.bidir,duplicate,F5,Same as HO-T04
+Y32-8.3.2.1,Y32,p12 cl.8.3.2.1,"Hydraulic motor, variable, unidirectional",Hydraulic,Pumps & motors,fl.hyd.motor.var,pending,F5,
+Y32-8.3.2.2,Y32,p12 cl.8.3.2.2,"Hydraulic motor, variable, bidirectional",Hydraulic,Pumps & motors,fl.hyd.motor.var.bidir,pending,F5,
+Y32-8.4.1c,Y32,p13 cl.8.4.1,"Pump-motor: pump in one direction, motor in the other (complete)",Hydraulic,Pumps & motors,fl.hyd.pumpmotor.rev.full,pending,F5,
+Y32-8.4.1s,Y32,p13 cl.8.4.1,"Pump-motor: pump in one direction, motor in the other (simplified)",Hydraulic,Pumps & motors,fl.hyd.pumpmotor.rev,pending,F5,
+Y32-8.4.2c,Y32,p13 cl.8.4.2,"Pump-motor: one flow direction, pump or motor (complete)",Hydraulic,Pumps & motors,fl.hyd.pumpmotor.full,pending,F5,
+Y32-8.4.2s,Y32,p13 cl.8.4.2,"Pump-motor: one flow direction, pump or motor (simplified)",Hydraulic,Pumps & motors,fl.hyd.pumpmotor,pending,F5,
+Y32-8.4.3c,Y32,p13 cl.8.4.3,"Pump-motor: both flow directions, variable, pressure compensated (complete)",Hydraulic,Pumps & motors,fl.hyd.pumpmotor.bidir.pc.full,pending,F5,
+Y32-8.4.3s,Y32,p13 cl.8.4.3,"Pump-motor: both flow directions, variable, pressure compensated (simplified)",Hydraulic,Pumps & motors,fl.hyd.pumpmotor.bidir.pc,pending,F5,
+Y32-8.5.1,Y32,p13 cl.8.5.1,"Compressor, fixed displacement",Pneumatic,Pumps & motors,fl.pneu.compressor.ansi,pending,F5,Director Q1: ANSI-style variant of fl.pneu.compressor; becomes 'equivalent' if the ANSI drawing is identical.
+Y32-8.5.2,Y32,p13 cl.8.5.2,"Vacuum pump, fixed displacement",Pneumatic,Pumps & motors,fl.pneu.vacuumpump,pending,F5,
+Y32-8.6.1,Y32,p13 cl.8.6.1,"Pneumatic motor, unidirectional",Pneumatic,Pumps & motors,fl.pneu.motor.ansi,pending,F5,Director Q1: ANSI-style variant of fl.pneu.motor; becomes 'equivalent' if the ANSI drawing is identical.
+Y32-8.6.2,Y32,p13 cl.8.6.2,"Pneumatic motor, bidirectional",Pneumatic,Pumps & motors,fl.pneu.motor.bidir,pending,F5,
+Y32-8.7.1,Y32,p13 cl.8.7.1,"Oscillator, hydraulic",Hydraulic,Pumps & motors,fl.hyd.rotary,duplicate,F5,Same as HO-T07 rotary actuator
+Y32-8.7.2,Y32,p13 cl.8.7.2,"Oscillator, pneumatic",Pneumatic,Pumps & motors,fl.pneu.rotary,pending,F5,
+Y32-8.8.1,Y32,p13 cl.8.8.1,Electric motor (prime mover),Hydraulic+Pneumatic,Pumps & motors,fl.*.primemover.electric,pending,F5,"Mechanical prime mover (shaft only), not an electrical device; el.motor remains the electrical symbol"
+Y32-8.8.2,Y32,p13 cl.8.8.2,Heat engine (e.g. internal combustion engine),Hydraulic+Pneumatic,Pumps & motors,fl.*.primemover.engine,pending,F5,
+Y32-9.1.1,Y32,p13 cl.9.1.1,Pressure indicator / recorder (three forms),Hydraulic+Pneumatic,Measurement,fl.*.pressure.indicator.ansi,pending,F9,Director Q1: ANSI-style variant of fl.*.pressure.indicator; becomes 'equivalent' if the ANSI drawing is identical.
+Y32-9.1.2,Y32,p13 cl.9.1.2,Temperature indicator (four forms),Hydraulic+Pneumatic,Measurement,fl.*.thermometer.ansi,pending,F9,Director Q1: ANSI-style variant of fl.*.thermometer; becomes 'equivalent' if the ANSI drawing is identical.
+Y32-9.1.3.1,Y32,p13 cl.9.1.3.1,"Flow meter, flow rate",Hydraulic+Pneumatic,Measurement,fl.*.flowmeter.ansi,pending,F9,Director Q1: ANSI-style variant of fl.*.flowmeter; becomes 'equivalent' if the ANSI drawing is identical.
+Y32-9.1.3.2,Y32,p14 cl.9.1.3.2,"Flow meter, totalizing",Hydraulic+Pneumatic,Measurement,fl.*.flowmeter.total,pending,F9,
+Y32-9.2.1,Y32,p15 cl.9.2.1,Venturi,Hydraulic+Pneumatic,Measurement,fl.*.venturi,pending,F9,
+Y32-9.2.2,Y32,p15 cl.9.2.2,Orifice plate (two forms),Hydraulic+Pneumatic,Measurement,fl.*.orificeplate,pending,F9,
+Y32-9.2.3,Y32,p15 cl.9.2.3,Pitot tube,Hydraulic+Pneumatic,Measurement,fl.*.pitot,pending,F9,
+Y32-9.2.4a,Y32,p15 cl.9.2.4,"Nozzle, hydraulic",Hydraulic,Lines & connections,fl.hyd.nozzle,pending,F9,
+Y32-9.2.4b,Y32,p15 cl.9.2.4,"Nozzle, pneumatic",Pneumatic,Lines & connections,fl.pneu.nozzle,pending,F9,
+Y32-9.3.1,Y32,p15 cl.9.3.1,Pressure switch,Hydraulic+Pneumatic,Measurement,fl.*.pressure.switch.ansi,pending,F9,Director Q1: ANSI-style variant of fl.*.pressure.switch; becomes 'equivalent' if the ANSI drawing is identical.
+Y32-9.3.2,Y32,p15 cl.9.3.2,Muffler (silencer),Pneumatic,Lines & connections,fl.pneu.silencer,pending,F2,
+Y32-10.9.1s,Y32,p15 cl.10.9.1,"On-off (manual shut-off), simplified",Hydraulic+Pneumatic,Valves,fl.*.shutoff.ansi,pending,F8,Director Q1: ANSI-style variant of fl.*.shutoff; becomes 'equivalent' if the ANSI drawing is identical. Same as HO-B24
+Y32-10.9.1o,Y32,p16 cl.10.9.1,"On-off, composite, off",Hydraulic+Pneumatic,Valves,fl.*.valve.2way.manual,pending,F8,Detented manual 2/2; may map to configurator
+Y32-10.9.1n,Y32,p17 cl.10.9.1,"On-off, composite, on",Hydraulic+Pneumatic,Valves,fl.*.valve.2way.manual,duplicate,F8,Same valve shown actuated
+Y32-10.9.2s,Y32,p17 cl.10.9.2,"Check, simplified",Hydraulic+Pneumatic,Valves,fl.*.check.ansi,pending,F8,Director Q1: ANSI-style variant of fl.*.check; becomes 'equivalent' if the ANSI drawing is identical.
+Y32-10.9.2c,Y32,p17 cl.10.9.2,"Check, composite symbol",Hydraulic+Pneumatic,Valves,fl.*.check,duplicate,-,Composite drawing of the same function
+Y32-10.9.3,Y32,p17 cl.10.9.3,"Check, pilot-operated to open",Hydraulic+Pneumatic,Valves,fl.*.check.pilot,pending,F8,Hyd form = HO-C09
+Y32-10.9.4,Y32,p17 cl.10.9.4,"Check, pilot-operated to close",Hydraulic+Pneumatic,Valves,fl.*.check.pilotclose,pending,F8,
+Y32-10.9.5.1nc,Y32,p17 cl.10.9.5.1,"Two-way valve, two position, normally closed",Hydraulic+Pneumatic,Valves,fl.*.dcv (2/2),existing,F1,Configurator 2/2 with spring; verify geometry
+Y32-10.9.5.1no,Y32,p17 cl.10.9.5.1,"Two-way valve, two position, normally open",Hydraulic+Pneumatic,Valves,fl.*.dcv (2/2),existing,F1,
+Y32-10.9.5.2nc,Y32,p17 cl.10.9.5.2,"Two-way valve, infinite position, normally closed",Hydraulic+Pneumatic,Valves,fl.*.valve.2way.prop.nc,pending,F8,
+Y32-10.9.5.2no,Y32,p17 cl.10.9.5.2,"Two-way valve, infinite position, normally open",Hydraulic+Pneumatic,Valves,fl.*.valve.2way.prop.no,pending,F8,
+Y32-10.10.1.1,Y32,p17 cl.10.10.1.1,"Three-way, two position, normally open",Hydraulic+Pneumatic,Valves,fl.*.dcv (3/2),existing,F1,Verify
+Y32-10.10.1.2,Y32,p17 cl.10.10.1.2,"Three-way, two position, normally closed",Hydraulic+Pneumatic,Valves,fl.*.dcv (3/2),existing,F1,Verify
+Y32-10.10.1.3,Y32,p17 cl.10.10.1.3,"Three-way distributor (pressure first to one port, then the other)",Hydraulic+Pneumatic,Valves,fl.*.valve.3way.distributor,pending,F8,Port arrangement not expressible by the 3-port configurator layout
+Y32-10.10.1.4,Y32,p17 cl.10.10.1.4,Three-way two-pressure valve,Hydraulic+Pneumatic,Valves,fl.*.valve.3way.twopressure,pending,F8,
+Y32-10.10.2.1,Y32,p17 cl.10.10.2.1,Double check valve without cross bleed,Hydraulic+Pneumatic,Valves,fl.*.doublecheck,pending,F8,
+Y32-10.10.2.2,Y32,p17 cl.10.10.2.2,Double check valve with cross bleed,Hydraulic+Pneumatic,Valves,fl.*.doublecheck.bleed,pending,F8,
+Y32-10.11.1,Y32,p18 cl.10.11.1,"Four-way, two position (normal and actuated; two forms)",Hydraulic+Pneumatic,Valves,fl.*.dcv (4/2),existing,F1,Second form is a 5-connection drawing; check against pneumatic 5/2
+Y32-10.11.2,Y32,p18 cl.10.11.2,"Four-way, three position (normal, actuated left, actuated right)",Hydraulic+Pneumatic,Valves,fl.*.dcv (4/3),existing,F1,Actuated states are the same valve shifted; drawn only in the normal state
+Y32-10.11.3,Y32,p18 cl.10.11.3,Typical centre conditions of three-position valves (8 shown),Hydraulic+Pneumatic,Valves,dcv pattern 'b-t'; dcv pattern 'apt'; dcv pattern 'ab'; dcv pattern 'a-t'; dcv pattern 'ab-pt',validated,F1,"Add each missing centre condition as a configurator flow pattern; Five new centre conditions; the other three (closed, open, 5-port closed) already existed"
+Y32-10.11.4,Y32,p18 cl.10.11.4,"Two-position, snap action with transition",Hydraulic+Pneumatic,Valves,dcv option 'transition',validated,F1,Q2; Director Q2: dialog change allowed
+Y32-10.12.1,Y32,p18 cl.10.12.1,"Infinite positioning between open and closed, normally closed",Hydraulic+Pneumatic,Valves,fl.*.valve.prop.nc,pending,F8,
+Y32-10.12.2,Y32,p18 cl.10.12.2,"Infinite positioning between open and closed, normally open",Hydraulic+Pneumatic,Valves,fl.*.valve.prop.no,pending,F8,
+Y32-10.13.1s,Y32,p18 cl.10.13.1,"Pressure relief, simplified",Hydraulic+Pneumatic,Valves,fl.*.relief.ansi,pending,F8,Director Q1: ANSI-style variant of fl.*.relief; becomes 'equivalent' if the ANSI drawing is identical. Pneumatic relief added (pending)
+Y32-10.13.1n,Y32,p18 cl.10.13.1,"Pressure relief, normal",Hydraulic+Pneumatic,Valves,fl.*.relief,duplicate,-,"Same valve, explanatory form"
+Y32-10.13.1a,Y32,p18 cl.10.13.1,"Pressure relief, actuated (relieving)",Hydraulic+Pneumatic,Valves,fl.*.relief,duplicate,-,Same valve shown actuated
+Y32-10.13.2a,Y32,p18 cl.10.13.2,"Sequence valve, internal drain",Hydraulic+Pneumatic,Valves,fl.*.sequence,pending,F7,Hyd form = HO-C20
+Y32-10.13.2b,Y32,p18 cl.10.13.2,"Sequence valve, external drain",Hydraulic+Pneumatic,Valves,fl.*.sequence.drain,pending,F7,
+Y32-10.13.3a,Y32,p19 cl.10.13.3,Pressure reducing,Hydraulic+Pneumatic,Valves,fl.*.reducing.ansi,pending,F8,Director Q1: ANSI-style variant of fl.*.reducing; becomes 'equivalent' if the ANSI drawing is identical. Hyd existing; pneumatic regulator exists
+Y32-10.13.3b,Y32,p19 cl.10.13.3,Pressure reducing with external drain,Hydraulic,Valves,fl.hyd.reducing.drain,pending,F7,
+Y32-10.13.4,Y32,p19 cl.10.13.4,Pressure reducing and relieving,Hydraulic,Valves,fl.hyd.reducing.relieving,pending,F7,
+Y32-10.13.5,Y32,p19 cl.10.13.5,"Airline pressure regulator (adjustable, relieving)",Pneumatic,Valves,fl.pneu.regulator.relieving,pending,F7,
+Y32-10.14,Y32,p19 cl.10.14,Infinite positioning three-way valves (four examples),Hydraulic+Pneumatic,Valves,dcv option 'proportional',validated,F1,Proportional bars; Q2; Director Q2: dialog change allowed; Three-way infinite-positioning valves: 3/2 valve types with the proportional option
+Y32-10.15,Y32,p19 cl.10.15,Infinite positioning four-way valves (four examples),Hydraulic+Pneumatic,Valves,dcv option 'proportional',validated,F1,Q2; Director Q2: dialog change allowed; Four-way: 4/2 and 4/3 with the proportional option
+Y32-10.16.1,Y32,p19 cl.10.16.1,"Flow control, adjustable, non-compensated",Hydraulic+Pneumatic,Valves,fl.*.throttle.adj.ansi,pending,F8,Director Q1: ANSI-style variant of fl.*.throttle.adj; becomes 'equivalent' if the ANSI drawing is identical.
+Y32-10.16.2,Y32,p19 cl.10.16.2,"Flow control, adjustable with bypass",Hydraulic+Pneumatic,Valves,fl.*.flow.oneway.ansi,pending,F8,Director Q1: ANSI-style variant of fl.*.flow.oneway; becomes 'equivalent' if the ANSI drawing is identical.
+Y32-10.16.3,Y32,p19 cl.10.16.3,"Flow control, adjustable and pressure compensated with bypass",Hydraulic+Pneumatic,Valves,fl.*.flow.pc.bypass,pending,F8,
+Y32-10.16.4,Y32,p19 cl.10.16.4,"Flow control, adjustable, temperature and pressure compensated",Hydraulic+Pneumatic,Valves,fl.*.flow.tpc.bypass,pending,F8,
+Y32-11.1,Y32,p19 cl.11.1,Component enclosure,Hydraulic+Pneumatic,Composite,gen.enclosure,duplicate,F10,Same as HO-B03
+Y32-11.2c,Y32,p20 cl.11.2,"Airline accessories (FRL), composite",Pneumatic,Composite,fl.pneu.frl.full,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Q3
+Y32-11.2s,Y32,p20 cl.11.2,"Airline accessories (FRL), simplified",Pneumatic,Composite,fl.pneu.frl,pending,F10,Single defined symbol with ports
+Y32-11.3.1.1,Y32,p21 cl.11.3.1.1,"Double pump, fixed, one inlet two outlets",Hydraulic,Composite,fl.hyd.pump.double,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Q3
+Y32-11.3.1.2,Y32,p21 cl.11.3.1.2,Double pump with integral check unloading,Hydraulic+Pneumatic,Composite,-,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Q3
+Y32-11.3.1.3,Y32,p21 cl.11.3.1.3,Integral variable flow rate control with overload relief,Hydraulic+Pneumatic,Composite,-,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Q3
+Y32-11.3.1.4,Y32,p21 cl.11.3.1.4,Variable displacement pump with integral replenishing pump and control valves,Hydraulic+Pneumatic,Composite,-,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Q3
+Y32-11.4.1,Y32,p23 cl.11.4.1,"Relief valve, balanced type",Hydraulic,Composite,fl.hyd.relief.balanced,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Q3
+Y32-11.4.2,Y32,p23 cl.11.4.2,Remote operated sequence with integral check,Hydraulic+Pneumatic,Composite,-,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Q3
+Y32-11.4.3,Y32,p23 cl.11.4.3,Remote and direct operated sequence with differential areas and integral check,Hydraulic+Pneumatic,Composite,-,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Q3
+Y32-11.4.4,Y32,p23 cl.11.4.4,Pressure reducing with integral check,Hydraulic+Pneumatic,Composite,-,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Q3
+Y32-11.4.5.1,Y32,p23 cl.11.4.5.1,"Pilot operated check, differential pilot opened",Hydraulic+Pneumatic,Composite,-,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Q3
+Y32-11.4.5.2,Y32,p23 cl.11.4.5.2,Pilot operated check (second form; untitled in source),Hydraulic+Pneumatic,Composite,-,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Q3; source gives no title for 11.4.5.2
+Y32-11.4.6s,Y32,p22 cl.11.4.6,"2-position 4-connection solenoid and pilot actuated, manual pilot override (simplified)",Hydraulic+Pneumatic,Composite,dcv operator 'solenoid.and.pilot.ext'; dcv operator 'manual',validated,F1,Q2 (3 operators per side); Director Q2: dialog change allowed; Simplified symbol reproducible with 2 operators per side (pilot stage + manual override)
+Y32-11.4.6c,Y32,p22 cl.11.4.6,"Same, complete symbol",Hydraulic+Pneumatic,Composite,-,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Q3
+Y32-11.4.7s,Y32,p24 cl.11.4.7,"2-position 5-connection solenoid controlled pilot actuated, detents, throttled exhaust (simplified)",Pneumatic,Composite,dcv operator 'detent'; dcv operator 'solenoid.and.pilot.ext',validated,F1,"Q2 (3 operators + throttled exhausts); Director Q2: dialog change allowed; throttled exhausts are not a configurator feature (drawn without them, noted); Throttled exhausts are drawn separately (not a configurator feature)"
+Y32-11.4.7c,Y32,p24 cl.11.4.7,"Same, complete symbol",Hydraulic+Pneumatic,Composite,-,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Q3
+Y32-11.4.8,Y32,p24 cl.11.4.8,Variable pressure compensated flow control and overload relief,Hydraulic+Pneumatic,Composite,-,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Q3
+ECL-OTH1.1,ECL,Other things r1 #1,"Buzzer, AC",Electrical,Signalling,el.buzzer.ac,pending,E8,Dome with ~
+ECL-OTH1.2,ECL,Other things r1 #2,"Buzzer, DC",Electrical,Signalling,el.buzzer.dc,pending,E8,Dome with =
+ECL-OTH1.3,ECL,Other things r1 #3,Voltmeter,Electrical,Measurement,el.meter.v,pending,E8,
+ECL-OTH1.4,ECL,Other things r1 #4,Ammeter,Electrical,Measurement,el.meter.a,pending,E8,
+ECL-OTH1.5,ECL,Other things r1 #5,Galvanometer,Electrical,Measurement,el.meter.g,pending,E8,
+ECL-OTH1.6,ECL,Other things r1 #6,DC motor with brushes (vertical),Electrical,Machines,el.motor.dc,pending,E8,Brush rectangles distinguish it from existing el.motor
+ECL-OTH1.7,ECL,Other things r1 #7,"Voltmeter, pictorial (illustration)",Electrical,Measurement,-,blocked,-,"Pictorial illustration (shaded meter body), not a schematic symbol"
+ECL-OTH2.1,ECL,Other things r2 #1,Microphone,Electronic,Transducers,el.microphone,pending,E8,
+ECL-OTH2.2,ECL,Other things r2 #2,Crystal (quartz resonator),Electronic,Passive,el.crystal,pending,E1,
+ECL-OTH2.3,ECL,Other things r2 #3,Loudspeaker,Electronic,Transducers,el.speaker,pending,E8,
+ECL-OTH2.4,ECL,Other things r2 #4,DC motor with brushes (horizontal),Electrical,Machines,ECL-OTH1.6,duplicate,E8,Rotated drawing of r1 #6
+ECL-OTH2.5,ECL,Other things r2 #5,"Ammeter, pictorial (illustration)",Electrical,Measurement,-,blocked,-,Pictorial illustration
+ECL-BAS1.1,ECL,Basic logic blocks r1 #1,"AND gate, 2 inputs",Electronic,Logic,el.logic.and2,pending,E7,Distinctive-shape (ANSI/IEEE 91) style
+ECL-BAS1.2,ECL,Basic logic blocks r1 #2,"NAND gate, 2 inputs",Electronic,Logic,el.logic.nand2,pending,E7,Distinctive-shape (ANSI/IEEE 91) style
+ECL-BAS1.3,ECL,Basic logic blocks r1 #3,"OR gate, 2 inputs",Electronic,Logic,el.logic.or2,pending,E7,Distinctive-shape (ANSI/IEEE 91) style
+ECL-BAS1.4,ECL,Basic logic blocks r1 #4,"NOR gate, 2 inputs",Electronic,Logic,el.logic.nor2,pending,E7,Distinctive-shape (ANSI/IEEE 91) style
+ECL-BAS1.5,ECL,Basic logic blocks r1 #5,"XOR gate, 2 inputs",Electronic,Logic,el.logic.xor2,pending,E7,Distinctive-shape (ANSI/IEEE 91) style
+ECL-BAS1.6,ECL,Basic logic blocks r1 #6,"XNOR gate, 2 inputs",Electronic,Logic,el.logic.xnor2,pending,E7,Distinctive-shape (ANSI/IEEE 91) style
+ECL-BAS2.1,ECL,Basic logic blocks r2 #1,"AND gate, 3 inputs",Electronic,Logic,el.logic.and3,pending,E7,Distinctive-shape (ANSI/IEEE 91) style
+ECL-BAS2.2,ECL,Basic logic blocks r2 #2,"NAND gate, 3 inputs",Electronic,Logic,el.logic.nand3,pending,E7,Distinctive-shape (ANSI/IEEE 91) style
+ECL-BAS2.3,ECL,Basic logic blocks r2 #3,"OR gate, 3 inputs",Electronic,Logic,el.logic.or3,pending,E7,Distinctive-shape (ANSI/IEEE 91) style
+ECL-BAS2.4,ECL,Basic logic blocks r2 #4,"NOR gate, 3 inputs",Electronic,Logic,el.logic.nor3,pending,E7,Distinctive-shape (ANSI/IEEE 91) style
+ECL-BAS2.5,ECL,Basic logic blocks r2 #5,"XOR gate, 3 inputs",Electronic,Logic,el.logic.xor3,pending,E7,Distinctive-shape (ANSI/IEEE 91) style
+ECL-BAS2.6,ECL,Basic logic blocks r2 #6,"XNOR gate, 3 inputs",Electronic,Logic,el.logic.xnor3,pending,E7,Distinctive-shape (ANSI/IEEE 91) style
+ECL-BAS3.1,ECL,Basic logic blocks r3 #1,"AND gate, 4 inputs",Electronic,Logic,el.logic.and4,pending,E7,Distinctive-shape (ANSI/IEEE 91) style
+ECL-BAS3.2,ECL,Basic logic blocks r3 #2,"NAND gate, 4 inputs",Electronic,Logic,el.logic.nand4,pending,E7,Distinctive-shape (ANSI/IEEE 91) style
+ECL-BAS3.3,ECL,Basic logic blocks r3 #3,"OR gate, 4 inputs",Electronic,Logic,el.logic.or4,pending,E7,Distinctive-shape (ANSI/IEEE 91) style
+ECL-BAS3.4,ECL,Basic logic blocks r3 #4,"NOR gate, 4 inputs",Electronic,Logic,el.logic.nor4,pending,E7,Distinctive-shape (ANSI/IEEE 91) style
+ECL-BAS3.5,ECL,Basic logic blocks r3 #5,"XOR gate, 4 inputs",Electronic,Logic,el.logic.xor4,pending,E7,Distinctive-shape (ANSI/IEEE 91) style
+ECL-BAS3.6,ECL,Basic logic blocks r3 #6,"XNOR gate, 4 inputs",Electronic,Logic,el.logic.xnor4,pending,E7,Distinctive-shape (ANSI/IEEE 91) style
+ECL-BAS4.1,ECL,Basic logic blocks r4 #1,"AND gate, wide input bar (5 inputs)",Electronic,Logic,el.logic.and5,pending,E7,Extended input bar drawing; 5 input leads shown
+ECL-BAS4.2,ECL,Basic logic blocks r4 #2,"NAND gate, wide input bar (5 inputs)",Electronic,Logic,el.logic.nand5,pending,E7,Extended input bar drawing; 5 input leads shown
+ECL-BAS4.3,ECL,Basic logic blocks r4 #3,"OR gate, wide input bar (5 inputs)",Electronic,Logic,el.logic.or5,pending,E7,Extended input bar drawing; 5 input leads shown
+ECL-BAS4.4,ECL,Basic logic blocks r4 #4,"NOR gate, wide input bar (5 inputs)",Electronic,Logic,el.logic.nor5,pending,E7,Extended input bar drawing; 5 input leads shown
+ECL-BAS4.5,ECL,Basic logic blocks r4 #5,"XOR gate, wide input bar (5 inputs)",Electronic,Logic,el.logic.xor5,pending,E7,Extended input bar drawing; 5 input leads shown
+ECL-BAS4.6,ECL,Basic logic blocks r4 #6,"XNOR gate, wide input bar (5 inputs)",Electronic,Logic,el.logic.xnor5,pending,E7,Extended input bar drawing; 5 input leads shown
+ECL-BAS1.7,ECL,Basic logic blocks r1 #7,NOT gate (inverter),Electronic,Logic,el.logic.not,pending,E7,
+ECL-BAS2.7,ECL,Basic logic blocks r2 #7,"D latch (D, E, Q, /Q)",Electronic,Logic,el.logic.dlatch,pending,E7,
+ECL-BAS3.7,ECL,Basic logic blocks r3 #7,"D flip-flop, edge triggered (D, clock, Q, /Q)",Electronic,Logic,el.logic.dff,pending,E7,
+ECL-BAS4.7,ECL,Basic logic blocks r4 #7,"JK flip-flop (J, clock, K, Q, /Q)",Electronic,Logic,el.logic.jkff,pending,E7,
+ECL-BAS1.8,ECL,Basic logic blocks r1 #8,Full adder (vertical pin layout),Electronic,Logic,el.logic.fulladder,pending,E7,
+ECL-BAS1.9,ECL,Basic logic blocks r1 #9,Full adder (horizontal pin layout),Electronic,Logic,ECL-BAS1.8,duplicate,E7,"Same function, other pin placement"
+ECL-BAS3.8,ECL,Basic logic blocks r3 #8,"Multiplexer, 2 to 1",Electronic,Logic,el.logic.mux2,pending,E7,Select input drawn on the notch; flag: source shows no select-pin label
+ECL-BAS2.9,ECL,Basic logic blocks r2 #9,Bus with branches (bus ripper),Electronic,Logic,-,convention,-,"Wire/bus drawing, not a component"
+ECL-BAS3.9,ECL,Basic logic blocks r3 #9,"Bus width marker, 4 lines (two forms)",General,Drafting,gen.mark.buswidth,annotation,E7,
+ECL-SRC1.1,ECL,"Sources, connectors r1 #1",DC voltage source (+/- marked),Electrical,Sources,el.source.dc,pending,E2,Existing el.source.v drawn differently; compare in E2
+ECL-SRC1.2,ECL,"Sources, connectors r1 #2",AC voltage source,Electrical,Sources,el.source.ac,existing,E2,
+ECL-SRC1.3,ECL,"Sources, connectors r1 #3",Current source,Electrical,Sources,el.source.i,pending,E2,
+ECL-SRC1.4,ECL,"Sources, connectors r1 #4",Dependent (controlled) current source,Electrical,Sources,el.source.i.dep,pending,E2,
+ECL-SRC1.5,ECL,"Sources, connectors r1 #5",Coaxial connector,Electronic,Connections,el.connector.coax,pending,E2,
+ECL-SRC1.6,ECL,"Sources, connectors r1 #6",Antenna,Electronic,Connections,el.antenna,pending,E2,
+ECL-SRC2.1,ECL,"Sources, connectors r2 #1",Chassis / frame ground,Electrical,Connections,el.chassis,existing,E2,
+ECL-SRC2.2,ECL,"Sources, connectors r2 #2","Ground, bar (T form)",Electrical,Connections,el.ground.bar,pending,E2,
+ECL-SRC2.3,ECL,"Sources, connectors r2 #3","Ground, hollow triangle (up)",Electrical,Connections,el.ground.signal.up,pending,E2,
+ECL-SRC2.4,ECL,"Sources, connectors r2 #4","Ground, filled triangle (up)",Electrical,Connections,el.ground.signal.fill,pending,E2,
+ECL-SRC2.5,ECL,"Sources, connectors r2 #5",Supply terminal +,Electrical,Connections,el.rail.pos,pending,E2,
+ECL-SRC2.6,ECL,"Sources, connectors r2 #6",Supply terminal +5V,Electrical,Connections,el.rail.pos,duplicate,E2,"Label text is a component label, not part of the symbol"
+ECL-SRC2.7,ECL,"Sources, connectors r2 #7",Supply terminal VCC,Electrical,Connections,el.rail.pos,duplicate,E2,"Label text is a component label, not part of the symbol"
+ECL-SRC2.8,ECL,"Sources, connectors r2 #8","Single cell, 5V",Electrical,Sources,el.cell,existing,E2,
+ECL-SRC2.9,ECL,"Sources, connectors r2 #9","Battery, multi-cell, 60V",Electrical,Sources,el.battery,pending,E2,
+ECL-SRC3.1,ECL,"Sources, connectors r3 #1",Terminal (open circle with lead),Electrical,Connections,el.terminal,existing,E2,
+ECL-SRC3.2,ECL,"Sources, connectors r3 #2","Ground, bar (inverted T)",Electrical,Connections,el.ground.bar,duplicate,E2,
+ECL-SRC3.3,ECL,"Sources, connectors r3 #3",Earth ground,Electrical,Connections,el.earth,existing,E2,
+ECL-SRC3.4,ECL,"Sources, connectors r3 #4","Signal ground, hollow triangle",Electrical,Connections,el.ground.signal,existing,E2,
+ECL-SRC3.5,ECL,"Sources, connectors r3 #5",Supply terminal -,Electrical,Connections,el.rail.neg,pending,E2,
+ECL-SRC3.6,ECL,"Sources, connectors r3 #6",Supply terminal -5V,Electrical,Connections,el.rail.neg,duplicate,E2,
+ECL-SRC3.7,ECL,"Sources, connectors r3 #7",Supply terminal VEE,Electrical,Connections,el.rail.neg,duplicate,E2,
+ECL-SRC3.8,ECL,"Sources, connectors r3 #8",Single cell (horizontal),Electrical,Sources,el.cell,duplicate,E2,
+ECL-SRC3.9,ECL,"Sources, connectors r3 #9","Battery, multi-cell (horizontal)",Electrical,Sources,el.battery,duplicate,E2,
+ECL-SRC3.10,ECL,"Sources, connectors r3 #10","Battery, multi-cell with break (120V)",Electrical,Sources,el.battery.long,pending,E2,
+ECL-SRC4.1,ECL,"Sources, connectors r4 #1",Wire,Electrical,Connections,editor,convention,-,Wire drawing / junction handled by the editor
+ECL-SRC4.2,ECL,"Sources, connectors r4 #2",Junction dot,Electrical,Connections,editor,convention,-,Wire drawing / junction handled by the editor
+ECL-SRC4.3,ECL,"Sources, connectors r4 #3","Wire crossing, hop (up)",Electrical,Connections,editor,convention,-,Wire drawing / junction handled by the editor
+ECL-SRC4.4,ECL,"Sources, connectors r4 #4","Wire crossing, hop (left)",Electrical,Connections,editor,convention,-,Wire drawing / junction handled by the editor
+ECL-SRC4.5,ECL,"Sources, connectors r4 #5","Wire crossing, double hop",Electrical,Connections,editor,convention,-,Wire drawing / junction handled by the editor
+ECL-SRC4.6,ECL,"Sources, connectors r4 #6","Wire crossing, hop (vertical)",Electrical,Connections,editor,convention,-,Wire drawing / junction handled by the editor
+ECL-DIO1.1,ECL,Diodes (semiconductor) r1 #1,Diode,Electronic,Semiconductors,el.diode,existing,E3,Filled style
+ECL-DIO1.2,ECL,Diodes (semiconductor) r1 #2,Zener diode,Electronic,Semiconductors,el.diode.zener,existing,E3,Filled style
+ECL-DIO1.3,ECL,Diodes (semiconductor) r1 #3,Schottky diode,Electronic,Semiconductors,el.diode.schottky,pending,E3,Filled style
+ECL-DIO1.4,ECL,Diodes (semiconductor) r1 #4,Varicap (varactor) diode,Electronic,Semiconductors,el.diode.varicap,pending,E3,Filled style
+ECL-DIO1.5,ECL,Diodes (semiconductor) r1 #5,Tunnel diode,Electronic,Semiconductors,el.diode.tunnel,blocked,E3,Director Q4: unlabelled/ambiguous drawing left out until identified. Source gives no labels for this cathode variant; identification needed before implementation (Q4)
+ECL-DIO1.6,ECL,Diodes (semiconductor) r1 #6,Diode with bracket cathode (second form),Electronic,Semiconductors,el.diode.bracket2,blocked,E3,Director Q4: unlabelled/ambiguous drawing left out until identified. Source gives no labels for this cathode variant; identification needed before implementation (Q4)
+ECL-DIO1.7,ECL,Diodes (semiconductor) r1 #7,LED,Electronic,Semiconductors,el.led,existing,E3,Filled style
+ECL-DIO1.8,ECL,Diodes (semiconductor) r1 #8,Photodiode,Electronic,Semiconductors,el.photodiode,pending,E3,Filled style
+ECL-DIO1.9,ECL,Diodes (semiconductor) r1 #9,Diode with integral cathode mark (S form),Electronic,Semiconductors,el.diode.s,blocked,E3,Director Q4: unlabelled/ambiguous drawing left out until identified. Source gives no labels for this cathode variant; identification needed before implementation (Q4)
+ECL-DIO1.10,ECL,Diodes (semiconductor) r1 #10,"Diode, outline with cathode bars (10th form)",Electronic,Semiconductors,el.diode.form10,blocked,E3,Director Q4: unlabelled/ambiguous drawing left out until identified. Source gives no labels for this cathode variant; identification needed before implementation (Q4)
+ECL-DIO2.1,ECL,Diodes (semiconductor) r2 #1,Diode (outline style),Electronic,Semiconductors,ECL-DIO1.1,duplicate,E3,"Outline vs filled is a drawing style, same meaning"
+ECL-DIO2.2,ECL,Diodes (semiconductor) r2 #2,Zener diode (outline style),Electronic,Semiconductors,ECL-DIO1.2,duplicate,E3,"Outline vs filled is a drawing style, same meaning"
+ECL-DIO2.3,ECL,Diodes (semiconductor) r2 #3,Schottky diode (outline style),Electronic,Semiconductors,ECL-DIO1.3,duplicate,E3,"Outline vs filled is a drawing style, same meaning"
+ECL-DIO2.4,ECL,Diodes (semiconductor) r2 #4,Varicap (varactor) diode (outline style),Electronic,Semiconductors,ECL-DIO1.4,duplicate,E3,"Outline vs filled is a drawing style, same meaning"
+ECL-DIO2.5,ECL,Diodes (semiconductor) r2 #5,Tunnel diode (outline style),Electronic,Semiconductors,ECL-DIO1.5,duplicate,E3,"Outline vs filled is a drawing style, same meaning"
+ECL-DIO2.6,ECL,Diodes (semiconductor) r2 #6,Diode with bracket cathode (second form) (outline style),Electronic,Semiconductors,ECL-DIO1.6,duplicate,E3,"Outline vs filled is a drawing style, same meaning"
+ECL-DIO2.7,ECL,Diodes (semiconductor) r2 #7,LED (outline style),Electronic,Semiconductors,ECL-DIO1.7,duplicate,E3,"Outline vs filled is a drawing style, same meaning"
+ECL-DIO2.8,ECL,Diodes (semiconductor) r2 #8,Photodiode (outline style),Electronic,Semiconductors,ECL-DIO1.8,duplicate,E3,"Outline vs filled is a drawing style, same meaning"
+ECL-DIO2.9,ECL,Diodes (semiconductor) r2 #9,Diode with integral cathode mark (S form) (outline style),Electronic,Semiconductors,ECL-DIO1.9,duplicate,E3,"Outline vs filled is a drawing style, same meaning"
+ECL-DIO3.1,ECL,Diodes (semiconductor) r3 #1,LED (vertical),Electronic,Semiconductors,el.led,duplicate,E3,
+ECL-DIO3.2,ECL,Diodes (semiconductor) r3 #2,Photodiode (vertical),Electronic,Semiconductors,el.photodiode,duplicate,E3,
+ECL-DIO3.3,ECL,Diodes (semiconductor) r3 #3,Zener diode with voltage label (vertical),Electronic,Semiconductors,el.diode.zener,duplicate,E3,
+ECL-DIO3.4,ECL,Diodes (semiconductor) r3 #4,DIAC (antiparallel diodes),Electronic,Semiconductors,el.diac,pending,E3,
+ECL-DIO3.5,ECL,Diodes (semiconductor) r3 #5,TRIAC,Electronic,Semiconductors,el.triac,pending,E3,
+ECL-DIO3.6,ECL,Diodes (semiconductor) r3 #6,"Thyristor (SCR), cathode gate",Electronic,Semiconductors,el.scr,pending,E3,
+ECL-DIO3.7,ECL,Diodes (semiconductor) r3 #7,Bidirectional transient suppressor (two zeners),Electronic,Semiconductors,el.tvs.bidir,pending,E3,
+ECL-DIO3.8,ECL,Diodes (semiconductor) r3 #8,Bidirectional zener with bent bars,Electronic,Semiconductors,el.diode.zener.bidir,blocked,E3,Director Q4: unlabelled/ambiguous drawing left out until identified. Two adjacent forms differ only in bar style; identify before implementing (Q4)
+ECL-DIO3.9,ECL,Diodes (semiconductor) r3 #9,Bridge rectifier block,Electronic,Power electronics,el.rectifier.block,pending,E3,
+ECL-DIO3.10,ECL,Diodes (semiconductor) r3 #10,Bridge rectifier (diamond),Electronic,Power electronics,el.rectifier.bridge,pending,E3,
+ECL-DIO4.1,ECL,Diodes (semiconductor) r4 #1,DIAC (outline),Electronic,Semiconductors,el.diac,duplicate,E3,Outline style of row 3
+ECL-DIO4.2,ECL,Diodes (semiconductor) r4 #2,TRIAC (outline),Electronic,Semiconductors,el.triac,duplicate,E3,Outline style of row 3
+ECL-DIO4.3,ECL,Diodes (semiconductor) r4 #3,Thyristor (outline),Electronic,Semiconductors,el.scr,duplicate,E3,Outline style of row 3
+ECL-DIO4.4,ECL,Diodes (semiconductor) r4 #4,TVS (outline),Electronic,Semiconductors,el.tvs.bidir,duplicate,E3,Outline style of row 3
+ECL-DIO4.5,ECL,Diodes (semiconductor) r4 #5,Bidirectional zener (outline),Electronic,Semiconductors,el.diode.zener.bidir,duplicate,E3,Outline style of row 3
+ECL-DIO4.6,ECL,Diodes (semiconductor) r4 #6,AC/DC converter (rectifier) block,Electrical,Power electronics,el.converter.acdc,pending,E3,
+ECL-DIO5.1,ECL,Diodes (semiconductor) r5 #1,Circle with cathode bar (unlabelled),Electronic,Semiconductors,-,blocked,E3,Director Q4: unlabelled/ambiguous drawing left out until identified. No label in source; possibly a vacuum/gas diode or photocell. Not implemented without identification (Q4)
+ECL-LIN1.1,ECL,Linear components r1 #1,Thermistor (IEC rectangle),Electronic,Passive,el.thermistor.iec,pending,E1,
+ECL-LIN1.2,ECL,Linear components r1 #2,Thermistor (zigzag),Electronic,Passive,el.thermistor.ansi,pending,E1,
+ECL-LIN1.3,ECL,Linear components r1 #3,"Resistor, rectangular-wave form",Electronic,Passive,el.resistor.wave,pending,E1,
+ECL-LIN1.4,ECL,Linear components r1 #4,Inductor with magnetic core,Electronic,Passive,el.inductor.core,pending,E1,
+ECL-LIN1.5,ECL,Linear components r1 #5,"Inductor, adjustable, with core",Electronic,Passive,el.inductor.core.var,pending,E1,
+ECL-LIN2.1,ECL,Linear components r2 #1,Resistor (IEC),Electronic,Passive,el.resistor.iec,existing,E1,
+ECL-LIN2.2,ECL,Linear components r2 #2,Resistor (ANSI),Electronic,Passive,el.resistor.ansi,existing,E1,
+ECL-LIN2.3,ECL,Linear components r2 #3,Heating element / filled resistor,Electronic,Passive,el.resistor.filled,blocked,E1,Director Q4: unlabelled/ambiguous drawing left out until identified. Filled rectangle meaning varies by convention (heater element vs. fixed resistor); Q4
+ECL-LIN2.4,ECL,Linear components r2 #4,Inductor,Electronic,Passive,el.inductor,existing,E1,
+ECL-LIN2.5,ECL,Linear components r2 #5,"Inductor, adjustable",Electronic,Passive,el.inductor.var,pending,E1,
+ECL-LIN3.1,ECL,Linear components r3 #1,"Potentiometer, rheostat connection (IEC)",Electronic,Passive,el.rheostat.iec,pending,E1,
+ECL-LIN3.2,ECL,Linear components r3 #2,Rheostat (ANSI),Electronic,Passive,el.rheostat.ansi,pending,E1,
+ECL-LIN3.3,ECL,Linear components r3 #3,Rheostat (filled body),Electronic,Passive,el.rheostat.filled,blocked,E1,Director Q4: unlabelled/ambiguous drawing left out until identified. Depends on the meaning of the filled-body resistor (Q4)
+ECL-LIN3.4,ECL,Linear components r3 #4,"Photoresistor (LDR, IEC)",Electronic,Passive,el.ldr.iec,pending,E1,
+ECL-LIN3.5,ECL,Linear components r3 #5,"Photoresistor (LDR, ANSI)",Electronic,Passive,el.ldr.ansi,pending,E1,
+ECL-LIN3.6,ECL,Linear components r3 #6,"Capacitor, adjustable (trimmer)",Electronic,Passive,el.capacitor.trim,pending,E1,
+ECL-LIN4.1,ECL,Linear components r4 #1,"Trimmer resistor, rheostat connection (IEC)",Electronic,Passive,el.trim.rheostat.iec,pending,E1,
+ECL-LIN4.2,ECL,Linear components r4 #2,"Trimmer resistor, rheostat connection (ANSI)",Electronic,Passive,el.trim.rheostat.ansi,pending,E1,
+ECL-LIN4.3,ECL,Linear components r4 #3,"Trimmer resistor, rheostat connection (filled)",Electronic,Passive,el.trim.rheostat.filled,blocked,E1,Director Q4: unlabelled/ambiguous drawing left out until identified. Depends on the meaning of the filled-body resistor (Q4)
+ECL-LIN4.4,ECL,Linear components r4 #4,Photoresistor in envelope (IEC),Electronic,Passive,el.ldr.iec.env,pending,E1,
+ECL-LIN4.5,ECL,Linear components r4 #5,Photoresistor in envelope (ANSI),Electronic,Passive,el.ldr.ansi.env,pending,E1,
+ECL-LIN5.1,ECL,Linear components r5 #1,"Resistor, adjustable (IEC)",Electronic,Passive,el.resistor.var.iec,existing,E1,Verify the existing drawing matches (variable vs preset arrow)
+ECL-LIN5.2,ECL,Linear components r5 #2,"Resistor, adjustable, preset (ANSI)",Electronic,Passive,el.resistor.preset.ansi,pending,E1,
+ECL-LIN5.3,ECL,Linear components r5 #3,"Resistor, adjustable, preset (filled)",Electronic,Passive,el.resistor.preset.filled,blocked,E1,Director Q4: unlabelled/ambiguous drawing left out until identified. Depends on the meaning of the filled-body resistor (Q4)
+ECL-LIN6.1,ECL,Linear components r6 #1,Potentiometer (IEC),Electronic,Passive,el.potentiometer.iec,existing,E1,
+ECL-LIN6.2,ECL,Linear components r6 #2,Potentiometer (ANSI),Electronic,Passive,el.potentiometer.ansi,pending,E1,
+ECL-LIN6.3,ECL,Linear components r6 #3,Inductor with tap / sliding contact,Electronic,Passive,el.inductor.tap,pending,E1,
+ECL-LIN6.4,ECL,Linear components r6 #4,Capacitor,Electronic,Passive,el.capacitor,existing,E1,
+ECL-LIN6.5,ECL,Linear components r6 #5,"Capacitor, polarised (curved plate)",Electronic,Passive,el.capacitor.pol.curved,pending,E1,
+ECL-LIN6.6,ECL,Linear components r6 #6,"Capacitor, polarised (rectangle plate)",Electronic,Passive,el.capacitor.pol,existing,E1,Existing el.capacitor.pol (IEEE 315) - verify which plate form it uses
+ECL-XFM1.1,ECL,Transformers r1 #1,"Transformer, iron core, dots same end (in phase)",Electrical,Transformers,el.transformer.dot,pending,E5,Existing el.transformer has no polarity dots; dotted variants are distinct
+ECL-XFM1.2,ECL,Transformers r1 #2,"Transformer, iron core, step-down, dots same end",Electrical,Transformers,el.transformer.dot.step,pending,E5,
+ECL-XFM1.3,ECL,Transformers r1 #3,"Transformer, centre-tapped secondary",Electrical,Transformers,el.transformer.ct,pending,E5,
+ECL-XFM1.4,ECL,Transformers r1 #4,"Transformer, two secondary windings",Electrical,Transformers,el.transformer.2sec,pending,E5,
+ECL-XFM2.1,ECL,Transformers r2 #1,"Transformer, iron core, dots opposite ends (inverting)",Electrical,Transformers,el.transformer.inv,pending,E5,
+ECL-XFM2.2,ECL,Transformers r2 #2,"Transformer, step-down, dots opposite ends",Electrical,Transformers,el.transformer.inv.step,pending,E5,
+ECL-XFM2.3,ECL,Transformers r2 #3,"Transformer, centre-tapped secondary, dots opposite ends",Electrical,Transformers,el.transformer.ct.inv,pending,E5,
+ECL-XFM2.4,ECL,Transformers r2 #4,Autotransformer (tapped single winding),Electrical,Transformers,el.autotransformer,pending,E5,
+ECL-XFM2.5,ECL,Transformers r2 #5,Autotransformer with core,Electrical,Transformers,el.autotransformer.core,pending,E5,
+ECL-TRS1.1,ECL,Transistors r1 #1,NPN bipolar transistor,Electronic,Semiconductors,el.npn,existing,E4,
+ECL-TRS1.2,ECL,Transistors r1 #2,NPN phototransistor,Electronic,Semiconductors,el.npn.photo,pending,E4,
+ECL-TRS1.3,ECL,Transistors r1 #3,N-channel JFET,Electronic,Semiconductors,el.jfet.n,pending,E4,
+ECL-TRS1.4,ECL,Transistors r1 #4,"N-channel MOSFET, enhancement, in envelope",Electronic,Semiconductors,el.nmos.env,pending,E4,
+ECL-TRS1.5,ECL,Transistors r1 #5,"N-channel MOSFET, enhancement (no envelope)",Electronic,Semiconductors,el.nmos,pending,E4,
+ECL-TRS1.6,ECL,Transistors r1 #6,"MOSFET, no body arrow (4th form)",Electronic,Semiconductors,el.mos.plain,blocked,E4,Director Q4: unlabelled/ambiguous drawing left out until identified. Gate/channel line style needs confirming against the source before implementation (Q4)
+ECL-TRS1.7,ECL,Transistors r1 #7,"N-channel MOSFET, depletion, in envelope",Electronic,Semiconductors,el.nmos.depl.env,blocked,E4,Director Q4: unlabelled/ambiguous drawing left out until identified. Gate/channel line style needs confirming against the source before implementation (Q4)
+ECL-TRS2.1,ECL,Transistors r2 #1,PNP bipolar transistor,Electronic,Semiconductors,el.pnp,existing,E4,
+ECL-TRS2.2,ECL,Transistors r2 #2,PNP phototransistor,Electronic,Semiconductors,el.pnp.photo,pending,E4,
+ECL-TRS2.3,ECL,Transistors r2 #3,P-channel JFET,Electronic,Semiconductors,el.jfet.p,pending,E4,
+ECL-TRS2.4,ECL,Transistors r2 #4,"P-channel MOSFET, enhancement, in envelope",Electronic,Semiconductors,el.pmos.env,pending,E4,
+ECL-TRS2.5,ECL,Transistors r2 #5,"P-channel MOSFET, enhancement (no envelope)",Electronic,Semiconductors,el.pmos,pending,E4,
+ECL-TRS2.6,ECL,Transistors r2 #6,"P-channel MOSFET, gate bubble form",Electronic,Semiconductors,el.pmos.bubble,pending,E4,
+ECL-TRS2.7,ECL,Transistors r2 #7,"P-channel MOSFET, depletion, in envelope",Electronic,Semiconductors,el.pmos.depl.env,blocked,E4,Director Q4: unlabelled/ambiguous drawing left out until identified. Gate/channel line style needs confirming against the source before implementation (Q4)
+ECL-MEC1.1,ECL,Mechanical switches r1 #1,"Switch, single pole, open (make)",Electrical,Switching (IEC),el.contact.no.iec,existing,E6,Same function as existing make contact; ECL draws terminal circles
+ECL-MEC2.1,ECL,Mechanical switches r2 #1,"Switch, single pole, drawn closed",Electrical,Switching (IEC),el.switch.closed,blocked,E6,Director Q4: unlabelled/ambiguous drawing left out until identified. Blade resting on contact: break (NC) contact or a make contact drawn actuated? Q4
+ECL-MEC3.1,ECL,Mechanical switches r3 #1,"Switch, single pole double throw (changeover)",Electrical,Switching (IEC),el.switch.spdt,pending,E6,
+ECL-MEC4.1,ECL,Mechanical switches r4 #1,"Changeover switch, centre/blade to common (second position drawing)",Electrical,Switching (IEC),el.switch.spdt,duplicate,E6,Same switch drawn in another position
+ECL-MEC1.2,ECL,Mechanical switches r1 #2,Relay: coil with one make contact (linked),Electrical,Switching (IEC),el.relay.no,pending,E6,Coil and contact linked by a dashed line
+ECL-MEC2.2,ECL,Mechanical switches r2 #2,Relay: coil with contact drawn closed,Electrical,Switching (IEC),el.relay.nc,blocked,E6,Director Q4: unlabelled/ambiguous drawing left out until identified. As r2 #1 (Q4)
+ECL-MEC3.2,ECL,Mechanical switches r3 #2,"Switch, two pole, linked (DPST)",Electrical,Switching (IEC),el.switch.dpst,pending,E6,
+ECL-MEC1.3,ECL,Mechanical switches r1 #3,Relay: coil with two linked make contacts,Electrical,Switching (IEC),el.relay.2no,pending,E6,
+ECL-MEC2.3,ECL,Mechanical switches r2 #3,"Rotary selector switch, four positions",Electrical,Switching (IEC),el.switch.rotary4,pending,E6,
+ECL-SEM1.1,ECL,Semiconductor devices r1 #1,Schmitt trigger inverter,Electronic,Logic,el.logic.schmitt.not,pending,E7,
+ECL-SEM2.1,ECL,Semiconductor devices r2 #1,Schmitt trigger buffer,Electronic,Logic,el.logic.schmitt,pending,E7,
+ECL-SEM1.2,ECL,Semiconductor devices r1 #2,Operational amplifier,Electronic,Integrated,el.opamp,existing,E8,
+ECL-SEM1.3,ECL,Semiconductor devices r1 #3,Operational amplifier with supply pins (+ input on top),Electronic,Integrated,el.opamp.supply,pending,E8,
+ECL-SEM1.4,ECL,Semiconductor devices r1 #4,Operational amplifier with supply pins (- input on top),Electronic,Integrated,el.opamp.supply.inv,pending,E8,
+ECL-SEM1.5,ECL,Semiconductor devices r1 #5,"Voltage regulator, 3 terminal (e.g. 7805)",Electronic,Integrated,el.regulator,pending,E8,"Part number '7805' is a label, not drawn into the symbol"
+ECL-VAC1.1,ECL,Vacuum tubes r1 #1,"Vacuum diode, directly heated",Electronic,Vacuum tubes,el.tube.diode.direct,pending,E8,
+ECL-VAC1.2,ECL,Vacuum tubes r1 #2,"Vacuum diode, indirectly heated (cathode)",Electronic,Vacuum tubes,el.tube.diode,pending,E8,
+ECL-VAC1.3,ECL,Vacuum tubes r1 #3,Triode,Electronic,Vacuum tubes,el.tube.triode,pending,E8,
+ECL-VAC1.4,ECL,Vacuum tubes r1 #4,Tetrode,Electronic,Vacuum tubes,el.tube.tetrode,pending,E8,4th form has two grids: tetrode (no suppressor grid shown)
