@@ -888,11 +888,42 @@ F3 = {
     "Y32-4.2.3": ("validated", "fl.hyd.accumulator.weight", ""),
     "Y32-4.3": ("validated", "fl.pneu.receiver.ansi", "ANSI receiver is inline (two ports); ISO has one top port"),
 }
+F4 = {
+    "HO-F01": ("validated", "fl.hyd.breather",
+               "Small element between vent and filter not legible in the chart; not reproduced (noted on the symbol)"),
+    "HO-F03": ("validated", both("filter.indicator"), "Visual indicator drawn above the filter"),
+    "HO-F04": ("validated", "fl.hyd.cooler.liquid", "Drawn with horizontal flow; coolant arrows are not connections"),
+    "HO-F05": ("validated", "fl.hyd.cooler.air", "Drawn with horizontal flow; air arrows and fan"),
+    "HO-F06": ("validated", both("heater"), ""),
+    "HO-F07": ("blocked", "-", "Arrow directions inside the chart's temperature-controller figure are not legible; "
+                               "the function is provided by the ANSI temperature controllers (Y32 5.1.3)"),
+    "Y32-5": ("validated", both("conditioner"), ""),
+    "Y32-5.1.1a": ("validated", both("heater.ansi"), "Triangles (ANSI) vs arrowheads (ISO fl.*.heater)"),
+    "Y32-5.1.1b": ("validated", both("heater.liquid"), "Medium ports C1 (out) / C2 (in), port type any"),
+    "Y32-5.1.1c": ("validated", both("heater.gas"), "Medium ports C1 / C2, port type any"),
+    "Y32-5.1.2a": ("validated", both("cooler") + "; " + both("cooler.ansi"),
+                   "First form = the ISO cooler (same drawing); second form = filled corners (.ansi)"),
+    "Y32-5.1.2b": ("validated", both("cooler.lines.liquid") + "; " + both("cooler.lines.gas"),
+                   "Medium ports C1 / C2, port type any"),
+    "Y32-5.1.3a": ("validated", both("tempcontrol"),
+                   "Arrow-form drawing; the source's alternative filled-corner drawing has the same meaning"),
+    "Y32-5.1.3b": ("validated", both("tempcontrol.liquid") + "; " + both("tempcontrol.gas"), "Medium ports C1 / C2"),
+    "Y32-5.2": ("equivalent", both("filter"), "Same drawing as the existing ISO filter"),
+    "Y32-5.3.1": ("validated", both("separator"), "Drain port L (hyd) / 3 (pneu)"),
+    "Y32-5.3.2": ("validated", both("separator.auto"), ""),
+    "Y32-5.4.1": ("validated", both("filtersep"), ""),
+    "Y32-5.4.2": ("validated", both("filtersep.auto"), ""),
+    "Y32-5.5": ("validated", "fl.pneu.dryer", ""),
+    "Y32-5.6.1": ("validated", "fl.pneu.lubricator", ""),
+    "Y32-5.6.2": ("validated", "fl.pneu.lubricator.drain", ""),
+}
 for k, (st, tgt, note) in F2.items():
+    PROGRESS[k] = (st, tgt, note)
+for k, (st, tgt, note) in F4.items():
     PROGRESS[k] = (st, tgt, note)
 for k, (st, tgt, note) in F3.items():
     PROGRESS[k] = (st, tgt, note)
-BATCH_OF = {**{k: "F2" for k in F2}, **{k: "F3" for k in F3}}
+BATCH_OF = {**{k: "F2" for k in F2}, **{k: "F3" for k in F3}, **{k: "F4" for k in F4}}
 for r in R:
     if r["key"] in PROGRESS:
         st, tgt, note = PROGRESS[r["key"]]

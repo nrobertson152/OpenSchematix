@@ -103,13 +103,13 @@ HO-C40,HO,Energy Control C40,Parallel directional control valve,Hydraulic,Mobile
 HO-C41,HO,Energy Control C41,Parallel directional control valve (second form),Hydraulic,Mobile valves,fl.hyd.mobile.parallel2,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Composite; Q3
 HO-C42,HO,Energy Control C42,Parallel directional control valve for use with LS pumps,Hydraulic,Mobile valves,fl.hyd.mobile.ls,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Composite; Q3
 HO-C43,HO,Energy Control C43,Parallel directional control valve for LS pumps with flow control function,Hydraulic,Mobile valves,fl.hyd.mobile.ls.flow,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Composite; Q3
-HO-F01,HO,Fluid Treatment F01,Breather with filter,Hydraulic,Fluid conditioning,fl.hyd.breather,pending,F4,
+HO-F01,HO,Fluid Treatment F01,Breather with filter,Hydraulic,Fluid conditioning,fl.hyd.breather,validated,F4,Small element between vent and filter not legible in the chart; not reproduced (noted on the symbol)
 HO-F02,HO,Fluid Treatment F02,Filter,Hydraulic,Fluid conditioning,fl.hyd.filter,existing,F4,
-HO-F03,HO,Fluid Treatment F03,Filter with indicator,Hydraulic,Fluid conditioning,fl.hyd.filter.indicator,pending,F4,
-HO-F04,HO,Fluid Treatment F04,Water / oil cooler,Hydraulic,Fluid conditioning,fl.hyd.cooler.liquid,pending,F4,
-HO-F05,HO,Fluid Treatment F05,Air / oil cooler,Hydraulic,Fluid conditioning,fl.hyd.cooler.air,pending,F4,
-HO-F06,HO,Fluid Treatment F06,Heater,Hydraulic,Fluid conditioning,fl.hyd.heater,pending,F4,
-HO-F07,HO,Fluid Treatment F07,Temperature controller,Hydraulic,Fluid conditioning,fl.hyd.tempcontrol,pending,F4,
+HO-F03,HO,Fluid Treatment F03,Filter with indicator,Hydraulic,Fluid conditioning,fl.hyd.filter.indicator; fl.pneu.filter.indicator,validated,F4,Visual indicator drawn above the filter
+HO-F04,HO,Fluid Treatment F04,Water / oil cooler,Hydraulic,Fluid conditioning,fl.hyd.cooler.liquid,validated,F4,Drawn with horizontal flow; coolant arrows are not connections
+HO-F05,HO,Fluid Treatment F05,Air / oil cooler,Hydraulic,Fluid conditioning,fl.hyd.cooler.air,validated,F4,Drawn with horizontal flow; air arrows and fan
+HO-F06,HO,Fluid Treatment F06,Heater,Hydraulic,Fluid conditioning,fl.hyd.heater; fl.pneu.heater,validated,F4,
+HO-F07,HO,Fluid Treatment F07,Temperature controller,Hydraulic,Fluid conditioning,-,blocked,F4,Arrow directions inside the chart's temperature-controller figure are not legible; the function is provided by the ANSI temperature controllers (Y32 5.1.3)
 HO-M01,HO,Measuring M01,Pressure indicator,Hydraulic+Pneumatic,Measurement,fl.*.pressure.indicator,pending,F9,
 HO-M02,HO,Measuring M02,Pressure transducer,Hydraulic+Pneumatic,Measurement,fl.*.pressure.transducer,pending,F9,
 HO-M03,HO,Measuring M03,Pressure gauge,Hydraulic+Pneumatic,Measurement,fl.*.gauge,existing,F9,
@@ -174,22 +174,22 @@ Y32-4.2.2,Y32,p5 cl.4.2.2,"Accumulator, gas charged",Hydraulic,Reservoirs & accu
 Y32-4.2.3,Y32,p5 cl.4.2.3,"Accumulator, weighted",Hydraulic,Reservoirs & accumulators,fl.hyd.accumulator.weight,validated,F3,
 Y32-4.3,Y32,p5 cl.4.3,Receiver,Pneumatic,Reservoirs & accumulators,fl.pneu.receiver.ansi,validated,F3,Director Q1: ANSI-style variant of fl.pneu.receiver; becomes 'equivalent' if the ANSI drawing is identical.; ANSI receiver is inline (two ports); ISO has one top port
 Y32-4.4,Y32,p5 cl.4.4,"Energy source (hydraulic, pneumatic)",Hydraulic+Pneumatic,Lines & connections,fl.hyd.flowdir; fl.pneu.flowdir,duplicate,F2,F2: 1-port source marker; Drawing identical to the flow-direction marker (3.5); the flow-direction symbols note this use
-Y32-5,Y32,p6 cl.5,"Fluid conditioner, general",Hydraulic+Pneumatic,Fluid conditioning,fl.*.conditioner,pending,F4,
-Y32-5.1.1a,Y32,p7 cl.5.1.1,Heater (inside triangles: introduction of heat),Hydraulic+Pneumatic,Fluid conditioning,fl.*.heater,pending,F4,
-Y32-5.1.1b,Y32,p7 cl.5.1.1,"Heater, heating medium liquid (outside triangles filled)",Hydraulic+Pneumatic,Fluid conditioning,fl.*.heater.liquid,pending,F4,"Medium of heating/cooling lines: filled = liquid, hollow = gaseous (both forms shown)"
-Y32-5.1.1c,Y32,p7 cl.5.1.1,"Heater, heating medium gaseous (outside triangles hollow)",Hydraulic+Pneumatic,Fluid conditioning,fl.*.heater.gas,pending,F4,"Medium of heating/cooling lines: filled = liquid, hollow = gaseous (both forms shown)"
-Y32-5.1.2a,Y32,p7 cl.5.1.2,Cooler (two drawing forms),Hydraulic+Pneumatic,Fluid conditioning,fl.*.cooler,pending,F4,
-Y32-5.1.2b,Y32,p7 cl.5.1.2,Cooler with coolant lines (liquid / gaseous),Hydraulic+Pneumatic,Fluid conditioning,fl.*.cooler.liquid,pending,F4,"Medium of heating/cooling lines: filled = liquid, hollow = gaseous (both forms shown)"
-Y32-5.1.3a,Y32,p7 cl.5.1.3,Temperature controller (two drawing forms),Hydraulic+Pneumatic,Fluid conditioning,fl.*.tempcontrol,pending,F4,
-Y32-5.1.3b,Y32,p7 cl.5.1.3,Temperature controller with medium lines (liquid / gaseous),Hydraulic+Pneumatic,Fluid conditioning,fl.*.tempcontrol.lines,pending,F4,"Medium of heating/cooling lines: filled = liquid, hollow = gaseous (both forms shown)"
-Y32-5.2,Y32,p7 cl.5.2,Filter - strainer,Hydraulic+Pneumatic,Fluid conditioning,fl.*.filter.ansi,pending,F4,Director Q1: ANSI-style variant of fl.*.filter; becomes 'equivalent' if the ANSI drawing is identical.
-Y32-5.3.1,Y32,p7 cl.5.3.1,Separator with manual drain,Hydraulic+Pneumatic,Fluid conditioning,fl.*.separator,pending,F4,
-Y32-5.3.2,Y32,p7 cl.5.3.2,Separator with automatic drain,Hydraulic+Pneumatic,Fluid conditioning,fl.*.separator.auto,pending,F4,
-Y32-5.4.1,Y32,p7 cl.5.4.1,Filter - separator with manual drain,Hydraulic+Pneumatic,Fluid conditioning,fl.*.filtersep,pending,F4,
-Y32-5.4.2,Y32,p7 cl.5.4.2,Filter - separator with automatic drain,Hydraulic+Pneumatic,Fluid conditioning,fl.*.filtersep.auto,pending,F4,
-Y32-5.5,Y32,p7 cl.5.5,Desiccator (chemical dryer),Pneumatic,Fluid conditioning,fl.pneu.dryer,pending,F4,
-Y32-5.6.1,Y32,p7 cl.5.6.1,"Lubricator, less drain",Pneumatic,Fluid conditioning,fl.pneu.lubricator,pending,F4,
-Y32-5.6.2,Y32,p7 cl.5.6.2,Lubricator with manual drain,Pneumatic,Fluid conditioning,fl.pneu.lubricator.drain,pending,F4,
+Y32-5,Y32,p6 cl.5,"Fluid conditioner, general",Hydraulic+Pneumatic,Fluid conditioning,fl.hyd.conditioner; fl.pneu.conditioner,validated,F4,
+Y32-5.1.1a,Y32,p7 cl.5.1.1,Heater (inside triangles: introduction of heat),Hydraulic+Pneumatic,Fluid conditioning,fl.hyd.heater.ansi; fl.pneu.heater.ansi,validated,F4,Triangles (ANSI) vs arrowheads (ISO fl.*.heater)
+Y32-5.1.1b,Y32,p7 cl.5.1.1,"Heater, heating medium liquid (outside triangles filled)",Hydraulic+Pneumatic,Fluid conditioning,fl.hyd.heater.liquid; fl.pneu.heater.liquid,validated,F4,"Medium of heating/cooling lines: filled = liquid, hollow = gaseous (both forms shown); Medium ports C1 (out) / C2 (in), port type any"
+Y32-5.1.1c,Y32,p7 cl.5.1.1,"Heater, heating medium gaseous (outside triangles hollow)",Hydraulic+Pneumatic,Fluid conditioning,fl.hyd.heater.gas; fl.pneu.heater.gas,validated,F4,"Medium of heating/cooling lines: filled = liquid, hollow = gaseous (both forms shown); Medium ports C1 / C2, port type any"
+Y32-5.1.2a,Y32,p7 cl.5.1.2,Cooler (two drawing forms),Hydraulic+Pneumatic,Fluid conditioning,fl.hyd.cooler; fl.pneu.cooler; fl.hyd.cooler.ansi; fl.pneu.cooler.ansi,validated,F4,First form = the ISO cooler (same drawing); second form = filled corners (.ansi)
+Y32-5.1.2b,Y32,p7 cl.5.1.2,Cooler with coolant lines (liquid / gaseous),Hydraulic+Pneumatic,Fluid conditioning,fl.hyd.cooler.lines.liquid; fl.pneu.cooler.lines.liquid; fl.hyd.cooler.lines.gas; fl.pneu.cooler.lines.gas,validated,F4,"Medium of heating/cooling lines: filled = liquid, hollow = gaseous (both forms shown); Medium ports C1 / C2, port type any"
+Y32-5.1.3a,Y32,p7 cl.5.1.3,Temperature controller (two drawing forms),Hydraulic+Pneumatic,Fluid conditioning,fl.hyd.tempcontrol; fl.pneu.tempcontrol,validated,F4,Arrow-form drawing; the source's alternative filled-corner drawing has the same meaning
+Y32-5.1.3b,Y32,p7 cl.5.1.3,Temperature controller with medium lines (liquid / gaseous),Hydraulic+Pneumatic,Fluid conditioning,fl.hyd.tempcontrol.liquid; fl.pneu.tempcontrol.liquid; fl.hyd.tempcontrol.gas; fl.pneu.tempcontrol.gas,validated,F4,"Medium of heating/cooling lines: filled = liquid, hollow = gaseous (both forms shown); Medium ports C1 / C2"
+Y32-5.2,Y32,p7 cl.5.2,Filter - strainer,Hydraulic+Pneumatic,Fluid conditioning,fl.hyd.filter; fl.pneu.filter,equivalent,F4,Director Q1: ANSI-style variant of fl.*.filter; becomes 'equivalent' if the ANSI drawing is identical.; Same drawing as the existing ISO filter
+Y32-5.3.1,Y32,p7 cl.5.3.1,Separator with manual drain,Hydraulic+Pneumatic,Fluid conditioning,fl.hyd.separator; fl.pneu.separator,validated,F4,Drain port L (hyd) / 3 (pneu)
+Y32-5.3.2,Y32,p7 cl.5.3.2,Separator with automatic drain,Hydraulic+Pneumatic,Fluid conditioning,fl.hyd.separator.auto; fl.pneu.separator.auto,validated,F4,
+Y32-5.4.1,Y32,p7 cl.5.4.1,Filter - separator with manual drain,Hydraulic+Pneumatic,Fluid conditioning,fl.hyd.filtersep; fl.pneu.filtersep,validated,F4,
+Y32-5.4.2,Y32,p7 cl.5.4.2,Filter - separator with automatic drain,Hydraulic+Pneumatic,Fluid conditioning,fl.hyd.filtersep.auto; fl.pneu.filtersep.auto,validated,F4,
+Y32-5.5,Y32,p7 cl.5.5,Desiccator (chemical dryer),Pneumatic,Fluid conditioning,fl.pneu.dryer,validated,F4,
+Y32-5.6.1,Y32,p7 cl.5.6.1,"Lubricator, less drain",Pneumatic,Fluid conditioning,fl.pneu.lubricator,validated,F4,
+Y32-5.6.2,Y32,p7 cl.5.6.2,Lubricator with manual drain,Pneumatic,Fluid conditioning,fl.pneu.lubricator.drain,validated,F4,
 Y32-6.1.1,Y32,p7 cl.6.1.1,"Cylinder, single acting",Hydraulic+Pneumatic,Cylinders,fl.*.cyl.single.ret.ansi,pending,F6,Director Q1: ANSI-style variant of fl.*.cyl.single.ret; becomes 'equivalent' if the ANSI drawing is identical. Same as HO-T08
 Y32-6.1.2,Y32,p7 cl.6.1.2,"Cylinder, double acting",Hydraulic+Pneumatic,Cylinders,fl.*.cyl.double.ansi,pending,F6,Director Q1: ANSI-style variant of fl.*.cyl.double; becomes 'equivalent' if the ANSI drawing is identical.
 Y32-6.1.2.1,Y32,p7 cl.6.1.2.1,"Cylinder, double acting, single end rod",Hydraulic+Pneumatic,Cylinders,fl.*.cyl.double,existing,F6,
