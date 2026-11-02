@@ -262,3 +262,56 @@ def test_expansion_branch_changes_only_library_files():
     files = [f for f in diff.stdout.split() if f]
     outside = [f for f in files if not f.startswith(ALLOWED)]
     assert not outside, f"unexpected production changes: {outside}"
+
+
+# ---------------------------------------------------------------- drafting elements (director decision Q5)
+DRAFTING = [s for s in BUILTINS if is_drafting_element(s)]
+
+
+def test_drafting_element_classification_is_explicit():
+    """Exemption needs BOTH a drafting group and an empty designator prefix; neither alone qualifies."""
+    from openschematix.symbols.base import Geometry, SymbolDef, line
+    g = Geometry([line(0, 0, 10, 0)], [])
+    mk = lambda group, prefix: SymbolDef("x.test", "t", "Hydraulic", group, "Generic", "d", prefix, g)  # noqa: E731
+    assert is_drafting_element(mk("Valve operators", ""))
+    assert is_drafting_element(mk("Drafting", ""))
+    assert not is_drafting_element(mk("Valve operators", "V")), "a purchasable part is never a drafting element"
+    assert not is_drafting_element(mk("Connections", "")), "an empty prefix alone is not enough"
+    assert not is_drafting_element(symbols.get("gen.offpage")), "sheet connector has no prefix but connects"
+    terminal_less = [s.id for s in BUILTINS if not s.build(None).terminals]
+    assert terminal_less and all(is_drafting_element(symbols.get(i)) for i in terminal_less)
+
+
+def test_drafting_elements_never_connect_enter_bom_or_raise_checks(tmp_path):
+    from openschematix import bom, check
+    p = new_project("Drafting elements")
+    doc = p.sheets[0]
+    placed = []
+    for i, sd in enumerate(DRAFTING):
+        c = editing.place(doc, sd.id, 200 + (i % 12) * 150, 200 + (i // 12) * 150)
+        placed.append(c)
+        if not c.terminals():
+            # a wire drawn onto the drawing (its envelope-side point) attaches to nothing
+            w = editing.add_wire(doc, [(c.x, c.y), (c.x, c.y - 40)])
+            assert w.start is None and w.end is None, sd.id
+    assert bom.generate(p) == []
+    ids = {c.id for c in placed}
+    nets = netlist.compute_nets(p)
+    pilot_terms = {(doc.uid, c.id, n) for c in placed for n in c.terminals()}
+    assert {t for n in nets for t in n.terminals if t[1] in ids} <= pilot_terms
+    no_term = {c.id for c in placed if not c.terminals()}
+    issues = [i for i in check.check(p) if i.obj_id in ids]
+    assert not [i for i in issues if i.obj_id in no_term], "terminal-less elements must not raise Check issues"
+    assert {i.code for i in issues} <= {"open-terminal"}, "a pilot element may only report its unconnected port"
+    for c in placed[:6]:
+        before = {t: v for t, v in c.terminals().items()}
+        editing.rotate_items(doc, [c.id], [], clockwise=True)
+        editing.mirror_items(doc, [c.id], [])
+        editing.move_items(doc, [c.id], [], 20, 10)
+        assert set(c.terminals()) == set(before)
+    path = tmp_path / "drafting.schematix"
+    projectio.save_project(p, str(path), snapshot=False)
+    q = projectio.open_any(str(path)).project
+    got = {c.id: (c.symbol, c.rotation, c.mirror, c.x, c.y) for c in q.sheets[0].components.values()}
+    assert got == {c.id: (c.symbol, c.rotation, c.mirror, c.x, c.y) for c in placed}
+    assert bom.generate(q) == []
