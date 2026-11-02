@@ -20,7 +20,8 @@ Status
   excluded     left out by director decision (reason in notes)
   equivalent   ANSI drawing found identical to the ISO symbol named in target (set while implementing)
   implemented  added; target = the new id(s)      validated = implemented and covered by the batch tests
-Run:  python docs/symbol-library-expansion/build_inventory.py
+Run:  python docs/symbol-library-expansion/build_inventory.py           (read-only check)
+      python docs/symbol-library-expansion/build_inventory.py --write   (update inventory.csv)
 """
 import csv
 import os
@@ -827,7 +828,7 @@ def both(*ids):
 
 
 F2 = {
-    "HO-B03": ("blocked", "-", "A component enclosure needs a centre-line (dash-dot) line style; wires and drawing "
+    "HO-B03": ("blocked", "-", 'Director decision 3 (2026-11-02): the centre-line (dash-dot) line style is deferred to a separate issue/PR; not simulated with dashed lines. ' + "A component enclosure needs a centre-line (dash-dot) line style; wires and drawing "
                                "shapes only have solid and dashed. Adding a line style is an engine / file-format "
                                "change outside this PR - reported as a limitation"),
     "HO-B04": ("validated", both("hose"), ""),
@@ -847,8 +848,8 @@ F2 = {
     "HO-B19": ("validated", both("port.plugged"), "ISO and ANSI (Y32 3.9.1) drawings are identical"),
     "HO-B20": ("validated", both("rotaryunion"), ""),
     "HO-S20": ("validated", "gen.coupling", "Shaft coupling, drafting element"),
-    "Y32-2.4.4": ("blocked", "-", "Centre (dash-dot) line style not available; see HO-B03"),
-    "Y32-11.1": ("blocked", "-", "Component enclosure: centre-line style not available; see HO-B03"),
+    "Y32-2.4.4": ("blocked", "-", 'Director decision 3 (2026-11-02): the centre-line (dash-dot) line style is deferred to a separate issue/PR; not simulated with dashed lines. ' + "Centre (dash-dot) line style not available; see HO-B03"),
+    "Y32-11.1": ("blocked", "-", 'Director decision 3 (2026-11-02): the centre-line (dash-dot) line style is deferred to a separate issue/PR; not simulated with dashed lines. ' + "Component enclosure: centre-line style not available; see HO-B03"),
     "Y32-2.10": ("validated", "gen.mark.compensated", ""),
     "Y32-2.11": ("validated", "gen.mark.temperature", ""),
     "Y32-3.5.1": ("validated", "fl.pneu.flowdir; fl.pneu.flowdir.both", "One-way and two-way forms"),
@@ -936,10 +937,10 @@ F5 = {
     "Y32-8.2.3.1c": ("validated", "fl.hyd.pump.pc.full", ""),
     "Y32-8.2.3.2s": ("validated", "fl.hyd.pump.pc.bidir", ""),
     "Y32-8.2.3.2c": ("validated", "fl.hyd.pump.pc.bidir.full", ""),
-    "Y32-8.3.1": ("blocked", "-", MOTOR_ERR),
-    "Y32-8.3.1.2": ("blocked", "-", MOTOR_ERR),
-    "Y32-8.3.2.1": ("blocked", "-", MOTOR_ERR),
-    "Y32-8.3.2.2": ("blocked", "-", MOTOR_ERR),
+    "Y32-8.3.1": ("pending", "fl.hyd.motor.ansi", MOTOR_ERR + ". " + 'Director decision 1 (2026-11-02): add as an ANSI-style interpretation with INWARD motor triangles, departing deliberately from the printed (outward, pump-like) figure; mark equivalent if identical to an existing symbol. Bounded follow-up batch F5b after F9'),
+    "Y32-8.3.1.2": ("pending", "fl.hyd.motor.bidir.ansi", MOTOR_ERR + ". " + 'Director decision 1 (2026-11-02): add as an ANSI-style interpretation with INWARD motor triangles, departing deliberately from the printed (outward, pump-like) figure; mark equivalent if identical to an existing symbol. Bounded follow-up batch F5b after F9'),
+    "Y32-8.3.2.1": ("pending", "fl.hyd.motor.var", MOTOR_ERR + ". " + 'Director decision 1 (2026-11-02): add as an ANSI-style interpretation with INWARD motor triangles, departing deliberately from the printed (outward, pump-like) figure; mark equivalent if identical to an existing symbol. Bounded follow-up batch F5b after F9'),
+    "Y32-8.3.2.2": ("pending", "fl.hyd.motor.var.bidir", MOTOR_ERR + ". " + 'Director decision 1 (2026-11-02): add as an ANSI-style interpretation with INWARD motor triangles, departing deliberately from the printed (outward, pump-like) figure; mark equivalent if identical to an existing symbol. Bounded follow-up batch F5b after F9'),
     "Y32-8.4.1c": ("validated", "fl.hyd.pumpmotor.rev.full", "Rotation arrow both ways"),
     "Y32-8.4.1s": ("validated", "fl.hyd.pumpmotor.rev", ""),
     "Y32-8.4.2c": ("validated", "fl.hyd.pumpmotor.full", ""),
@@ -949,14 +950,15 @@ F5 = {
     "Y32-8.5.1": ("validated", "fl.pneu.compressor.ansi", "ANSI simplified form has no drive shaft"),
     "Y32-8.5.2": ("validated", "fl.pneu.vacuumpump", ""),
     "Y32-8.6.1": ("validated", "fl.pneu.motor.ansi", ""),
-    "Y32-8.6.2": ("blocked", "-", "Drawn with both triangles pointing out (as a bidirectional compressor), "
-                                  "contrary to 8.6.1; not reproduced for the same reason as the hydraulic motors"),
+    "Y32-8.6.2": ("pending", "fl.pneu.motor.bidir", "Printed with both triangles pointing out (as a bidirectional compressor), "
+                                   "contrary to 8.6.1. " + 'Director decision 1 (2026-11-02): add as an ANSI-style interpretation with INWARD motor triangles, departing deliberately from the printed (outward, pump-like) figure; mark equivalent if identical to an existing symbol. Bounded follow-up batch F5b after F9'),
     "Y32-8.7.1": ("validated", "fl.hyd.rotary.ansi", "ANSI oscillator (dome) differs from the ISO rotary actuator"),
     "Y32-8.7.2": ("validated", "fl.pneu.rotary", ""),
     "Y32-8.8.1": ("equivalent", "el.motor", "The PDF marks it IEC; same circle-with-M as the existing electric motor"),
-    "Y32-8.8.2": ("blocked", "-", "Mechanical-only component (no fluid or electrical connection). Only drafting "
-                                  "elements may be terminal-less (director Q5) and a fictitious terminal is ruled "
-                                  "out - needs a director decision on mechanical components"),
+    "Y32-8.8.2": ("blocked", "-", "Mechanical-only component (no fluid or electrical connection). Director "
+                                  "decision 2 (2026-11-02): left out of v1.2.0; no fictitious terminals and no "
+                                  "widening of the terminal-less exemption; prime movers may get a separate "
+                                  "model/domain proposal later"),
 }
 for k, (st, tgt, note) in F2.items():
     PROGRESS[k] = (st, tgt, note)
@@ -966,7 +968,10 @@ for k, (st, tgt, note) in F4.items():
     PROGRESS[k] = (st, tgt, note)
 for k, (st, tgt, note) in F3.items():
     PROGRESS[k] = (st, tgt, note)
-BATCH_OF = {**{k: "F2" for k in F2}, **{k: "F3" for k in F3}, **{k: "F4" for k in F4}, **{k: "F5" for k in F5}}
+# Rows deliberately reopened by a director decision (completed -> pending). The write guard below allows
+# exactly these; any other completed row that would fall back to pending is refused.
+REOPENED = {"Y32-8.3.1", "Y32-8.3.1.2", "Y32-8.3.2.1", "Y32-8.3.2.2", "Y32-8.6.2"}   # decision 1, 2026-11-02
+BATCH_OF = {**{k: "F2" for k in F2}, **{k: "F3" for k in F3}, **{k: "F4" for k in F4}, **{k: "F5" for k in F5}, **{k: "F5b" for k in REOPENED}}
 for r in R:
     if r["key"] in PROGRESS:
         st, tgt, note = PROGRESS[r["key"]]
@@ -979,17 +984,60 @@ for r in R:
             r["batch"] = "F1"
 assert not set(PROGRESS) - {r["key"] for r in R}, set(PROGRESS) - {r["key"] for r in R}
 
-# =============================================================== write
-here = os.path.dirname(os.path.abspath(__file__))
+# =============================================================== write (guarded)
+# Completed statuses must never fall back to "pending" by regenerating: progress lives in the PROGRESS overlays
+# above, and a run that would lose it is refused. Default is a read-only check; pass --write to update the CSV.
+DONE = {"implemented", "validated", "equivalent", "existing", "duplicate", "convention", "blocked", "excluded"}
+HERE = os.path.dirname(os.path.abspath(__file__))
+CSV_PATH = os.path.join(HERE, "inventory.csv")
 keys = [r["key"] for r in R]
 dup = {k for k in keys if keys.count(k) > 1}
 assert not dup, f"duplicate inventory keys: {sorted(dup)}"
-with open(os.path.join(here, "inventory.csv"), "w", newline="", encoding="utf-8") as f:
-    w = csv.DictWriter(f, fieldnames=list(R[0]), lineterminator="\n")
+
+
+def render(rows) -> str:
+    import io
+    buf = io.StringIO()
+    w = csv.DictWriter(buf, fieldnames=list(rows[0]), lineterminator="\n")
     w.writeheader()
-    w.writerows(R)
-if __name__ == "__main__":
+    w.writerows(rows)
+    return buf.getvalue()
+
+
+def regressions(rows, path=CSV_PATH):
+    """Rows whose committed status is completed but would be written back as pending/annotation/configurator."""
+    if not os.path.exists(path):
+        return []
+    with open(path, newline="", encoding="utf-8") as f:
+        old = {r["key"]: r for r in csv.DictReader(f)}
+    return [(r["key"], old[r["key"]]["status"], r["status"]) for r in rows
+            if r["key"] in old and old[r["key"]]["status"] in DONE and r["status"] not in DONE
+            and r["key"] not in REOPENED]
+
+
+def main(argv=None):
+    import sys
     from collections import Counter
+    argv = sys.argv[1:] if argv is None else argv
+    text = render(R)
+    lost = regressions(R)
+    if lost:
+        print("REFUSED: regenerating would reset completed rows:", lost[:10])
+        return 2
+    current = open(CSV_PATH, encoding="utf-8").read() if os.path.exists(CSV_PATH) else ""
+    if "--write" in argv:
+        if text != current:
+            with open(CSV_PATH, "w", newline="", encoding="utf-8") as f:
+                f.write(text)
+            print("inventory.csv updated")
+    elif text != current:
+        print("inventory.csv differs from the generator; review, then run with --write")
+        return 1
     print(len(R), "rows")
     print(Counter(r["status"] for r in R))
     print(Counter(r["source"] for r in R))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

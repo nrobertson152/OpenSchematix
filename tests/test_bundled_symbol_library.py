@@ -315,3 +315,32 @@ def test_drafting_elements_never_connect_enter_bom_or_raise_checks(tmp_path):
     got = {c.id: (c.symbol, c.rotation, c.mirror, c.x, c.y) for c in q.sheets[0].components.values()}
     assert got == {c.id: (c.symbol, c.rotation, c.mirror, c.x, c.y) for c in placed}
     assert bom.generate(q) == []
+
+
+# ---------------------------------------------------------------- inventory generator safety
+def _load_generator():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("build_inventory", INVENTORY.parent / "build_inventory.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)          # builds rows only; writing needs main(["--write"])
+    return mod
+
+
+def test_inventory_csv_matches_its_generator():
+    """inventory.csv is generated; a hand edit or a lost progress overlay shows up here."""
+    gen = _load_generator()
+    assert gen.render(gen.R) == INVENTORY.read_text(encoding="utf-8")
+    assert gen.main([]) == 0
+
+
+def test_inventory_generator_refuses_to_reset_completed_rows(tmp_path):
+    gen = _load_generator()
+    rows = [dict(r) for r in gen.R]
+    done = next(r for r in rows if r["status"] == "validated")
+    done["status"] = "pending"                      # e.g. a batch overlay that went missing
+    lost = gen.regressions(rows, str(INVENTORY))
+    assert (done["key"], "validated", "pending") in lost
+    # importing the generator never writes the CSV
+    before = INVENTORY.read_text(encoding="utf-8")
+    _load_generator()
+    assert INVENTORY.read_text(encoding="utf-8") == before

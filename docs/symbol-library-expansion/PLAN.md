@@ -109,5 +109,18 @@ are generated for visual comparison against the sources.
   elements — empty designator prefix and group "Valve operators" or "Drafting"
   (`symbols.base.is_drafting_element`). Conversely, a terminal-less symbol must be a drafting element.
 
+### Director decisions, 2026-11-02 (PR #66 comment 6568749680)
+
+* **D1 — ANSI motors (Y32 8.3.x, 8.6.2):** added only as distinguishable, functionally correct ANSI-style
+  interpretations with **inward** motor triangles, explicitly departing from the printed (pump-like) figures;
+  `equivalent` where identical to an existing symbol. Bounded follow-up batch **F5b**, after F9.
+* **D2 — heat engine (Y32 8.8.2):** left out of v1.2.0 (`blocked`). No fictitious terminals, no widening of the
+  terminal-less exemption beyond "Valve operators" / "Drafting".
+* **D3 — component enclosure:** the centre-line (dash-dot) style is a separate issue/PR; rows stay `blocked`, not
+  simulated with dashed lines; no editor or file-format change in this PR.
+* **Inventory safety:** `build_inventory.py` is a read-only check by default; `--write` updates the CSV and is
+  refused if any completed row would fall back to `pending` (except rows listed in `REOPENED` by a director
+  decision). `tests/test_bundled_symbol_library.py` fails if the CSV and the generator ever disagree.
+
 Scope note: because of Q2, `openschematix/gui/dialogs.py` (ValveDialog only) is the one non-library production
 file this PR may change. The changed-files guard test allows exactly that.
