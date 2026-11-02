@@ -1,7 +1,8 @@
 """Transformers, switches and relays (symbol-library expansion, batches E5 and E6).
 
 Source: ECL = "Electric Components Library" (ElCompLib2017.svg, CC0 1.0), sections "Transformers" and
-"Mechanical switches". Redrawn natively:
+"Mechanical switches"; batch E8 adds the "Other things", "Semiconductor devices" and "Vacuum tubes" items.
+Redrawn natively:
 * Transformers follow the existing el.transformer (windings of 3-unit humps facing the core, core lines at
   x = +-1.5, primary P1/P2 on the left, secondary S1/S2 on the right). Polarity dots mark the winding ends that
   are in phase.
@@ -10,7 +11,9 @@ Source: ECL = "Electric Components Library" (ElCompLib2017.svg, CC0 1.0), sectio
 """
 from __future__ import annotations
 
-from .base import IEC, IEEE, Geometry, SymbolDef, Terminal as T, arc, arrowhead, circle, line, polyline, rect
+import math
+
+from .base import IEC, IEEE, Geometry, SymbolDef, Terminal as T, arc, arrowhead, circle, line, poly, polyline, rect, text
 
 E = "Electrical"
 IEC_IEEE = IEC + " / " + IEEE.split(" /")[0]
@@ -146,4 +149,79 @@ def symbols():
                   "Rotary selector: common C connected to one of the positions 1-4 (shown on 2).", "S",
                   Geometry(rot, [T("C", -20, 0, "l"), T("1", 20, -30, "r"), T("2", 20, -10, "r"), T("3", 20, 10, "r"),
                                  T("4", 20, 30, "r")]), keywords=("selector", "rotary", "wafer")))
+    # ---------------------------------------------------------------- E8: other devices
+    EL = "Electronic"
+    sine = polyline([(-5 + 10 * i / 12, -3 - 2.5 * math.sin(2 * math.pi * i / 12)) for i in range(13)], w="thin")
+    dome = [arc(0, 0, 12, 0, 180), line(-12, 0, 12, 0), line(-6, 0, -6, 10), line(6, 0, 6, 10),
+            line(-20, 10, -6, 10), line(6, 10, 20, 10)]
+    two_b = [T("1", -20, 10, "l"), T("2", 20, 10, "r")]
+    add(SymbolDef("el.buzzer.ac", "Buzzer, AC", E, "Signalling", IEC_IEEE, "Buzzer for alternating current.", "H",
+                  Geometry(dome + [sine], list(two_b)), keywords=("buzzer", "sounder", "bell")))
+    add(SymbolDef("el.buzzer.dc", "Buzzer, DC", E, "Signalling", IEC_IEEE, "Buzzer for direct current.", "H",
+                  Geometry(dome + [line(-5, -6, 5, -6, w="thin"), line(-5, -2.5, 5, -2.5, w="thin")], list(two_b)),
+                  keywords=("buzzer", "sounder")))
+    vert = [T("1", 0, -20, "u"), T("2", 0, 20, "d")]
+    for letter, sid, name, desc in (("V", "el.meter.v", "Voltmeter", "Voltmeter."),
+                                     ("A", "el.meter.a", "Ammeter", "Ammeter."),
+                                     ("G", "el.meter.g", "Galvanometer", "Galvanometer (sensitive current detector).")):
+        add(SymbolDef(sid, name, E, "Measuring", IEC_IEEE, desc, "P",
+                      Geometry([circle(0, 0, 10), line(0, -20, 0, -10), line(0, 10, 0, 20), text(0, 0, letter, size=9)],
+                               list(vert)), keywords=("meter", "measuring", name.lower())))
+    add(SymbolDef("el.motor.dc", "Motor, DC, with brushes", E, "Machines", IEC_IEEE,
+                  "Direct-current motor; the rectangles are the brushes on the commutator.", "M",
+                  Geometry([circle(0, 0, 14), rect(-5, -20, 5, -14), rect(-5, 14, 5, 20), line(0, -30, 0, -20),
+                            line(0, 20, 0, 30), text(0, 0, "M", size=11)], [T("1", 0, -30, "u"), T("2", 0, 30, "d")]),
+                  keywords=("motor", "dc", "brushed")))
+    add(SymbolDef("el.microphone", "Microphone", EL, "Signalling", IEC_IEEE, "Microphone, general symbol.", "B",
+                  Geometry([circle(0, 0, 8), line(-9, -12, -9, 12, w="thick"), line(0, -20, 0, -8), line(0, 8, 0, 20)],
+                           list(vert)), keywords=("mic", "audio")))
+    add(SymbolDef("el.speaker", "Loudspeaker", EL, "Signalling", IEC_IEEE, "Loudspeaker, general symbol.", "B",
+                  Geometry([rect(-5, -8, 5, 8), polyline([(5, -8), (14, -16), (14, 16), (5, 8)]), line(0, -20, 0, -8),
+                            line(0, 8, 0, 20)], list(vert)), keywords=("speaker", "audio")))
+    op = [line(-30, -10, -15, -10), line(-30, 10, -15, 10), line(25, 0, 40, 0), poly(-15, -20, 25, 0, -15, 20),
+          line(0, -12.5, 0, -30), line(0, 12.5, 0, 30)]
+    for plus_top, sid, nm in ((True, "el.opamp.supply", "+ input on top"), (False, "el.opamp.supply.inv", "- input on top")):
+        a, b = ("+", "-") if plus_top else ("-", "+")
+        add(SymbolDef(sid, f"Operational amplifier with supply pins ({nm})", EL, "Integrated", IEEE,
+                      "Op-amp, triangle form, with supply pins V+ (top) and V- (bottom).", "U",
+                      Geometry(op + [text(-10, -10, a, size=9), text(-10, 10, b, size=9)],
+                               [T(a, -30, -10, "l", ptype="elec.input"), T(b, -30, 10, "l", ptype="elec.input"),
+                                T("OUT", 40, 0, "r", ptype="elec.output"), T("V+", 0, -30, "u", ptype="elec.power"),
+                                T("V-", 0, 30, "d", ptype="elec.power")]), keywords=("amplifier", "opamp")))
+    add(SymbolDef("el.regulator", "Voltage regulator, three-terminal", EL, "Integrated", IEC_IEEE,
+                  "Linear voltage regulator: input IN, output OUT, common GND. Write the type (e.g. 7805) as the "
+                  "value.", "U",
+                  Geometry([rect(-15, -8, 15, 8), line(-30, 0, -15, 0), line(15, 0, 30, 0), line(0, 8, 0, 20)],
+                           [T("IN", -30, 0, "l", ptype="elec.power"), T("OUT", 30, 0, "r", ptype="elec.power"),
+                            T("GND", 0, 20, "d", ptype="elec.ground")]), keywords=("ldo", "7805", "regulator")))
+    # vacuum tubes
+    fil = lambda y: [arc(0, y, 10, 0, 180), line(-10, y, -10, y + 20), line(10, y, 10, y + 20)]  # noqa: E731
+    cath = lambda y: [arc(0, y, 14, 20, 160), line(-14, y, -30, y)]  # noqa: E731
+    ff = lambda y: [T("F1", -10, y + 20, "d"), T("F2", 10, y + 20, "d")]  # noqa: E731
+    bulb = [circle(0, 0, 20)]
+    add(SymbolDef("el.tube.diode.direct", "Vacuum diode, directly heated", EL, "Vacuum tubes", IEC_IEEE,
+                  "Vacuum diode with directly heated cathode (filament F1-F2) and anode A.", "V",
+                  Geometry(bulb + [line(-8, -8, 8, -8), line(0, -8, 0, -30)] + fil(10),
+                           [T("A", 0, -30, "u")] + ff(10)), keywords=("valve", "tube", "rectifier")))
+    add(SymbolDef("el.tube.diode", "Vacuum diode, indirectly heated", EL, "Vacuum tubes", IEC_IEEE,
+                  "Vacuum diode with indirectly heated cathode K, heater F1-F2, anode A.", "V",
+                  Geometry(bulb + [line(-8, -8, 8, -8), line(0, -8, 0, -30)] + fil(10) + cath(10),
+                           [T("A", 0, -30, "u"), T("K", -30, 10, "l")] + ff(10)), keywords=("valve", "tube")))
+
+    def envelope(top, bottom):
+        return [arc(0, top, 20, 0, 180), line(-20, top, -20, bottom), line(20, top, 20, bottom),
+                arc(0, bottom, 20, 180, 180)]
+
+    def grid(y):
+        return [line(-14, y, 14, y, dash=True), line(-30, y, -14, y)]
+    add(SymbolDef("el.tube.triode", "Triode", EL, "Vacuum tubes", IEC_IEEE,
+                  "Triode: anode A, control grid G, indirectly heated cathode K, heater F1-F2.", "V",
+                  Geometry(envelope(-10, 10) + [line(-10, -18, 10, -18), line(0, -18, 0, -40)] + grid(0) + fil(20)
+                           + cath(20), [T("A", 0, -40, "u"), T("G", -30, 0, "l"), T("K", -30, 20, "l")] + ff(20)),
+                  keywords=("valve", "tube", "amplifier")))
+    add(SymbolDef("el.tube.tetrode", "Tetrode", EL, "Vacuum tubes", IEC_IEEE,
+                  "Tetrode: anode A, screen grid G2, control grid G1, indirectly heated cathode K, heater F1-F2.", "V",
+                  Geometry(envelope(-20, 10) + [line(-10, -28, 10, -28), line(0, -28, 0, -50)] + grid(-10) + grid(0)
+                           + fil(20) + cath(20), [T("A", 0, -50, "u"), T("G2", -30, -10, "l"), T("G1", -30, 0, "l"),
+                                                  T("K", -30, 20, "l")] + ff(20)), keywords=("valve", "tube")))
     return s

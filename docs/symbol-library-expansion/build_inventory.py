@@ -1230,10 +1230,29 @@ E7.update({
 })
 for k, (st, tgt, note) in E7.items():
     PROGRESS[k] = (st, tgt, note)
+E8 = {
+    "ECL-OTH1.1": ("validated", "el.buzzer.ac", ""),
+    "ECL-OTH1.2": ("validated", "el.buzzer.dc", ""),
+    "ECL-OTH1.3": ("validated", "el.meter.v", ""),
+    "ECL-OTH1.4": ("validated", "el.meter.a", ""),
+    "ECL-OTH1.5": ("validated", "el.meter.g", ""),
+    "ECL-OTH1.6": ("validated", "el.motor.dc", "Brush rectangles; differs from the existing el.motor"),
+    "ECL-OTH2.1": ("validated", "el.microphone", ""),
+    "ECL-OTH2.3": ("validated", "el.speaker", ""),
+    "ECL-SEM1.3": ("validated", "el.opamp.supply", "Supply pins V+ / V- (port type elec.power)"),
+    "ECL-SEM1.4": ("validated", "el.opamp.supply.inv", "Supply pins V+ / V- (port type elec.power)"),
+    "ECL-SEM1.5": ("validated", "el.regulator", "IN, OUT, GND; the part number is the value"),
+    "ECL-VAC1.1": ("validated", "el.tube.diode.direct", "A, F1, F2"),
+    "ECL-VAC1.2": ("validated", "el.tube.diode", "A, K, F1, F2"),
+    "ECL-VAC1.3": ("validated", "el.tube.triode", "A, G, K, F1, F2"),
+    "ECL-VAC1.4": ("validated", "el.tube.tetrode", "A, G2, G1, K, F1, F2"),
+}
+for k, (st, tgt, note) in E8.items():
+    PROGRESS[k] = (st, tgt, note)
 # History: decision 1 (2026-11-02) reopened Y32-8.3.1, -8.3.1.2, -8.3.2.1, -8.3.2.2 and -8.6.2; batch F5b completed
 # them, so the allowlist is empty again and those rows are protected like every other completed row.
 REOPENED: set = set()
-BATCH_OF = {**{k: "F2" for k in F2}, **{k: "F3" for k in F3}, **{k: "F4" for k in F4}, **{k: "F5" for k in F5}, **{k: "F5b" for k in F5B}, **{k: "F6" for k in F6}, **{k: "F7" for k in F7}, **{k: "F8a" for k in F8A}, **{k: "F8b" for k in F8B}, **{k: "F9" for k in F9}, **{k: "F10" for k in F10}, **{k: "E1" for k in E1}, **{k: "E2" for k in E2}, **{k: "E3" for k in E3}, **{k: "E4" for k in E4}, **{k: "E5" for k in E5}, **{k: "E6" for k in E6}, **{k: "E7" for k in E7}}
+BATCH_OF = {**{k: "F2" for k in F2}, **{k: "F3" for k in F3}, **{k: "F4" for k in F4}, **{k: "F5" for k in F5}, **{k: "F5b" for k in F5B}, **{k: "F6" for k in F6}, **{k: "F7" for k in F7}, **{k: "F8a" for k in F8A}, **{k: "F8b" for k in F8B}, **{k: "F9" for k in F9}, **{k: "F10" for k in F10}, **{k: "E1" for k in E1}, **{k: "E2" for k in E2}, **{k: "E3" for k in E3}, **{k: "E4" for k in E4}, **{k: "E5" for k in E5}, **{k: "E6" for k in E6}, **{k: "E7" for k in E7}, **{k: "E8" for k in E8}}
 for r in R:
     if r["key"] in PROGRESS:
         st, tgt, note = PROGRESS[r["key"]]

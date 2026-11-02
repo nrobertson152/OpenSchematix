@@ -328,16 +328,16 @@ Y32-11.4.6c,Y32,p22 cl.11.4.6,"Same, complete symbol",Hydraulic+Pneumatic,Compos
 Y32-11.4.7s,Y32,p24 cl.11.4.7,"2-position 5-connection solenoid controlled pilot actuated, detents, throttled exhaust (simplified)",Pneumatic,Composite,dcv operator 'detent'; dcv operator 'solenoid.and.pilot.ext',validated,F1,"Q2 (3 operators + throttled exhausts); Director Q2: dialog change allowed; throttled exhausts are not a configurator feature (drawn without them, noted); Throttled exhausts are drawn separately (not a configurator feature)"
 Y32-11.4.7c,Y32,p24 cl.11.4.7,"Same, complete symbol",Hydraulic+Pneumatic,Composite,-,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Q3
 Y32-11.4.8,Y32,p24 cl.11.4.8,Variable pressure compensated flow control and overload relief,Hydraulic+Pneumatic,Composite,-,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Q3
-ECL-OTH1.1,ECL,Other things r1 #1,"Buzzer, AC",Electrical,Signalling,el.buzzer.ac,pending,E8,Dome with ~
-ECL-OTH1.2,ECL,Other things r1 #2,"Buzzer, DC",Electrical,Signalling,el.buzzer.dc,pending,E8,Dome with =
-ECL-OTH1.3,ECL,Other things r1 #3,Voltmeter,Electrical,Measurement,el.meter.v,pending,E8,
-ECL-OTH1.4,ECL,Other things r1 #4,Ammeter,Electrical,Measurement,el.meter.a,pending,E8,
-ECL-OTH1.5,ECL,Other things r1 #5,Galvanometer,Electrical,Measurement,el.meter.g,pending,E8,
-ECL-OTH1.6,ECL,Other things r1 #6,DC motor with brushes (vertical),Electrical,Machines,el.motor.dc,pending,E8,Brush rectangles distinguish it from existing el.motor
+ECL-OTH1.1,ECL,Other things r1 #1,"Buzzer, AC",Electrical,Signalling,el.buzzer.ac,validated,E8,Dome with ~
+ECL-OTH1.2,ECL,Other things r1 #2,"Buzzer, DC",Electrical,Signalling,el.buzzer.dc,validated,E8,Dome with =
+ECL-OTH1.3,ECL,Other things r1 #3,Voltmeter,Electrical,Measurement,el.meter.v,validated,E8,
+ECL-OTH1.4,ECL,Other things r1 #4,Ammeter,Electrical,Measurement,el.meter.a,validated,E8,
+ECL-OTH1.5,ECL,Other things r1 #5,Galvanometer,Electrical,Measurement,el.meter.g,validated,E8,
+ECL-OTH1.6,ECL,Other things r1 #6,DC motor with brushes (vertical),Electrical,Machines,el.motor.dc,validated,E8,Brush rectangles distinguish it from existing el.motor; Brush rectangles; differs from the existing el.motor
 ECL-OTH1.7,ECL,Other things r1 #7,"Voltmeter, pictorial (illustration)",Electrical,Measurement,-,blocked,-,"Pictorial illustration (shaded meter body), not a schematic symbol"
-ECL-OTH2.1,ECL,Other things r2 #1,Microphone,Electronic,Transducers,el.microphone,pending,E8,
+ECL-OTH2.1,ECL,Other things r2 #1,Microphone,Electronic,Transducers,el.microphone,validated,E8,
 ECL-OTH2.2,ECL,Other things r2 #2,Crystal (quartz resonator),Electronic,Passive,-,blocked,E1,"Director Q4: a rectangle with a plate on one side only does not match the crystal symbol (plates on both sides); identity uncertain, left out until identified"
-ECL-OTH2.3,ECL,Other things r2 #3,Loudspeaker,Electronic,Transducers,el.speaker,pending,E8,
+ECL-OTH2.3,ECL,Other things r2 #3,Loudspeaker,Electronic,Transducers,el.speaker,validated,E8,
 ECL-OTH2.4,ECL,Other things r2 #4,DC motor with brushes (horizontal),Electrical,Machines,ECL-OTH1.6,duplicate,E8,Rotated drawing of r1 #6
 ECL-OTH2.5,ECL,Other things r2 #5,"Ammeter, pictorial (illustration)",Electrical,Measurement,-,blocked,-,Pictorial illustration
 ECL-BAS1.1,ECL,Basic logic blocks r1 #1,"AND gate, 2 inputs",Electronic,Logic,el.logic.and2,validated,E7,"Distinctive-shape (ANSI/IEEE 91) style; Inputs A..E, output Y"
@@ -505,10 +505,10 @@ ECL-MEC2.3,ECL,Mechanical switches r2 #3,"Rotary selector switch, four positions
 ECL-SEM1.1,ECL,Semiconductor devices r1 #1,Schmitt trigger inverter,Electronic,Logic,el.logic.schmitt.not,validated,E7,
 ECL-SEM2.1,ECL,Semiconductor devices r2 #1,Schmitt trigger buffer,Electronic,Logic,el.logic.schmitt,validated,E7,
 ECL-SEM1.2,ECL,Semiconductor devices r1 #2,Operational amplifier,Electronic,Integrated,el.opamp,existing,E8,
-ECL-SEM1.3,ECL,Semiconductor devices r1 #3,Operational amplifier with supply pins (+ input on top),Electronic,Integrated,el.opamp.supply,pending,E8,
-ECL-SEM1.4,ECL,Semiconductor devices r1 #4,Operational amplifier with supply pins (- input on top),Electronic,Integrated,el.opamp.supply.inv,pending,E8,
-ECL-SEM1.5,ECL,Semiconductor devices r1 #5,"Voltage regulator, 3 terminal (e.g. 7805)",Electronic,Integrated,el.regulator,pending,E8,"Part number '7805' is a label, not drawn into the symbol"
-ECL-VAC1.1,ECL,Vacuum tubes r1 #1,"Vacuum diode, directly heated",Electronic,Vacuum tubes,el.tube.diode.direct,pending,E8,
-ECL-VAC1.2,ECL,Vacuum tubes r1 #2,"Vacuum diode, indirectly heated (cathode)",Electronic,Vacuum tubes,el.tube.diode,pending,E8,
-ECL-VAC1.3,ECL,Vacuum tubes r1 #3,Triode,Electronic,Vacuum tubes,el.tube.triode,pending,E8,
-ECL-VAC1.4,ECL,Vacuum tubes r1 #4,Tetrode,Electronic,Vacuum tubes,el.tube.tetrode,pending,E8,4th form has two grids: tetrode (no suppressor grid shown)
+ECL-SEM1.3,ECL,Semiconductor devices r1 #3,Operational amplifier with supply pins (+ input on top),Electronic,Integrated,el.opamp.supply,validated,E8,Supply pins V+ / V- (port type elec.power)
+ECL-SEM1.4,ECL,Semiconductor devices r1 #4,Operational amplifier with supply pins (- input on top),Electronic,Integrated,el.opamp.supply.inv,validated,E8,Supply pins V+ / V- (port type elec.power)
+ECL-SEM1.5,ECL,Semiconductor devices r1 #5,"Voltage regulator, 3 terminal (e.g. 7805)",Electronic,Integrated,el.regulator,validated,E8,"Part number '7805' is a label, not drawn into the symbol; IN, OUT, GND; the part number is the value"
+ECL-VAC1.1,ECL,Vacuum tubes r1 #1,"Vacuum diode, directly heated",Electronic,Vacuum tubes,el.tube.diode.direct,validated,E8,"A, F1, F2"
+ECL-VAC1.2,ECL,Vacuum tubes r1 #2,"Vacuum diode, indirectly heated (cathode)",Electronic,Vacuum tubes,el.tube.diode,validated,E8,"A, K, F1, F2"
+ECL-VAC1.3,ECL,Vacuum tubes r1 #3,Triode,Electronic,Vacuum tubes,el.tube.triode,validated,E8,"A, G, K, F1, F2"
+ECL-VAC1.4,ECL,Vacuum tubes r1 #4,Tetrode,Electronic,Vacuum tubes,el.tube.tetrode,validated,E8,"4th form has two grids: tetrode (no suppressor grid shown); A, G2, G1, K, F1, F2"
