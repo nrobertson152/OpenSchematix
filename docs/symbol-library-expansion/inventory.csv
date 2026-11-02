@@ -406,12 +406,12 @@ ECL-SRC4.5,ECL,"Sources, connectors r4 #5","Wire crossing, double hop",Electrica
 ECL-SRC4.6,ECL,"Sources, connectors r4 #6","Wire crossing, hop (vertical)",Electrical,Connections,editor,convention,-,Wire drawing / junction handled by the editor
 ECL-DIO1.1,ECL,Diodes (semiconductor) r1 #1,Diode,Electronic,Semiconductors,el.diode,existing,E3,Filled style
 ECL-DIO1.2,ECL,Diodes (semiconductor) r1 #2,Zener diode,Electronic,Semiconductors,el.diode.zener,existing,E3,Filled style
-ECL-DIO1.3,ECL,Diodes (semiconductor) r1 #3,Schottky diode,Electronic,Semiconductors,el.diode.schottky,pending,E3,Filled style
-ECL-DIO1.4,ECL,Diodes (semiconductor) r1 #4,Varicap (varactor) diode,Electronic,Semiconductors,el.diode.varicap,pending,E3,Filled style
+ECL-DIO1.3,ECL,Diodes (semiconductor) r1 #3,Schottky diode,Electronic,Semiconductors,el.diode.schottky,validated,E3,"Filled style; Outline style, as the existing el.diode"
+ECL-DIO1.4,ECL,Diodes (semiconductor) r1 #4,Varicap (varactor) diode,Electronic,Semiconductors,el.diode.varicap,validated,E3,Filled style
 ECL-DIO1.5,ECL,Diodes (semiconductor) r1 #5,Tunnel diode,Electronic,Semiconductors,el.diode.tunnel,blocked,E3,Director Q4: unlabelled/ambiguous drawing left out until identified. Source gives no labels for this cathode variant; identification needed before implementation (Q4)
 ECL-DIO1.6,ECL,Diodes (semiconductor) r1 #6,Diode with bracket cathode (second form),Electronic,Semiconductors,el.diode.bracket2,blocked,E3,Director Q4: unlabelled/ambiguous drawing left out until identified. Source gives no labels for this cathode variant; identification needed before implementation (Q4)
 ECL-DIO1.7,ECL,Diodes (semiconductor) r1 #7,LED,Electronic,Semiconductors,el.led,existing,E3,Filled style
-ECL-DIO1.8,ECL,Diodes (semiconductor) r1 #8,Photodiode,Electronic,Semiconductors,el.photodiode,pending,E3,Filled style
+ECL-DIO1.8,ECL,Diodes (semiconductor) r1 #8,Photodiode,Electronic,Semiconductors,el.photodiode,validated,E3,Filled style
 ECL-DIO1.9,ECL,Diodes (semiconductor) r1 #9,Diode with integral cathode mark (S form),Electronic,Semiconductors,el.diode.s,blocked,E3,Director Q4: unlabelled/ambiguous drawing left out until identified. Source gives no labels for this cathode variant; identification needed before implementation (Q4)
 ECL-DIO1.10,ECL,Diodes (semiconductor) r1 #10,"Diode, outline with cathode bars (10th form)",Electronic,Semiconductors,el.diode.form10,blocked,E3,Director Q4: unlabelled/ambiguous drawing left out until identified. Source gives no labels for this cathode variant; identification needed before implementation (Q4)
 ECL-DIO2.1,ECL,Diodes (semiconductor) r2 #1,Diode (outline style),Electronic,Semiconductors,ECL-DIO1.1,duplicate,E3,"Outline vs filled is a drawing style, same meaning"
@@ -426,19 +426,19 @@ ECL-DIO2.9,ECL,Diodes (semiconductor) r2 #9,Diode with integral cathode mark (S 
 ECL-DIO3.1,ECL,Diodes (semiconductor) r3 #1,LED (vertical),Electronic,Semiconductors,el.led,duplicate,E3,
 ECL-DIO3.2,ECL,Diodes (semiconductor) r3 #2,Photodiode (vertical),Electronic,Semiconductors,el.photodiode,duplicate,E3,
 ECL-DIO3.3,ECL,Diodes (semiconductor) r3 #3,Zener diode with voltage label (vertical),Electronic,Semiconductors,el.diode.zener,duplicate,E3,
-ECL-DIO3.4,ECL,Diodes (semiconductor) r3 #4,DIAC (antiparallel diodes),Electronic,Semiconductors,el.diac,pending,E3,
-ECL-DIO3.5,ECL,Diodes (semiconductor) r3 #5,TRIAC,Electronic,Semiconductors,el.triac,pending,E3,
-ECL-DIO3.6,ECL,Diodes (semiconductor) r3 #6,"Thyristor (SCR), cathode gate",Electronic,Semiconductors,el.scr,pending,E3,
-ECL-DIO3.7,ECL,Diodes (semiconductor) r3 #7,Bidirectional transient suppressor (two zeners),Electronic,Semiconductors,el.tvs.bidir,pending,E3,
-ECL-DIO3.8,ECL,Diodes (semiconductor) r3 #8,Bidirectional zener with bent bars,Electronic,Semiconductors,el.diode.zener.bidir,blocked,E3,Director Q4: unlabelled/ambiguous drawing left out until identified. Two adjacent forms differ only in bar style; identify before implementing (Q4)
-ECL-DIO3.9,ECL,Diodes (semiconductor) r3 #9,Bridge rectifier block,Electronic,Power electronics,el.rectifier.block,pending,E3,
-ECL-DIO3.10,ECL,Diodes (semiconductor) r3 #10,Bridge rectifier (diamond),Electronic,Power electronics,el.rectifier.bridge,pending,E3,
+ECL-DIO3.4,ECL,Diodes (semiconductor) r3 #4,DIAC (antiparallel diodes),Electronic,Semiconductors,el.diac,validated,E3,"Drawn horizontally (terminals 1, 2)"
+ECL-DIO3.5,ECL,Diodes (semiconductor) r3 #5,TRIAC,Electronic,Semiconductors,el.triac,validated,E3,"Terminals MT2, MT1, G"
+ECL-DIO3.6,ECL,Diodes (semiconductor) r3 #6,"Thyristor (SCR), cathode gate",Electronic,Semiconductors,el.scr,validated,E3,"Terminals A, K, G"
+ECL-DIO3.7,ECL,Diodes (semiconductor) r3 #7,Bidirectional transient suppressor (two zeners),Electronic,Semiconductors,-,blocked,E3,Director Q4: two opposed diodes sharing a plain (not Zener) bar - no label in the source and no standard meaning identified; the bent-bar form beside it is the TVS
+ECL-DIO3.8,ECL,Diodes (semiconductor) r3 #8,Bidirectional zener with bent bars,Electronic,Semiconductors,el.tvs.bidir,validated,E3,"Director Q4: unlabelled/ambiguous drawing left out until identified. Two adjacent forms differ only in bar style; identify before implementing (Q4); Re-examined: two Zener diodes back to back sharing a bent (breakdown) bar is the standard bidirectional TVS / Zener symbol, so it is no longer ambiguous"
+ECL-DIO3.9,ECL,Diodes (semiconductor) r3 #9,Bridge rectifier block,Electronic,Power electronics,el.rectifier.block,validated,E3,"Terminals AC1, AC2, +, -"
+ECL-DIO3.10,ECL,Diodes (semiconductor) r3 #10,Bridge rectifier (diamond),Electronic,Power electronics,el.rectifier.bridge,validated,E3,"Terminals AC1, AC2, +, -"
 ECL-DIO4.1,ECL,Diodes (semiconductor) r4 #1,DIAC (outline),Electronic,Semiconductors,el.diac,duplicate,E3,Outline style of row 3
 ECL-DIO4.2,ECL,Diodes (semiconductor) r4 #2,TRIAC (outline),Electronic,Semiconductors,el.triac,duplicate,E3,Outline style of row 3
 ECL-DIO4.3,ECL,Diodes (semiconductor) r4 #3,Thyristor (outline),Electronic,Semiconductors,el.scr,duplicate,E3,Outline style of row 3
-ECL-DIO4.4,ECL,Diodes (semiconductor) r4 #4,TVS (outline),Electronic,Semiconductors,el.tvs.bidir,duplicate,E3,Outline style of row 3
-ECL-DIO4.5,ECL,Diodes (semiconductor) r4 #5,Bidirectional zener (outline),Electronic,Semiconductors,el.diode.zener.bidir,duplicate,E3,Outline style of row 3
-ECL-DIO4.6,ECL,Diodes (semiconductor) r4 #6,AC/DC converter (rectifier) block,Electrical,Power electronics,el.converter.acdc,pending,E3,
+ECL-DIO4.4,ECL,Diodes (semiconductor) r4 #4,TVS (outline),Electronic,Semiconductors,ECL-DIO3.7,duplicate,E3,Outline style of row 3; Outline style of row 3
+ECL-DIO4.5,ECL,Diodes (semiconductor) r4 #5,Bidirectional zener (outline),Electronic,Semiconductors,el.tvs.bidir,duplicate,E3,Outline style of row 3; Outline style of row 3
+ECL-DIO4.6,ECL,Diodes (semiconductor) r4 #6,AC/DC converter (rectifier) block,Electrical,Power electronics,el.converter.acdc,validated,E3,"DC polarity not marked in the source: terminals DC1, DC2"
 ECL-DIO5.1,ECL,Diodes (semiconductor) r5 #1,Circle with cathode bar (unlabelled),Electronic,Semiconductors,-,blocked,E3,Director Q4: unlabelled/ambiguous drawing left out until identified. No label in source; possibly a vacuum/gas diode or photocell. Not implemented without identification (Q4)
 ECL-LIN1.1,ECL,Linear components r1 #1,Thermistor (IEC rectangle),Electronic,Passive,el.thermistor.iec,validated,E1,
 ECL-LIN1.2,ECL,Linear components r1 #2,Thermistor (zigzag),Electronic,Passive,el.thermistor.ansi,validated,E1,
