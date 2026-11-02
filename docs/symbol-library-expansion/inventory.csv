@@ -22,7 +22,7 @@ HO-B20,HO,Basic Symbols r20,Rotary union,Hydraulic+Pneumatic,Lines & connections
 HO-B21,HO,Basic Symbols r21,Detent,Hydraulic+Pneumatic,Valve operators,dcv operator 'detent'; fl.hyd.op.detent; fl.pneu.op.detent,validated,F1,"Director: detents and spool controls go in the configurator, optionally also standalone; One notch per switching position; marker on the rest position"
 HO-B22,HO,Basic Symbols r22,Return above / below fluid level,Hydraulic,Reservoirs,fl.hyd.tank.above,validated,F3,Below-level form = existing fl.hyd.tank; Below-level form = existing fl.hyd.tank
 HO-B23,HO,Basic Symbols r23,Check valve,Hydraulic+Pneumatic,Non-return & flow,fl.*.check,existing,-,
-HO-B24,HO,Basic Symbols r24,Shut-off valve,Hydraulic+Pneumatic,Non-return & flow,fl.*.shutoff,pending,F8,
+HO-B24,HO,Basic Symbols r24,Shut-off valve,Hydraulic+Pneumatic,Non-return & flow,fl.hyd.shutoff; fl.pneu.shutoff,validated,F8a,
 HO-S01,HO,Spool Controls S01,"General symbol (manual, general)",Hydraulic+Pneumatic,Valve operators,dcv operator 'manual'; fl.hyd.op.manual; fl.pneu.op.manual,validated,F1,Existing configurator operator; Operator existed; standalone element added
 HO-S02,HO,Spool Controls S02,Push knob,Hydraulic+Pneumatic,Valve operators,dcv operator 'pushbutton'; fl.hyd.op.pushbutton; fl.pneu.op.pushbutton,validated,F1,Existing configurator operator; Operator existed; standalone element added
 HO-S03,HO,Spool Controls S03,Push-pull knob,Hydraulic+Pneumatic,Valve operators,dcv operator 'pushpull'; fl.hyd.op.pushpull; fl.pneu.op.pushpull,validated,F1,New operator + standalone operator element
@@ -68,11 +68,11 @@ HO-C05,HO,Energy Control C05,Spool type flow divider,Hydraulic,Flow control,fl.h
 HO-C06,HO,Energy Control C06,Rotary flow divider,Hydraulic,Flow control,fl.hyd.divider.rotary,pending,F8,
 HO-C07,HO,Energy Control C07,Lowering valve with reverse flow check,Hydraulic,Flow control,fl.hyd.lowering.check,pending,F8,
 HO-C08,HO,Energy Control C08,Throttle with reverse flow check,Hydraulic,Non-return & flow,fl.hyd.flow.oneway,existing,F8,Matches existing one-way flow control valve
-HO-C09,HO,Energy Control C09,Pilot operated check valve without drain,Hydraulic,Non-return & flow,fl.hyd.check.pilot,pending,F8,Same as Y32 10.9.3
-HO-C10,HO,Energy Control C10,Pilot operated check valve with drain,Hydraulic,Non-return & flow,fl.hyd.check.pilot.drain,pending,F8,
+HO-C09,HO,Energy Control C09,Pilot operated check valve without drain,Hydraulic,Non-return & flow,fl.hyd.check.pilot; fl.pneu.check.pilot,validated,F8a,"Same as Y32 10.9.3; The chart's dash-dot cartridge outline is not drawn (centre-line style deferred, director D3)"
+HO-C10,HO,Energy Control C10,Pilot operated check valve with drain,Hydraulic,Non-return & flow,fl.hyd.check.pilot.drain,validated,F8a,"The chart's dash-dot cartridge outline is not drawn (centre-line style deferred, director D3); drain to a reservoir symbol"
 HO-C11,HO,Energy Control C11,Check valve with spring,Hydraulic,Non-return & flow,fl.hyd.check.spring,existing,F8,
 HO-C12,HO,Energy Control C12,Shuttle valve,Hydraulic,Non-return & flow,fl.hyd.shuttle,existing,F8,
-HO-C13,HO,Energy Control C13,Logic element (cartridge),Hydraulic,Cartridge valves,fl.hyd.logic,pending,F8,
+HO-C13,HO,Energy Control C13,Logic element (cartridge),Hydraulic,Cartridge valves,fl.hyd.logic,validated,F8a,Ports A and B as drawn; the chart shows no control (X) line
 HO-C14,HO,Energy Control C14,Priority valve,Hydraulic,Flow control,fl.hyd.priority,pending,F8,
 HO-C15,HO,Energy Control C15,"Steering unit, open centre",Hydraulic,Steering,fl.hyd.steer.oc,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Composite; see Q3
 HO-C16,HO,Energy Control C16,"Steering unit, closed centre",Hydraulic,Steering,fl.hyd.steer.cc,excluded,-,Director Q3: composite assembly left out; build it from parts inside an enclosure. Composite; see Q3
@@ -272,13 +272,13 @@ Y32-9.2.4a,Y32,p15 cl.9.2.4,"Nozzle, hydraulic",Hydraulic,Lines & connections,fl
 Y32-9.2.4b,Y32,p15 cl.9.2.4,"Nozzle, pneumatic",Pneumatic,Lines & connections,fl.pneu.nozzle,pending,F9,
 Y32-9.3.1,Y32,p15 cl.9.3.1,Pressure switch,Hydraulic+Pneumatic,Measurement,fl.*.pressure.switch.ansi,pending,F9,Director Q1: ANSI-style variant of fl.*.pressure.switch; becomes 'equivalent' if the ANSI drawing is identical.
 Y32-9.3.2,Y32,p15 cl.9.3.2,Muffler (silencer),Pneumatic,Lines & connections,fl.pneu.silencer,validated,F2,Muffler; prefix Z (purchasable)
-Y32-10.9.1s,Y32,p15 cl.10.9.1,"On-off (manual shut-off), simplified",Hydraulic+Pneumatic,Valves,fl.*.shutoff.ansi,pending,F8,Director Q1: ANSI-style variant of fl.*.shutoff; becomes 'equivalent' if the ANSI drawing is identical. Same as HO-B24
-Y32-10.9.1o,Y32,p16 cl.10.9.1,"On-off, composite, off",Hydraulic+Pneumatic,Valves,fl.*.valve.2way.manual,pending,F8,Detented manual 2/2; may map to configurator
+Y32-10.9.1s,Y32,p15 cl.10.9.1,"On-off (manual shut-off), simplified",Hydraulic+Pneumatic,Valves,fl.hyd.shutoff.ansi; fl.pneu.shutoff.ansi,validated,F8a,Director Q1: ANSI-style variant of fl.*.shutoff; becomes 'equivalent' if the ANSI drawing is identical. Same as HO-B24
+Y32-10.9.1o,Y32,p16 cl.10.9.1,"On-off, composite, off",Hydraulic+Pneumatic,Valves,dcv pattern 'open.both',validated,F8a,Detented manual 2/2; may map to configurator; Composite on-off valve = 2/2 configurator valve with the new 'flow either way' position
 Y32-10.9.1n,Y32,p17 cl.10.9.1,"On-off, composite, on",Hydraulic+Pneumatic,Valves,fl.*.valve.2way.manual,duplicate,F8,Same valve shown actuated
-Y32-10.9.2s,Y32,p17 cl.10.9.2,"Check, simplified",Hydraulic+Pneumatic,Valves,fl.*.check.ansi,pending,F8,Director Q1: ANSI-style variant of fl.*.check; becomes 'equivalent' if the ANSI drawing is identical.
+Y32-10.9.2s,Y32,p17 cl.10.9.2,"Check, simplified",Hydraulic+Pneumatic,Valves,fl.hyd.check; fl.pneu.check,equivalent,F8a,"Director Q1: ANSI-style variant of fl.*.check; becomes 'equivalent' if the ANSI drawing is identical.; The existing ISO check, mirrored (seat on the other side)"
 Y32-10.9.2c,Y32,p17 cl.10.9.2,"Check, composite symbol",Hydraulic+Pneumatic,Valves,fl.*.check,duplicate,-,Composite drawing of the same function
-Y32-10.9.3,Y32,p17 cl.10.9.3,"Check, pilot-operated to open",Hydraulic+Pneumatic,Valves,fl.*.check.pilot,pending,F8,Hyd form = HO-C09
-Y32-10.9.4,Y32,p17 cl.10.9.4,"Check, pilot-operated to close",Hydraulic+Pneumatic,Valves,fl.*.check.pilotclose,pending,F8,
+Y32-10.9.3,Y32,p17 cl.10.9.3,"Check, pilot-operated to open",Hydraulic+Pneumatic,Valves,fl.hyd.check.pilot; fl.pneu.check.pilot,equivalent,F8a,Hyd form = HO-C09; Same drawing as the ISO pilot-operated check
+Y32-10.9.4,Y32,p17 cl.10.9.4,"Check, pilot-operated to close",Hydraulic+Pneumatic,Valves,fl.hyd.check.pilotclose; fl.pneu.check.pilotclose,validated,F8a,
 Y32-10.9.5.1nc,Y32,p17 cl.10.9.5.1,"Two-way valve, two position, normally closed",Hydraulic+Pneumatic,Valves,fl.*.dcv (2/2),existing,F1,Configurator 2/2 with spring; verify geometry
 Y32-10.9.5.1no,Y32,p17 cl.10.9.5.1,"Two-way valve, two position, normally open",Hydraulic+Pneumatic,Valves,fl.*.dcv (2/2),existing,F1,
 Y32-10.9.5.2nc,Y32,p17 cl.10.9.5.2,"Two-way valve, infinite position, normally closed",Hydraulic+Pneumatic,Valves,fl.*.valve.2way.prop.nc,pending,F8,
@@ -287,8 +287,8 @@ Y32-10.10.1.1,Y32,p17 cl.10.10.1.1,"Three-way, two position, normally open",Hydr
 Y32-10.10.1.2,Y32,p17 cl.10.10.1.2,"Three-way, two position, normally closed",Hydraulic+Pneumatic,Valves,fl.*.dcv (3/2),existing,F1,Verify
 Y32-10.10.1.3,Y32,p17 cl.10.10.1.3,"Three-way distributor (pressure first to one port, then the other)",Hydraulic+Pneumatic,Valves,fl.*.valve.3way.distributor,pending,F8,Port arrangement not expressible by the 3-port configurator layout
 Y32-10.10.1.4,Y32,p17 cl.10.10.1.4,Three-way two-pressure valve,Hydraulic+Pneumatic,Valves,fl.*.valve.3way.twopressure,pending,F8,
-Y32-10.10.2.1,Y32,p17 cl.10.10.2.1,Double check valve without cross bleed,Hydraulic+Pneumatic,Valves,fl.*.doublecheck,pending,F8,
-Y32-10.10.2.2,Y32,p17 cl.10.10.2.2,Double check valve with cross bleed,Hydraulic+Pneumatic,Valves,fl.*.doublecheck.bleed,pending,F8,
+Y32-10.10.2.1,Y32,p17 cl.10.10.2.1,Double check valve without cross bleed,Hydraulic+Pneumatic,Valves,fl.hyd.doublecheck; fl.pneu.doublecheck,validated,F8a,Inlet names as the existing shuttle valve
+Y32-10.10.2.2,Y32,p17 cl.10.10.2.2,Double check valve with cross bleed,Hydraulic+Pneumatic,Valves,fl.hyd.doublecheck.bleed; fl.pneu.doublecheck.bleed,validated,F8a,Outlet arrow both ways (reverse flow permitted)
 Y32-10.11.1,Y32,p18 cl.10.11.1,"Four-way, two position (normal and actuated; two forms)",Hydraulic+Pneumatic,Valves,fl.*.dcv (4/2),existing,F1,Second form is a 5-connection drawing; check against pneumatic 5/2
 Y32-10.11.2,Y32,p18 cl.10.11.2,"Four-way, three position (normal, actuated left, actuated right)",Hydraulic+Pneumatic,Valves,fl.*.dcv (4/3),existing,F1,Actuated states are the same valve shifted; drawn only in the normal state
 Y32-10.11.3,Y32,p18 cl.10.11.3,Typical centre conditions of three-position valves (8 shown),Hydraulic+Pneumatic,Valves,dcv pattern 'b-t'; dcv pattern 'apt'; dcv pattern 'ab'; dcv pattern 'a-t'; dcv pattern 'ab-pt',validated,F1,"Add each missing centre condition as a configurator flow pattern; Five new centre conditions; the other three (closed, open, 5-port closed) already existed"

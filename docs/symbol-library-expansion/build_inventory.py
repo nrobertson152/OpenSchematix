@@ -1013,10 +1013,27 @@ F7 = {
 }
 for k, (st, tgt, note) in F7.items():
     PROGRESS[k] = (st, tgt, note)
+ENCL = "The chart's dash-dot cartridge outline is not drawn (centre-line style deferred, director D3)"
+F8A = {
+    "HO-B24": ("validated", both("shutoff"), ""),
+    "HO-C09": ("validated", both("check.pilot"), ENCL),
+    "HO-C10": ("validated", "fl.hyd.check.pilot.drain", ENCL + "; drain to a reservoir symbol"),
+    "HO-C13": ("validated", "fl.hyd.logic", "Ports A and B as drawn; the chart shows no control (X) line"),
+    "Y32-10.9.1s": ("validated", both("shutoff.ansi"), ""),
+    "Y32-10.9.1o": ("validated", "dcv pattern 'open.both'",
+                    "Composite on-off valve = 2/2 configurator valve with the new 'flow either way' position"),
+    "Y32-10.9.2s": ("equivalent", both("check"), "The existing ISO check, mirrored (seat on the other side)"),
+    "Y32-10.9.3": ("equivalent", both("check.pilot"), "Same drawing as the ISO pilot-operated check"),
+    "Y32-10.9.4": ("validated", both("check.pilotclose"), ""),
+    "Y32-10.10.2.1": ("validated", both("doublecheck"), "Inlet names as the existing shuttle valve"),
+    "Y32-10.10.2.2": ("validated", both("doublecheck.bleed"), "Outlet arrow both ways (reverse flow permitted)"),
+}
+for k, (st, tgt, note) in F8A.items():
+    PROGRESS[k] = (st, tgt, note)
 # Rows deliberately reopened by a director decision (completed -> pending). The write guard below allows
 # exactly these; any other completed row that would fall back to pending is refused.
 REOPENED = {"Y32-8.3.1", "Y32-8.3.1.2", "Y32-8.3.2.1", "Y32-8.3.2.2", "Y32-8.6.2"}   # decision 1, 2026-11-02
-BATCH_OF = {**{k: "F2" for k in F2}, **{k: "F3" for k in F3}, **{k: "F4" for k in F4}, **{k: "F5" for k in F5}, **{k: "F5b" for k in REOPENED}, **{k: "F6" for k in F6}, **{k: "F7" for k in F7}}
+BATCH_OF = {**{k: "F2" for k in F2}, **{k: "F3" for k in F3}, **{k: "F4" for k in F4}, **{k: "F5" for k in F5}, **{k: "F5b" for k in REOPENED}, **{k: "F6" for k in F6}, **{k: "F7" for k in F7}, **{k: "F8a" for k in F8A}}
 for r in R:
     if r["key"] in PROGRESS:
         st, tgt, note = PROGRESS[r["key"]]

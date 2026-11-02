@@ -175,6 +175,8 @@ PATTERNS = {
     2: {
         "open": {"label": "Open (P→A)", "arrows": [(1, 0)], "blocked": []},
         "closed": {"label": "Closed", "arrows": [], "blocked": [0, 1]},
+        # ANSI Y32.10 10.9.1 on-off valve (added by the library expansion)
+        "open.both": {"label": "Open, flow either way", "special": "both", "blocked": []},
     },
     3: {
         "P-A": {"label": "P→A, T blocked", "arrows": [(1, 0)], "blocked": [2]},
@@ -544,6 +546,10 @@ def build_valve(params):
             p.append(line(cx + 10, -HALF, cx + 10, HALF))                              # B - T
             p.append(polyline([(cx - 10, -HALF), (cx - 10, 4), (cx + 10, 4)]))        # A - T
             p.append(circle(cx + 10, 4, 1.6, fill=True, w="thin"))
+        elif sp == "both":
+            # one straight path, flow possible in either direction
+            p += [line(cx, -HALF + 3, cx, HALF - 3), arrowhead((cx, -HALF + 3), (cx, 0), length=4.5),
+                  arrowhead((cx, HALF - 3), (cx, 0), length=4.5)]
         elif sp == "b-t":
             p.append(line(cx + 10, -HALF, cx + 10, HALF))                              # B - T straight
         elif sp == "apt":
