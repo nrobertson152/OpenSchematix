@@ -9,6 +9,7 @@ Workflow: director creates an Issue → assigns a single implementation owner �
 Agent sessions and providers do not automatically communicate. Each must have repository access, permission to comment, and instructions to poll GitHub. Agents without write permission must supply a handoff for a connected agent to post.
 
 Files:
+- [Future release backlog](../docs/FUTURE_RELEASE_BACKLOG.md): Director-requested bugs and feature requests (stable IDs OS-FUT-001–023); review at session start and during release planning. Intake only, not permission to expand an active assignment.
 - [TASKS.md](TASKS.md): work allocation snapshot.
 - [INTEGRATION.md](INTEGRATION.md): dependency and integration policy.
 - [RELEASE_STATUS.md](RELEASE_STATUS.md): release gates and known risks.

@@ -3,7 +3,7 @@
 This document governs AI-assisted development. Human project director retains final authority.
 
 ## Start-of-task procedure
-1. Read this file and `.agents/README.md`, `.agents/TASKS.md`, `.agents/INTEGRATION.md`, and `.agents/RELEASE_STATUS.md` from the latest default branch.
+1. Read this file, [`docs/FUTURE_RELEASE_BACKLOG.md`](docs/FUTURE_RELEASE_BACKLOG.md), `.agents/README.md`, `.agents/TASKS.md`, `.agents/INTEGRATION.md`, and `.agents/RELEASE_STATUS.md` from the latest default branch. The backlog records Director-requested future bugs/features; it is not an active assignment or release authorization.
 2. Read your assigned GitHub Issue, linked PRs, and their most recent comments. Check actual head SHAs and CI before acting.
 3. Confirm the issue has a named owner, scope, acceptance criteria, and no competing implementation owner. If ambiguous, comment and wait.
 4. Use an isolated branch for changes. Never modify another agent's branch without explicit authorization.
