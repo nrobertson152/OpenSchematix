@@ -336,7 +336,7 @@ ECL-OTH1.5,ECL,Other things r1 #5,Galvanometer,Electrical,Measurement,el.meter.g
 ECL-OTH1.6,ECL,Other things r1 #6,DC motor with brushes (vertical),Electrical,Machines,el.motor.dc,pending,E8,Brush rectangles distinguish it from existing el.motor
 ECL-OTH1.7,ECL,Other things r1 #7,"Voltmeter, pictorial (illustration)",Electrical,Measurement,-,blocked,-,"Pictorial illustration (shaded meter body), not a schematic symbol"
 ECL-OTH2.1,ECL,Other things r2 #1,Microphone,Electronic,Transducers,el.microphone,pending,E8,
-ECL-OTH2.2,ECL,Other things r2 #2,Crystal (quartz resonator),Electronic,Passive,el.crystal,pending,E1,
+ECL-OTH2.2,ECL,Other things r2 #2,Crystal (quartz resonator),Electronic,Passive,-,blocked,E1,"Director Q4: a rectangle with a plate on one side only does not match the crystal symbol (plates on both sides); identity uncertain, left out until identified"
 ECL-OTH2.3,ECL,Other things r2 #3,Loudspeaker,Electronic,Transducers,el.speaker,pending,E8,
 ECL-OTH2.4,ECL,Other things r2 #4,DC motor with brushes (horizontal),Electrical,Machines,ECL-OTH1.6,duplicate,E8,Rotated drawing of r1 #6
 ECL-OTH2.5,ECL,Other things r2 #5,"Ammeter, pictorial (illustration)",Electrical,Measurement,-,blocked,-,Pictorial illustration
@@ -373,31 +373,31 @@ ECL-BAS1.9,ECL,Basic logic blocks r1 #9,Full adder (horizontal pin layout),Elect
 ECL-BAS3.8,ECL,Basic logic blocks r3 #8,"Multiplexer, 2 to 1",Electronic,Logic,el.logic.mux2,pending,E7,Select input drawn on the notch; flag: source shows no select-pin label
 ECL-BAS2.9,ECL,Basic logic blocks r2 #9,Bus with branches (bus ripper),Electronic,Logic,-,convention,-,"Wire/bus drawing, not a component"
 ECL-BAS3.9,ECL,Basic logic blocks r3 #9,"Bus width marker, 4 lines (two forms)",General,Drafting,gen.mark.buswidth,annotation,E7,
-ECL-SRC1.1,ECL,"Sources, connectors r1 #1",DC voltage source (+/- marked),Electrical,Sources,el.source.dc,pending,E2,Existing el.source.v drawn differently; compare in E2
+ECL-SRC1.1,ECL,"Sources, connectors r1 #1",DC voltage source (+/- marked),Electrical,Sources,el.source.dc,validated,E2,Existing el.source.v drawn differently; compare in E2; Polarity marks inside the circle; differs from el.source.v
 ECL-SRC1.2,ECL,"Sources, connectors r1 #2",AC voltage source,Electrical,Sources,el.source.ac,existing,E2,
-ECL-SRC1.3,ECL,"Sources, connectors r1 #3",Current source,Electrical,Sources,el.source.i,pending,E2,
-ECL-SRC1.4,ECL,"Sources, connectors r1 #4",Dependent (controlled) current source,Electrical,Sources,el.source.i.dep,pending,E2,
-ECL-SRC1.5,ECL,"Sources, connectors r1 #5",Coaxial connector,Electronic,Connections,el.connector.coax,pending,E2,
-ECL-SRC1.6,ECL,"Sources, connectors r1 #6",Antenna,Electronic,Connections,el.antenna,pending,E2,
+ECL-SRC1.3,ECL,"Sources, connectors r1 #3",Current source,Electrical,Sources,el.source.i,validated,E2,
+ECL-SRC1.4,ECL,"Sources, connectors r1 #4",Dependent (controlled) current source,Electrical,Sources,el.source.i.dep,validated,E2,
+ECL-SRC1.5,ECL,"Sources, connectors r1 #5",Coaxial connector,Electronic,Connections,el.connector.coax,validated,E2,"Centre C, shield S"
+ECL-SRC1.6,ECL,"Sources, connectors r1 #6",Antenna,Electronic,Connections,el.antenna,validated,E2,"'ANT' is a label, not part of the symbol"
 ECL-SRC2.1,ECL,"Sources, connectors r2 #1",Chassis / frame ground,Electrical,Connections,el.chassis,existing,E2,
-ECL-SRC2.2,ECL,"Sources, connectors r2 #2","Ground, bar (T form)",Electrical,Connections,el.ground.bar,pending,E2,
-ECL-SRC2.3,ECL,"Sources, connectors r2 #3","Ground, hollow triangle (up)",Electrical,Connections,el.ground.signal.up,pending,E2,
-ECL-SRC2.4,ECL,"Sources, connectors r2 #4","Ground, filled triangle (up)",Electrical,Connections,el.ground.signal.fill,pending,E2,
-ECL-SRC2.5,ECL,"Sources, connectors r2 #5",Supply terminal +,Electrical,Connections,el.rail.pos,pending,E2,
+ECL-SRC2.2,ECL,"Sources, connectors r2 #2","Ground, bar (T form)",Electrical,Connections,el.ground.bar,validated,E2,
+ECL-SRC2.3,ECL,"Sources, connectors r2 #3","Ground, hollow triangle (up)",Electrical,Connections,el.ground.signal,duplicate,E2,"The existing hollow-triangle ground, drawn the other way up"
+ECL-SRC2.4,ECL,"Sources, connectors r2 #4","Ground, filled triangle (up)",Electrical,Connections,el.ground.signal.fill,validated,E2,
+ECL-SRC2.5,ECL,"Sources, connectors r2 #5",Supply terminal +,Electrical,Connections,el.rail.pos,validated,E2,
 ECL-SRC2.6,ECL,"Sources, connectors r2 #6",Supply terminal +5V,Electrical,Connections,el.rail.pos,duplicate,E2,"Label text is a component label, not part of the symbol"
 ECL-SRC2.7,ECL,"Sources, connectors r2 #7",Supply terminal VCC,Electrical,Connections,el.rail.pos,duplicate,E2,"Label text is a component label, not part of the symbol"
 ECL-SRC2.8,ECL,"Sources, connectors r2 #8","Single cell, 5V",Electrical,Sources,el.cell,existing,E2,
-ECL-SRC2.9,ECL,"Sources, connectors r2 #9","Battery, multi-cell, 60V",Electrical,Sources,el.battery,pending,E2,
+ECL-SRC2.9,ECL,"Sources, connectors r2 #9","Battery, multi-cell, 60V",Electrical,Sources,el.battery,validated,E2,Voltage is a label
 ECL-SRC3.1,ECL,"Sources, connectors r3 #1",Terminal (open circle with lead),Electrical,Connections,el.terminal,existing,E2,
 ECL-SRC3.2,ECL,"Sources, connectors r3 #2","Ground, bar (inverted T)",Electrical,Connections,el.ground.bar,duplicate,E2,
 ECL-SRC3.3,ECL,"Sources, connectors r3 #3",Earth ground,Electrical,Connections,el.earth,existing,E2,
 ECL-SRC3.4,ECL,"Sources, connectors r3 #4","Signal ground, hollow triangle",Electrical,Connections,el.ground.signal,existing,E2,
-ECL-SRC3.5,ECL,"Sources, connectors r3 #5",Supply terminal -,Electrical,Connections,el.rail.neg,pending,E2,
+ECL-SRC3.5,ECL,"Sources, connectors r3 #5",Supply terminal -,Electrical,Connections,el.rail.neg,validated,E2,
 ECL-SRC3.6,ECL,"Sources, connectors r3 #6",Supply terminal -5V,Electrical,Connections,el.rail.neg,duplicate,E2,
 ECL-SRC3.7,ECL,"Sources, connectors r3 #7",Supply terminal VEE,Electrical,Connections,el.rail.neg,duplicate,E2,
 ECL-SRC3.8,ECL,"Sources, connectors r3 #8",Single cell (horizontal),Electrical,Sources,el.cell,duplicate,E2,
 ECL-SRC3.9,ECL,"Sources, connectors r3 #9","Battery, multi-cell (horizontal)",Electrical,Sources,el.battery,duplicate,E2,
-ECL-SRC3.10,ECL,"Sources, connectors r3 #10","Battery, multi-cell with break (120V)",Electrical,Sources,el.battery.long,pending,E2,
+ECL-SRC3.10,ECL,"Sources, connectors r3 #10","Battery, multi-cell with break (120V)",Electrical,Sources,el.battery.long,validated,E2,Break drawn dashed
 ECL-SRC4.1,ECL,"Sources, connectors r4 #1",Wire,Electrical,Connections,editor,convention,-,Wire drawing / junction handled by the editor
 ECL-SRC4.2,ECL,"Sources, connectors r4 #2",Junction dot,Electrical,Connections,editor,convention,-,Wire drawing / junction handled by the editor
 ECL-SRC4.3,ECL,"Sources, connectors r4 #3","Wire crossing, hop (up)",Electrical,Connections,editor,convention,-,Wire drawing / junction handled by the editor
@@ -440,36 +440,36 @@ ECL-DIO4.4,ECL,Diodes (semiconductor) r4 #4,TVS (outline),Electronic,Semiconduct
 ECL-DIO4.5,ECL,Diodes (semiconductor) r4 #5,Bidirectional zener (outline),Electronic,Semiconductors,el.diode.zener.bidir,duplicate,E3,Outline style of row 3
 ECL-DIO4.6,ECL,Diodes (semiconductor) r4 #6,AC/DC converter (rectifier) block,Electrical,Power electronics,el.converter.acdc,pending,E3,
 ECL-DIO5.1,ECL,Diodes (semiconductor) r5 #1,Circle with cathode bar (unlabelled),Electronic,Semiconductors,-,blocked,E3,Director Q4: unlabelled/ambiguous drawing left out until identified. No label in source; possibly a vacuum/gas diode or photocell. Not implemented without identification (Q4)
-ECL-LIN1.1,ECL,Linear components r1 #1,Thermistor (IEC rectangle),Electronic,Passive,el.thermistor.iec,pending,E1,
-ECL-LIN1.2,ECL,Linear components r1 #2,Thermistor (zigzag),Electronic,Passive,el.thermistor.ansi,pending,E1,
-ECL-LIN1.3,ECL,Linear components r1 #3,"Resistor, rectangular-wave form",Electronic,Passive,el.resistor.wave,pending,E1,
-ECL-LIN1.4,ECL,Linear components r1 #4,Inductor with magnetic core,Electronic,Passive,el.inductor.core,pending,E1,
-ECL-LIN1.5,ECL,Linear components r1 #5,"Inductor, adjustable, with core",Electronic,Passive,el.inductor.core.var,pending,E1,
+ECL-LIN1.1,ECL,Linear components r1 #1,Thermistor (IEC rectangle),Electronic,Passive,el.thermistor.iec,validated,E1,
+ECL-LIN1.2,ECL,Linear components r1 #2,Thermistor (zigzag),Electronic,Passive,el.thermistor.ansi,validated,E1,
+ECL-LIN1.3,ECL,Linear components r1 #3,"Resistor, rectangular-wave form",Electronic,Passive,el.resistor.wave,validated,E1,
+ECL-LIN1.4,ECL,Linear components r1 #4,Inductor with magnetic core,Electronic,Passive,el.inductor.core,validated,E1,
+ECL-LIN1.5,ECL,Linear components r1 #5,"Inductor, adjustable, with core",Electronic,Passive,el.inductor.core.var,validated,E1,"Line ending in a perpendicular bar = preset (trimming) adjustment, as drawn in the source"
 ECL-LIN2.1,ECL,Linear components r2 #1,Resistor (IEC),Electronic,Passive,el.resistor.iec,existing,E1,
 ECL-LIN2.2,ECL,Linear components r2 #2,Resistor (ANSI),Electronic,Passive,el.resistor.ansi,existing,E1,
 ECL-LIN2.3,ECL,Linear components r2 #3,Heating element / filled resistor,Electronic,Passive,el.resistor.filled,blocked,E1,Director Q4: unlabelled/ambiguous drawing left out until identified. Filled rectangle meaning varies by convention (heater element vs. fixed resistor); Q4
 ECL-LIN2.4,ECL,Linear components r2 #4,Inductor,Electronic,Passive,el.inductor,existing,E1,
-ECL-LIN2.5,ECL,Linear components r2 #5,"Inductor, adjustable",Electronic,Passive,el.inductor.var,pending,E1,
-ECL-LIN3.1,ECL,Linear components r3 #1,"Potentiometer, rheostat connection (IEC)",Electronic,Passive,el.rheostat.iec,pending,E1,
-ECL-LIN3.2,ECL,Linear components r3 #2,Rheostat (ANSI),Electronic,Passive,el.rheostat.ansi,pending,E1,
+ECL-LIN2.5,ECL,Linear components r2 #5,"Inductor, adjustable",Electronic,Passive,el.inductor.var,validated,E1,"Line ending in a perpendicular bar = preset (trimming) adjustment, as drawn in the source"
+ECL-LIN3.1,ECL,Linear components r3 #1,"Potentiometer, rheostat connection (IEC)",Electronic,Passive,el.rheostat.iec,validated,E1,Wiper connected to terminal 1
+ECL-LIN3.2,ECL,Linear components r3 #2,Rheostat (ANSI),Electronic,Passive,el.rheostat.ansi,validated,E1,Wiper connected to terminal 1
 ECL-LIN3.3,ECL,Linear components r3 #3,Rheostat (filled body),Electronic,Passive,el.rheostat.filled,blocked,E1,Director Q4: unlabelled/ambiguous drawing left out until identified. Depends on the meaning of the filled-body resistor (Q4)
-ECL-LIN3.4,ECL,Linear components r3 #4,"Photoresistor (LDR, IEC)",Electronic,Passive,el.ldr.iec,pending,E1,
-ECL-LIN3.5,ECL,Linear components r3 #5,"Photoresistor (LDR, ANSI)",Electronic,Passive,el.ldr.ansi,pending,E1,
-ECL-LIN3.6,ECL,Linear components r3 #6,"Capacitor, adjustable (trimmer)",Electronic,Passive,el.capacitor.trim,pending,E1,
-ECL-LIN4.1,ECL,Linear components r4 #1,"Trimmer resistor, rheostat connection (IEC)",Electronic,Passive,el.trim.rheostat.iec,pending,E1,
-ECL-LIN4.2,ECL,Linear components r4 #2,"Trimmer resistor, rheostat connection (ANSI)",Electronic,Passive,el.trim.rheostat.ansi,pending,E1,
+ECL-LIN3.4,ECL,Linear components r3 #4,"Photoresistor (LDR, IEC)",Electronic,Passive,el.ldr.iec,validated,E1,
+ECL-LIN3.5,ECL,Linear components r3 #5,"Photoresistor (LDR, ANSI)",Electronic,Passive,el.ldr.ansi,validated,E1,
+ECL-LIN3.6,ECL,Linear components r3 #6,"Capacitor, adjustable (trimmer)",Electronic,Passive,el.capacitor.trim,validated,E1,"Line ending in a perpendicular bar = preset (trimming) adjustment, as drawn in the source"
+ECL-LIN4.1,ECL,Linear components r4 #1,"Trimmer resistor, rheostat connection (IEC)",Electronic,Passive,el.trim.rheostat.iec,validated,E1,"Line ending in a perpendicular bar = preset (trimming) adjustment, as drawn in the source"
+ECL-LIN4.2,ECL,Linear components r4 #2,"Trimmer resistor, rheostat connection (ANSI)",Electronic,Passive,el.trim.rheostat.ansi,validated,E1,"Line ending in a perpendicular bar = preset (trimming) adjustment, as drawn in the source"
 ECL-LIN4.3,ECL,Linear components r4 #3,"Trimmer resistor, rheostat connection (filled)",Electronic,Passive,el.trim.rheostat.filled,blocked,E1,Director Q4: unlabelled/ambiguous drawing left out until identified. Depends on the meaning of the filled-body resistor (Q4)
-ECL-LIN4.4,ECL,Linear components r4 #4,Photoresistor in envelope (IEC),Electronic,Passive,el.ldr.iec.env,pending,E1,
-ECL-LIN4.5,ECL,Linear components r4 #5,Photoresistor in envelope (ANSI),Electronic,Passive,el.ldr.ansi.env,pending,E1,
-ECL-LIN5.1,ECL,Linear components r5 #1,"Resistor, adjustable (IEC)",Electronic,Passive,el.resistor.var.iec,existing,E1,Verify the existing drawing matches (variable vs preset arrow)
-ECL-LIN5.2,ECL,Linear components r5 #2,"Resistor, adjustable, preset (ANSI)",Electronic,Passive,el.resistor.preset.ansi,pending,E1,
+ECL-LIN4.4,ECL,Linear components r4 #4,Photoresistor in envelope (IEC),Electronic,Passive,el.ldr.iec.env,validated,E1,
+ECL-LIN4.5,ECL,Linear components r4 #5,Photoresistor in envelope (ANSI),Electronic,Passive,el.ldr.ansi.env,validated,E1,
+ECL-LIN5.1,ECL,Linear components r5 #1,"Resistor, adjustable (IEC)",Electronic,Passive,el.resistor.preset.iec,validated,E1,"Verify the existing drawing matches (variable vs preset arrow); Checked: the source draws a preset bar, whereas the existing el.resistor.var.iec has an arrow (continuously adjustable) - so a new symbol, not 'existing'"
+ECL-LIN5.2,ECL,Linear components r5 #2,"Resistor, adjustable, preset (ANSI)",Electronic,Passive,el.resistor.preset.ansi,validated,E1,"Line ending in a perpendicular bar = preset (trimming) adjustment, as drawn in the source"
 ECL-LIN5.3,ECL,Linear components r5 #3,"Resistor, adjustable, preset (filled)",Electronic,Passive,el.resistor.preset.filled,blocked,E1,Director Q4: unlabelled/ambiguous drawing left out until identified. Depends on the meaning of the filled-body resistor (Q4)
 ECL-LIN6.1,ECL,Linear components r6 #1,Potentiometer (IEC),Electronic,Passive,el.potentiometer.iec,existing,E1,
-ECL-LIN6.2,ECL,Linear components r6 #2,Potentiometer (ANSI),Electronic,Passive,el.potentiometer.ansi,pending,E1,
-ECL-LIN6.3,ECL,Linear components r6 #3,Inductor with tap / sliding contact,Electronic,Passive,el.inductor.tap,pending,E1,
+ECL-LIN6.2,ECL,Linear components r6 #2,Potentiometer (ANSI),Electronic,Passive,el.potentiometer.ansi,validated,E1,"Wiper = terminal 3, as el.potentiometer.iec"
+ECL-LIN6.3,ECL,Linear components r6 #3,Inductor with tap / sliding contact,Electronic,Passive,el.inductor.tap,validated,E1,Sliding contact = terminal 3
 ECL-LIN6.4,ECL,Linear components r6 #4,Capacitor,Electronic,Passive,el.capacitor,existing,E1,
-ECL-LIN6.5,ECL,Linear components r6 #5,"Capacitor, polarised (curved plate)",Electronic,Passive,el.capacitor.pol.curved,pending,E1,
-ECL-LIN6.6,ECL,Linear components r6 #6,"Capacitor, polarised (rectangle plate)",Electronic,Passive,el.capacitor.pol,existing,E1,Existing el.capacitor.pol (IEEE 315) - verify which plate form it uses
+ECL-LIN6.5,ECL,Linear components r6 #5,"Capacitor, polarised (curved plate)",Electronic,Passive,el.capacitor.pol,existing,E1,Checked: the existing polarised capacitor uses the curved plate
+ECL-LIN6.6,ECL,Linear components r6 #6,"Capacitor, polarised (rectangle plate)",Electronic,Passive,el.capacitor.pol.rect,validated,E1,Existing el.capacitor.pol (IEEE 315) - verify which plate form it uses; Checked: the open-rectangle plate form is not the existing symbol (which is curved)
 ECL-XFM1.1,ECL,Transformers r1 #1,"Transformer, iron core, dots same end (in phase)",Electrical,Transformers,el.transformer.dot,pending,E5,Existing el.transformer has no polarity dots; dotted variants are distinct
 ECL-XFM1.2,ECL,Transformers r1 #2,"Transformer, iron core, step-down, dots same end",Electrical,Transformers,el.transformer.dot.step,pending,E5,
 ECL-XFM1.3,ECL,Transformers r1 #3,"Transformer, centre-tapped secondary",Electrical,Transformers,el.transformer.ct,pending,E5,

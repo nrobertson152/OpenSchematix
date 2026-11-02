@@ -1115,10 +1115,55 @@ F10 = {
 }
 for k, (st, tgt, note) in F10.items():
     PROGRESS[k] = (st, tgt, note)
+PRESET = "Line ending in a perpendicular bar = preset (trimming) adjustment, as drawn in the source"
+E1 = {
+    "ECL-LIN1.1": ("validated", "el.thermistor.iec", ""),
+    "ECL-LIN1.2": ("validated", "el.thermistor.ansi", ""),
+    "ECL-LIN1.3": ("validated", "el.resistor.wave", ""),
+    "ECL-LIN1.4": ("validated", "el.inductor.core", ""),
+    "ECL-LIN1.5": ("validated", "el.inductor.core.var", PRESET),
+    "ECL-LIN2.5": ("validated", "el.inductor.var", PRESET),
+    "ECL-LIN3.1": ("validated", "el.rheostat.iec", "Wiper connected to terminal 1"),
+    "ECL-LIN3.2": ("validated", "el.rheostat.ansi", "Wiper connected to terminal 1"),
+    "ECL-LIN3.4": ("validated", "el.ldr.iec", ""),
+    "ECL-LIN3.5": ("validated", "el.ldr.ansi", ""),
+    "ECL-LIN3.6": ("validated", "el.capacitor.trim", PRESET),
+    "ECL-LIN4.1": ("validated", "el.trim.rheostat.iec", PRESET),
+    "ECL-LIN4.2": ("validated", "el.trim.rheostat.ansi", PRESET),
+    "ECL-LIN4.4": ("validated", "el.ldr.iec.env", ""),
+    "ECL-LIN4.5": ("validated", "el.ldr.ansi.env", ""),
+    "ECL-LIN5.1": ("validated", "el.resistor.preset.iec",
+                   "Checked: the source draws a preset bar, whereas the existing el.resistor.var.iec has an arrow "
+                   "(continuously adjustable) - so a new symbol, not 'existing'"),
+    "ECL-LIN5.2": ("validated", "el.resistor.preset.ansi", PRESET),
+    "ECL-LIN6.2": ("validated", "el.potentiometer.ansi", "Wiper = terminal 3, as el.potentiometer.iec"),
+    "ECL-LIN6.3": ("validated", "el.inductor.tap", "Sliding contact = terminal 3"),
+    "ECL-LIN6.5": ("existing", "el.capacitor.pol", "Checked: the existing polarised capacitor uses the curved plate"),
+    "ECL-LIN6.6": ("validated", "el.capacitor.pol.rect",
+                   "Checked: the open-rectangle plate form is not the existing symbol (which is curved)"),
+    "ECL-OTH2.2": ("blocked", "-", "Director Q4: a rectangle with a plate on one side only does not match the crystal "
+                                   "symbol (plates on both sides); identity uncertain, left out until identified"),
+}
+E2 = {
+    "ECL-SRC1.1": ("validated", "el.source.dc", "Polarity marks inside the circle; differs from el.source.v"),
+    "ECL-SRC1.3": ("validated", "el.source.i", ""),
+    "ECL-SRC1.4": ("validated", "el.source.i.dep", ""),
+    "ECL-SRC1.5": ("validated", "el.connector.coax", "Centre C, shield S"),
+    "ECL-SRC1.6": ("validated", "el.antenna", "'ANT' is a label, not part of the symbol"),
+    "ECL-SRC2.2": ("validated", "el.ground.bar", ""),
+    "ECL-SRC2.3": ("duplicate", "el.ground.signal", "The existing hollow-triangle ground, drawn the other way up"),
+    "ECL-SRC2.4": ("validated", "el.ground.signal.fill", ""),
+    "ECL-SRC2.5": ("validated", "el.rail.pos", ""),
+    "ECL-SRC2.9": ("validated", "el.battery", "Voltage is a label"),
+    "ECL-SRC3.5": ("validated", "el.rail.neg", ""),
+    "ECL-SRC3.10": ("validated", "el.battery.long", "Break drawn dashed"),
+}
+for k, (st, tgt, note) in {**E1, **E2}.items():
+    PROGRESS[k] = (st, tgt, note)
 # History: decision 1 (2026-11-02) reopened Y32-8.3.1, -8.3.1.2, -8.3.2.1, -8.3.2.2 and -8.6.2; batch F5b completed
 # them, so the allowlist is empty again and those rows are protected like every other completed row.
 REOPENED: set = set()
-BATCH_OF = {**{k: "F2" for k in F2}, **{k: "F3" for k in F3}, **{k: "F4" for k in F4}, **{k: "F5" for k in F5}, **{k: "F5b" for k in F5B}, **{k: "F6" for k in F6}, **{k: "F7" for k in F7}, **{k: "F8a" for k in F8A}, **{k: "F8b" for k in F8B}, **{k: "F9" for k in F9}, **{k: "F10" for k in F10}}
+BATCH_OF = {**{k: "F2" for k in F2}, **{k: "F3" for k in F3}, **{k: "F4" for k in F4}, **{k: "F5" for k in F5}, **{k: "F5b" for k in F5B}, **{k: "F6" for k in F6}, **{k: "F7" for k in F7}, **{k: "F8a" for k in F8A}, **{k: "F8b" for k in F8B}, **{k: "F9" for k in F9}, **{k: "F10" for k in F10}, **{k: "E1" for k in E1}, **{k: "E2" for k in E2}}
 for r in R:
     if r["key"] in PROGRESS:
         st, tgt, note = PROGRESS[r["key"]]
