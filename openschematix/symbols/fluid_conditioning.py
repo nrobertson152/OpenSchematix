@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import math
 
-from .base import ANSI, ISO, Geometry, SymbolDef, Terminal as T, arrowhead, circle, line, poly, polyline
+from .base import ANSI, ISO, Geometry, SymbolDef, Terminal as T, arrow, arrowhead, circle, line, poly, polyline, rect
 
 MEDIA = (("hyd", "Hydraulic", True), ("pneu", "Pneumatic", False))
 G = "Fluid conditioning"
@@ -195,4 +195,14 @@ def symbols():
                   "Lubricator with manual drain.", "Z",
                   Geometry(small([line(0, -10, 0, -4)], drain()),
                            [T("1", -20, 0, "l"), T("2", 20, 0, "r"), T("3", 0, 20, "d")]), keywords=("oiler", "frl")))
+    # batch F10: Y32.10 11.2, simplified (a single defined symbol; the composite form stays excluded, Q3)
+    add(SymbolDef("fl.pneu.frl", "Airline accessories (FRL), simplified (ANSI)", P, G, ANSI,
+                  "Filter, regulator and lubricator unit, simplified symbol: adjustable regulator with gauge in one "
+                  "body; flow 1 -> 2.", "Z",
+                  Geometry([rect(-25, -12, 25, 12), line(-50, 0, -25, 0), poly(-42, -5, -42, 5, -34, 0),
+                            line(25, 0, 40, 0), line(-17, -12, -17, -4), line(17, -15, 17, -6), circle(0, 0, 8),
+                            poly(-3, -5, -0.5, -6.5, 3.5, 5.5, fill=True)] + arrow(-13, 15, 13, -14, head=4),
+                           [T("1", -50, 0, "l"), T("2", 40, 0, "r")]),
+                  keywords=("frl", "service unit", "filter regulator lubricator"),
+                  notes="The open triangle on the inlet line is drawn as in Y32.10 11.2."))
     return s

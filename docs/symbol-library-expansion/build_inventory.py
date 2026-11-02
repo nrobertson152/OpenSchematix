@@ -1110,10 +1110,15 @@ for k, (st, tgt, note) in F5B.items():
     PROGRESS[k] = (st, tgt, note)
 # Rows deliberately reopened by a director decision (completed -> pending). The write guard below allows
 # exactly these; any other completed row that would fall back to pending is refused.
+F10 = {
+    "Y32-11.2s": ("validated", "fl.pneu.frl", "Single defined symbol; the composite form (11.2) stays excluded (Q3)"),
+}
+for k, (st, tgt, note) in F10.items():
+    PROGRESS[k] = (st, tgt, note)
 # History: decision 1 (2026-11-02) reopened Y32-8.3.1, -8.3.1.2, -8.3.2.1, -8.3.2.2 and -8.6.2; batch F5b completed
 # them, so the allowlist is empty again and those rows are protected like every other completed row.
 REOPENED: set = set()
-BATCH_OF = {**{k: "F2" for k in F2}, **{k: "F3" for k in F3}, **{k: "F4" for k in F4}, **{k: "F5" for k in F5}, **{k: "F5b" for k in F5B}, **{k: "F6" for k in F6}, **{k: "F7" for k in F7}, **{k: "F8a" for k in F8A}, **{k: "F8b" for k in F8B}, **{k: "F9" for k in F9}}
+BATCH_OF = {**{k: "F2" for k in F2}, **{k: "F3" for k in F3}, **{k: "F4" for k in F4}, **{k: "F5" for k in F5}, **{k: "F5b" for k in F5B}, **{k: "F6" for k in F6}, **{k: "F7" for k in F7}, **{k: "F8a" for k in F8A}, **{k: "F8b" for k in F8B}, **{k: "F9" for k in F9}, **{k: "F10" for k in F10}}
 for r in R:
     if r["key"] in PROGRESS:
         st, tgt, note = PROGRESS[r["key"]]
