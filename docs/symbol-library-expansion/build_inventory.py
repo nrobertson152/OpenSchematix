@@ -1065,10 +1065,42 @@ F8B = {
 }
 for k, (st, tgt, note) in F8B.items():
     PROGRESS[k] = (st, tgt, note)
+ELOUT = "Electrical output drawn as in the source, without electrical terminals (as for the solenoids)"
+SHAFT = ("Its only connections are mechanical shafts; there is no mechanical port type, and the director ruled out "
+         "fictitious terminals for the heat engine (D2) - left out for the same reason")
+F9 = {
+    "HO-M01": ("validated", both("pressure.indicator"), "The chart's short right-hand line is drawn, not a port"),
+    "HO-M02": ("validated", both("pressure.transducer"), ELOUT),
+    "HO-M04": ("validated", both("gauge.diff"), "Two connections"),
+    "HO-M05": ("validated", "fl.hyd.level.gauge", ""),
+    "HO-M06": ("validated", "fl.hyd.level.transducer", ELOUT),
+    "HO-M07": ("validated", both("thermometer"), ""),
+    "HO-M08": ("validated", both("flow.indicator"), ""),
+    "HO-M09": ("validated", both("flowmeter"), ""),
+    "HO-M10": ("blocked", "-", SHAFT),
+    "HO-M11": ("blocked", "-", SHAFT),
+    "HO-M12": ("validated", both("pressure.switch"), ELOUT + "; pilot port X"),
+    "HO-M13": ("blocked", "-", "Mechanically operated electric switch: the chart draws no fluid or electrical "
+                               "connection points; belongs with the electrical position switches (batch E6)"),
+    "Y32-9.1.1": ("validated", both("pressure.indicator.ansi"), "One symbol; the three forms differ only in where "
+                                                                "the connection is drawn (rotate)"),
+    "Y32-9.1.2": ("equivalent", both("thermometer"), "Drawn the same as the ISO thermometer; the four forms differ "
+                                                     "only in where the connection is drawn"),
+    "Y32-9.1.3.1": ("equivalent", both("flowmeter"), "Drawn the same as the ISO flow meter"),
+    "Y32-9.1.3.2": ("validated", both("flowmeter.total"), ""),
+    "Y32-9.2.1": ("validated", both("venturi"), "Throat tap X"),
+    "Y32-9.2.2": ("validated", both("orificeplate", "orificeplate.taps"), "Both forms: in line, and with taps X1/X2"),
+    "Y32-9.2.3": ("validated", both("pitot"), "Taps X1/X2 as drawn"),
+    "Y32-9.2.4a": ("validated", "fl.hyd.nozzle", "Filled arrow"),
+    "Y32-9.2.4b": ("validated", "fl.pneu.nozzle", "Hollow arrow"),
+    "Y32-9.3.1": ("validated", both("pressure.switch.ansi"), ELOUT),
+}
+for k, (st, tgt, note) in F9.items():
+    PROGRESS[k] = (st, tgt, note)
 # Rows deliberately reopened by a director decision (completed -> pending). The write guard below allows
 # exactly these; any other completed row that would fall back to pending is refused.
 REOPENED = {"Y32-8.3.1", "Y32-8.3.1.2", "Y32-8.3.2.1", "Y32-8.3.2.2", "Y32-8.6.2"}   # decision 1, 2026-11-02
-BATCH_OF = {**{k: "F2" for k in F2}, **{k: "F3" for k in F3}, **{k: "F4" for k in F4}, **{k: "F5" for k in F5}, **{k: "F5b" for k in REOPENED}, **{k: "F6" for k in F6}, **{k: "F7" for k in F7}, **{k: "F8a" for k in F8A}, **{k: "F8b" for k in F8B}}
+BATCH_OF = {**{k: "F2" for k in F2}, **{k: "F3" for k in F3}, **{k: "F4" for k in F4}, **{k: "F5" for k in F5}, **{k: "F5b" for k in REOPENED}, **{k: "F6" for k in F6}, **{k: "F7" for k in F7}, **{k: "F8a" for k in F8A}, **{k: "F8b" for k in F8B}, **{k: "F9" for k in F9}}
 for r in R:
     if r["key"] in PROGRESS:
         st, tgt, note = PROGRESS[r["key"]]

@@ -110,19 +110,19 @@ HO-F04,HO,Fluid Treatment F04,Water / oil cooler,Hydraulic,Fluid conditioning,fl
 HO-F05,HO,Fluid Treatment F05,Air / oil cooler,Hydraulic,Fluid conditioning,fl.hyd.cooler.air,validated,F4,Drawn with horizontal flow; air arrows and fan
 HO-F06,HO,Fluid Treatment F06,Heater,Hydraulic,Fluid conditioning,fl.hyd.heater; fl.pneu.heater,validated,F4,
 HO-F07,HO,Fluid Treatment F07,Temperature controller,Hydraulic,Fluid conditioning,-,blocked,F4,Arrow directions inside the chart's temperature-controller figure are not legible; the function is provided by the ANSI temperature controllers (Y32 5.1.3)
-HO-M01,HO,Measuring M01,Pressure indicator,Hydraulic+Pneumatic,Measurement,fl.*.pressure.indicator,pending,F9,
-HO-M02,HO,Measuring M02,Pressure transducer,Hydraulic+Pneumatic,Measurement,fl.*.pressure.transducer,pending,F9,
+HO-M01,HO,Measuring M01,Pressure indicator,Hydraulic+Pneumatic,Measurement,fl.hyd.pressure.indicator; fl.pneu.pressure.indicator,validated,F9,"The chart's short right-hand line is drawn, not a port"
+HO-M02,HO,Measuring M02,Pressure transducer,Hydraulic+Pneumatic,Measurement,fl.hyd.pressure.transducer; fl.pneu.pressure.transducer,validated,F9,"Electrical output drawn as in the source, without electrical terminals (as for the solenoids)"
 HO-M03,HO,Measuring M03,Pressure gauge,Hydraulic+Pneumatic,Measurement,fl.*.gauge,existing,F9,
-HO-M04,HO,Measuring M04,Differential pressure gauge,Hydraulic+Pneumatic,Measurement,fl.*.gauge.diff,pending,F9,
-HO-M05,HO,Measuring M05,Fluid level gauge,Hydraulic,Measurement,fl.hyd.level.gauge,pending,F9,
-HO-M06,HO,Measuring M06,Fluid level transducer,Hydraulic,Measurement,fl.hyd.level.transducer,pending,F9,
-HO-M07,HO,Measuring M07,Thermometer,Hydraulic+Pneumatic,Measurement,fl.*.thermometer,pending,F9,
-HO-M08,HO,Measuring M08,Flow indicator,Hydraulic+Pneumatic,Measurement,fl.*.flow.indicator,pending,F9,
-HO-M09,HO,Measuring M09,Flow meter,Hydraulic+Pneumatic,Measurement,fl.*.flowmeter,pending,F9,
-HO-M10,HO,Measuring M10,Tachometer,Hydraulic+Pneumatic,Measurement,fl.*.tachometer,pending,F9,
-HO-M11,HO,Measuring M11,Torque meter,Hydraulic+Pneumatic,Measurement,fl.*.torquemeter,pending,F9,
-HO-M12,HO,Measuring M12,Pressure switch,Hydraulic+Pneumatic,Measurement,fl.*.pressure.switch,pending,F9,
-HO-M13,HO,Measuring M13,Micro switch (mechanically operated electric switch),Hydraulic+Pneumatic,Measurement,fl.*.microswitch,pending,F9,
+HO-M04,HO,Measuring M04,Differential pressure gauge,Hydraulic+Pneumatic,Measurement,fl.hyd.gauge.diff; fl.pneu.gauge.diff,validated,F9,Two connections
+HO-M05,HO,Measuring M05,Fluid level gauge,Hydraulic,Measurement,fl.hyd.level.gauge,validated,F9,
+HO-M06,HO,Measuring M06,Fluid level transducer,Hydraulic,Measurement,fl.hyd.level.transducer,validated,F9,"Electrical output drawn as in the source, without electrical terminals (as for the solenoids)"
+HO-M07,HO,Measuring M07,Thermometer,Hydraulic+Pneumatic,Measurement,fl.hyd.thermometer; fl.pneu.thermometer,validated,F9,
+HO-M08,HO,Measuring M08,Flow indicator,Hydraulic+Pneumatic,Measurement,fl.hyd.flow.indicator; fl.pneu.flow.indicator,validated,F9,
+HO-M09,HO,Measuring M09,Flow meter,Hydraulic+Pneumatic,Measurement,fl.hyd.flowmeter; fl.pneu.flowmeter,validated,F9,
+HO-M10,HO,Measuring M10,Tachometer,Hydraulic+Pneumatic,Measurement,-,blocked,F9,"Its only connections are mechanical shafts; there is no mechanical port type, and the director ruled out fictitious terminals for the heat engine (D2) - left out for the same reason"
+HO-M11,HO,Measuring M11,Torque meter,Hydraulic+Pneumatic,Measurement,-,blocked,F9,"Its only connections are mechanical shafts; there is no mechanical port type, and the director ruled out fictitious terminals for the heat engine (D2) - left out for the same reason"
+HO-M12,HO,Measuring M12,Pressure switch,Hydraulic+Pneumatic,Measurement,fl.hyd.pressure.switch; fl.pneu.pressure.switch,validated,F9,"Electrical output drawn as in the source, without electrical terminals (as for the solenoids); pilot port X"
+HO-M13,HO,Measuring M13,Micro switch (mechanically operated electric switch),Hydraulic+Pneumatic,Measurement,-,blocked,F9,Mechanically operated electric switch: the chart draws no fluid or electrical connection points; belongs with the electrical position switches (batch E6)
 Y32-2.4.1,Y32,p3 cl.2.4.1,Solid line - main,Hydraulic+Pneumatic,Lines,editor / element,convention,-,
 Y32-2.4.2,Y32,p3 cl.2.4.2,Dash line - pilot,Hydraulic+Pneumatic,Lines,editor / element,convention,-,
 Y32-2.4.3,Y32,p3 cl.2.4.3,Dotted line - exhaust or drain,Hydraulic+Pneumatic,Lines,editor / element,convention,-,Dotted exhaust line: the editor has solid and dashed wire styles only
@@ -261,16 +261,16 @@ Y32-8.7.1,Y32,p13 cl.8.7.1,"Oscillator, hydraulic",Hydraulic,Pumps & motors,fl.h
 Y32-8.7.2,Y32,p13 cl.8.7.2,"Oscillator, pneumatic",Pneumatic,Pumps & motors,fl.pneu.rotary,validated,F5,
 Y32-8.8.1,Y32,p13 cl.8.8.1,Electric motor (prime mover),Hydraulic+Pneumatic,Pumps & motors,el.motor,equivalent,F5,"Mechanical prime mover (shaft only), not an electrical device; el.motor remains the electrical symbol; The PDF marks it IEC; same circle-with-M as the existing electric motor"
 Y32-8.8.2,Y32,p13 cl.8.8.2,Heat engine (e.g. internal combustion engine),Hydraulic+Pneumatic,Pumps & motors,-,blocked,F5,Mechanical-only component (no fluid or electrical connection). Director decision 2 (2026-11-02): left out of v1.2.0; no fictitious terminals and no widening of the terminal-less exemption; prime movers may get a separate model/domain proposal later
-Y32-9.1.1,Y32,p13 cl.9.1.1,Pressure indicator / recorder (three forms),Hydraulic+Pneumatic,Measurement,fl.*.pressure.indicator.ansi,pending,F9,Director Q1: ANSI-style variant of fl.*.pressure.indicator; becomes 'equivalent' if the ANSI drawing is identical.
-Y32-9.1.2,Y32,p13 cl.9.1.2,Temperature indicator (four forms),Hydraulic+Pneumatic,Measurement,fl.*.thermometer.ansi,pending,F9,Director Q1: ANSI-style variant of fl.*.thermometer; becomes 'equivalent' if the ANSI drawing is identical.
-Y32-9.1.3.1,Y32,p13 cl.9.1.3.1,"Flow meter, flow rate",Hydraulic+Pneumatic,Measurement,fl.*.flowmeter.ansi,pending,F9,Director Q1: ANSI-style variant of fl.*.flowmeter; becomes 'equivalent' if the ANSI drawing is identical.
-Y32-9.1.3.2,Y32,p14 cl.9.1.3.2,"Flow meter, totalizing",Hydraulic+Pneumatic,Measurement,fl.*.flowmeter.total,pending,F9,
-Y32-9.2.1,Y32,p15 cl.9.2.1,Venturi,Hydraulic+Pneumatic,Measurement,fl.*.venturi,pending,F9,
-Y32-9.2.2,Y32,p15 cl.9.2.2,Orifice plate (two forms),Hydraulic+Pneumatic,Measurement,fl.*.orificeplate,pending,F9,
-Y32-9.2.3,Y32,p15 cl.9.2.3,Pitot tube,Hydraulic+Pneumatic,Measurement,fl.*.pitot,pending,F9,
-Y32-9.2.4a,Y32,p15 cl.9.2.4,"Nozzle, hydraulic",Hydraulic,Lines & connections,fl.hyd.nozzle,pending,F9,
-Y32-9.2.4b,Y32,p15 cl.9.2.4,"Nozzle, pneumatic",Pneumatic,Lines & connections,fl.pneu.nozzle,pending,F9,
-Y32-9.3.1,Y32,p15 cl.9.3.1,Pressure switch,Hydraulic+Pneumatic,Measurement,fl.*.pressure.switch.ansi,pending,F9,Director Q1: ANSI-style variant of fl.*.pressure.switch; becomes 'equivalent' if the ANSI drawing is identical.
+Y32-9.1.1,Y32,p13 cl.9.1.1,Pressure indicator / recorder (three forms),Hydraulic+Pneumatic,Measurement,fl.hyd.pressure.indicator.ansi; fl.pneu.pressure.indicator.ansi,validated,F9,Director Q1: ANSI-style variant of fl.*.pressure.indicator; becomes 'equivalent' if the ANSI drawing is identical.; One symbol; the three forms differ only in where the connection is drawn (rotate)
+Y32-9.1.2,Y32,p13 cl.9.1.2,Temperature indicator (four forms),Hydraulic+Pneumatic,Measurement,fl.hyd.thermometer; fl.pneu.thermometer,equivalent,F9,Director Q1: ANSI-style variant of fl.*.thermometer; becomes 'equivalent' if the ANSI drawing is identical.; Drawn the same as the ISO thermometer; the four forms differ only in where the connection is drawn
+Y32-9.1.3.1,Y32,p13 cl.9.1.3.1,"Flow meter, flow rate",Hydraulic+Pneumatic,Measurement,fl.hyd.flowmeter; fl.pneu.flowmeter,equivalent,F9,Director Q1: ANSI-style variant of fl.*.flowmeter; becomes 'equivalent' if the ANSI drawing is identical.; Drawn the same as the ISO flow meter
+Y32-9.1.3.2,Y32,p14 cl.9.1.3.2,"Flow meter, totalizing",Hydraulic+Pneumatic,Measurement,fl.hyd.flowmeter.total; fl.pneu.flowmeter.total,validated,F9,
+Y32-9.2.1,Y32,p15 cl.9.2.1,Venturi,Hydraulic+Pneumatic,Measurement,fl.hyd.venturi; fl.pneu.venturi,validated,F9,Throat tap X
+Y32-9.2.2,Y32,p15 cl.9.2.2,Orifice plate (two forms),Hydraulic+Pneumatic,Measurement,fl.hyd.orificeplate; fl.pneu.orificeplate; fl.hyd.orificeplate.taps; fl.pneu.orificeplate.taps,validated,F9,"Both forms: in line, and with taps X1/X2"
+Y32-9.2.3,Y32,p15 cl.9.2.3,Pitot tube,Hydraulic+Pneumatic,Measurement,fl.hyd.pitot; fl.pneu.pitot,validated,F9,Taps X1/X2 as drawn
+Y32-9.2.4a,Y32,p15 cl.9.2.4,"Nozzle, hydraulic",Hydraulic,Lines & connections,fl.hyd.nozzle,validated,F9,Filled arrow
+Y32-9.2.4b,Y32,p15 cl.9.2.4,"Nozzle, pneumatic",Pneumatic,Lines & connections,fl.pneu.nozzle,validated,F9,Hollow arrow
+Y32-9.3.1,Y32,p15 cl.9.3.1,Pressure switch,Hydraulic+Pneumatic,Measurement,fl.hyd.pressure.switch.ansi; fl.pneu.pressure.switch.ansi,validated,F9,"Director Q1: ANSI-style variant of fl.*.pressure.switch; becomes 'equivalent' if the ANSI drawing is identical.; Electrical output drawn as in the source, without electrical terminals (as for the solenoids)"
 Y32-9.3.2,Y32,p15 cl.9.3.2,Muffler (silencer),Pneumatic,Lines & connections,fl.pneu.silencer,validated,F2,Muffler; prefix Z (purchasable)
 Y32-10.9.1s,Y32,p15 cl.10.9.1,"On-off (manual shut-off), simplified",Hydraulic+Pneumatic,Valves,fl.hyd.shutoff.ansi; fl.pneu.shutoff.ansi,validated,F8a,Director Q1: ANSI-style variant of fl.*.shutoff; becomes 'equivalent' if the ANSI drawing is identical. Same as HO-B24
 Y32-10.9.1o,Y32,p16 cl.10.9.1,"On-off, composite, off",Hydraulic+Pneumatic,Valves,dcv pattern 'open.both',validated,F8a,Detented manual 2/2; may map to configurator; Composite on-off valve = 2/2 configurator valve with the new 'flow either way' position
