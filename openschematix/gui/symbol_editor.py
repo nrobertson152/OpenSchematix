@@ -1277,9 +1277,17 @@ class SymbolEditor(tk.Toplevel):
         self.app.library.populate()
         self.set_status(f"Saved “{entry.name}” (revision {entry.doc['revision']}) in {folder}.")
         if entry.id in self.app.project.used_custom_symbols():
-            if messagebox.askyesno("Update drawings?", f"The open project uses “{entry.name}”. Update its drawings "
-                                   "to this new version?\n\nIf you choose No, the project keeps the version it was "
-                                   "drawn with until you update it from the library.", parent=self):
+            drawn = self.app.project.symbols.get(entry.id) or {}
+            drawn_name = drawn.get("name") or entry.name
+            if drawn_name != entry.name:
+                question = (f"The open project draws “{drawn_name}” (revision {drawn.get('revision', 0)}) with "
+                            f"this symbol id. Update its drawings to “{entry.name}” revision "
+                            f"{entry.doc.get('revision', 0)}?")
+            else:
+                question = f"The open project uses “{entry.name}”. Update its drawings to this new version?"
+            # update_project_symbol shows what an update would disconnect, and asks again, before changing anything
+            if messagebox.askyesno("Update drawings?", question + "\n\nIf you choose No, the project keeps the "
+                                   "version it was drawn with until you update it from the library.", parent=self):
                 self.app.update_project_symbol(entry.id)
         return True
 

@@ -37,7 +37,7 @@ from . import interact as ia
 from .canvas_view import SchematicCanvas
 from .cmdline import CommandLine, LogView
 from .dialogs import (AboutDialog, DxfImportDialog, ExportPdfDialog, PreferencesDialog, ProjectDialog, RecoveryDialog,
-                      ScaleDialog, ShortcutsDialog, SymbolPickerDialog, TemplateSaveDialog, TextDialog, ValveDialog,
+                      ScaleDialog, ShortcutsDialog, SymbolCollisionDialog, SymbolPickerDialog, TemplateSaveDialog, TextDialog, ValveDialog,
                       WireNumberDialog)
 from .inspector import Inspector
 from .keymap import KeyMap
@@ -1954,15 +1954,41 @@ class App:
         older revision) would silently replace the newer library geometry.
         The drawings keep their version until updated (save offers it). A
         symbol that exists only in the open project is edited from its
-        embedded definition and saving adds it to the library."""
+        embedded definition and saving adds it to the library.
+
+        If the library and the open project hold DIFFERENT definitions of
+        `sid` (an older revision, or another symbol that shares the id), the
+        user chooses first: edit the library symbol, edit a copy of the
+        project's definition (new id; drawings and library unchanged), or
+        Cancel (the default). Returns the editor, or None."""
+        from ..symbols import compare
         e = self.userlib.entries.get(sid)
         if e is not None:
-            self.edit_library_symbol(sid)
-            return
+            drawn = self.project.symbols.get(sid)
+            if drawn is not None:
+                dif = compare.diff(drawn, e.doc)
+                if not dif.identical:
+                    choice = self.ask_symbol_collision(sid, drawn, e.doc, dif.summary())
+                    if choice == "copy":
+                        return self.edit_symbol_copy(sid)
+                    if choice != "library":
+                        self.set_status("Edit symbol cancelled.")
+                        return None
+            return self.edit_library_symbol(sid)
         sd = self.project_symbol(sid)
         if sd is None or not sd.is_custom:
-            return
-        self.open_symbol_editor(doc=sd.custom, folder=None)
+            return None
+        return self.open_symbol_editor(doc=sd.custom, folder=None)
+
+    def ask_symbol_collision(self, sid, drawn, library, differences):
+        """"library", "copy" or None (Cancel). Separate so tests can answer it."""
+        return SymbolCollisionDialog(self, sid, drawn, library, differences).result
+
+    def confirm_symbol_update(self, impact, drawn, library) -> bool:
+        """Ask before an update that disconnects, re-routes or renames.
+        Default: No. Separate so tests can answer it."""
+        return messagebox.askyesno("Update drawings?", symbol_update_message(impact, drawn, library),
+                                   icon="warning", default="no", parent=self.root)
 
     def edit_library_symbol(self, sid):
         """Edit the user-library symbol `sid` in place, from the library's
@@ -1977,12 +2003,27 @@ class App:
                      f"draws revision {drawn.get('revision', 0)} until its drawings are updated.", "info")
         return self.open_symbol_editor(doc=e.doc, folder=e.folder)
 
-    def update_project_symbol(self, sid):
-        """Switch the project's embedded copy of a custom symbol to the library version."""
+    def update_project_symbol(self, sid) -> bool:
+        """Switch the project's embedded copy of a custom symbol to the library version.
+
+        Every "Update drawings" goes through here. Before anything changes,
+        the wire ends that would be detached (connection point no longer
+        exists) or re-routed (connection point moves) are worked out; if
+        there are any, or the symbol's name differs, the user confirms with
+        both definitions and every affected end listed (default: No). On No
+        the project and its wires are left exactly as they were. Returns True
+        if the drawings were updated."""
         e = self.userlib.entries.get(sid)
         if e is None:
-            return
+            return False
+        from ..symbols import compare
         from ..symbols.custom import to_symdef
+        drawn = self.project.symbols.get(sid)
+        impact = compare.update_impact(self.project, sid, e.doc)
+        if drawn is not None and not impact.harmless and not self.confirm_symbol_update(impact, drawn, e.doc):
+            self.log(f"Drawings not updated: they keep {compare.label(drawn)}.", "info")
+            self.set_status("Drawings not updated.")
+            return False
         s = self.begin_change()
         before = {(d.uid, w.id): (w.start, w.end) for d in self.project.sheets for w in d.wires.values()}
         self.project.symbols[sid] = json.loads(json.dumps(e.doc))
@@ -1996,7 +2037,9 @@ class App:
                            (f" {lost} wire end(s) were detached from connection points that no longer exist."
                             if lost else ""))
         if lost:
-            self.log(f"{lost} wire end(s) lost their connection point after the symbol update.", "warning")
+            self.log(f"{lost} wire end(s) lost their connection point after the symbol update: "
+                     + ", ".join(w.text() for w in impact.detached) + ". Undo restores them.", "warning")
+        return True
 
     def insert_symbol_dialog(self):
         sid = SymbolPickerDialog(self, "Insert symbol").result
@@ -2257,10 +2300,13 @@ class App:
             m.add_command(label="Zoom to drawing", command=self.canvas_fit_drawing)
             m.add_command(label="Zoom to sheet", command=lambda: self.canvas.fit())
             m.add_command(label="Sheet properties", command=self.focus_properties)
-        try:
-            m.tk_popup(x, y)
-        finally:
-            m.grab_release()
+        # tk_popup installs Tk's native menu grab and keyboard bindings.
+        # Tk's Menu class unposts on Escape and outside clicks, releases its
+        # grab and supports cascades.  Releasing the grab here (tk_popup
+        # returns immediately) disables that behavior; root-level dismissal
+        # handlers can also dispatch Escape to an active CAD command.
+        # Keep the grab under Tk's control, as in the sheet-tab popup.
+        m.tk_popup(x, y)
 
     def _connect_at(self, p):
         s = self.begin_change()
@@ -2664,6 +2710,32 @@ def _startup_splash(root):
     splash.lift()
     splash.update()
     return splash
+
+
+def symbol_update_message(impact, drawn, library, limit=12) -> str:
+    """Text of the confirmation before replacing a project's drawn symbol."""
+    from ..symbols.compare import label, pin_list
+
+    def ends(items):
+        shown = ", ".join(w.text() for w in items[:limit])
+        return shown + (f" and {len(items) - limit} more" if len(items) > limit else "")
+
+    lines = [f"This project draws {label(drawn)} (connection points {pin_list(drawn)}).",
+             f"Your library has {label(library)} (connection points {pin_list(library)}) under the same id.",
+             "", f"Updating the drawings ({impact.components} component(s)) would:"]
+    if impact.diff.renamed:
+        lines.append(f"• change the symbol from “{drawn.get('name', '')}” to “{library.get('name', '')}”")
+    if impact.detached:
+        lines.append(f"• DISCONNECT {len(impact.detached)} wire end(s) — connection point(s) "
+                     f"{', '.join(impact.diff.pins_removed)} no longer exist: {ends(impact.detached)}")
+    if impact.moved:
+        lines.append(f"• re-route {len(impact.moved)} wire end(s) to moved connection points: {ends(impact.moved)}")
+    for d in impact.diff.summary():
+        if not d.startswith(("different name", "connection points only in the drawn", "connection points in other")):
+            lines.append(f"• {d}")
+    lines += ["", "Disconnected wires stay in the drawing but are no longer connected. Undo (Ctrl+Z) "
+                  "reverts the update.", "", "Update the drawings anyway?"]
+    return "\n".join(lines)
 
 
 def main(argv=None):
