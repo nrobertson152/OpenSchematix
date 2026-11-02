@@ -968,10 +968,33 @@ for k, (st, tgt, note) in F4.items():
     PROGRESS[k] = (st, tgt, note)
 for k, (st, tgt, note) in F3.items():
     PROGRESS[k] = (st, tgt, note)
+F6 = {
+    "HO-T08": ("validated", both("cyl.single.ret"),
+               "No spring (external return); the chart's rod-end stub is drawn as a vent without a port"),
+    "HO-T10": ("validated", both("cyl.double.damp1"), "Library ISO style (single-line rod, ports on top)"),
+    "HO-T11": ("validated", both("cyl.double.damp2"), ""),
+    "HO-T12": ("validated", both("cyl.tele.double"), ""),
+    "HO-T13": ("validated", both("cyl.tele.single"), ""),
+    "Y32-6.1.1": ("validated", both("cyl.single.ret.ansi"), "Body open at the rod end, double-line piston"),
+    "Y32-6.1.2": ("validated", both("cyl.double.ansi"), "Drawn as the complete single-end-rod form (6.1.2.1)"),
+    "Y32-6.1.2.1": ("equivalent", both("cyl.double.ansi"), "Same symbol as 6.1.2"),
+    "Y32-6.1.2.2": ("validated", both("cyl.doublerod.ansi"), ""),
+    "Y32-6.1.2.3": ("validated", both("cyl.cushion2"), ""),
+    "Y32-6.1.2.4": ("validated", both("cyl.cushion.adj1"), ""),
+    "Y32-6.1.2.5a": ("validated", both("cyl.bigrod"), ""),
+    "Y32-6.1.2.5b": ("validated", both("cyl.bigrod.cushion2"), ""),
+    "Y32-6.2": ("validated", both("intensifier"), "Ports 1 low-pressure inlet, 2 high-pressure outlet"),
+    "Y32-6.3a": ("validated", "fl.hyd.servopositioner", "Return drawn to a reservoir symbol, as in the source"),
+    "Y32-6.3b": ("validated", "fl.pneu.servopositioner", "Exhaust to atmosphere, as in the source"),
+    "Y32-6.4": ("convention", "-", "Composition rule ('combine two or more basic cylinder symbols'): build "
+                                  "from the cylinder symbols; no separate symbol"),
+}
+for k, (st, tgt, note) in F6.items():
+    PROGRESS[k] = (st, tgt, note)
 # Rows deliberately reopened by a director decision (completed -> pending). The write guard below allows
 # exactly these; any other completed row that would fall back to pending is refused.
 REOPENED = {"Y32-8.3.1", "Y32-8.3.1.2", "Y32-8.3.2.1", "Y32-8.3.2.2", "Y32-8.6.2"}   # decision 1, 2026-11-02
-BATCH_OF = {**{k: "F2" for k in F2}, **{k: "F3" for k in F3}, **{k: "F4" for k in F4}, **{k: "F5" for k in F5}, **{k: "F5b" for k in REOPENED}}
+BATCH_OF = {**{k: "F2" for k in F2}, **{k: "F3" for k in F3}, **{k: "F4" for k in F4}, **{k: "F5" for k in F5}, **{k: "F5b" for k in REOPENED}, **{k: "F6" for k in F6}}
 for r in R:
     if r["key"] in PROGRESS:
         st, tgt, note = PROGRESS[r["key"]]

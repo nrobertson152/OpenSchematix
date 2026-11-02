@@ -52,12 +52,12 @@ HO-T04,HO,Energy Transformations r4,Fixed displacement reversible motor without 
 HO-T05,HO,Energy Transformations r5,Fixed displacement reversible pump with drain,Hydraulic,Pumps & motors,fl.hyd.pump.bidir.drain,validated,F5,"Drain drawn to a reservoir symbol, as in the chart"
 HO-T06,HO,Energy Transformations r6,Fixed displacement reversible motor with drain,Hydraulic,Pumps & motors,fl.hyd.motor.bidir.drain,validated,F5,
 HO-T07,HO,Energy Transformations r7,Rotary actuator,Hydraulic,Pumps & motors,fl.hyd.rotary,validated,F5,Also Y32 8.7.1 oscillator (same function); Port positions inferred from the chart's other rotary devices (not visible in its figure)
-HO-T08,HO,Energy Transformations r8,Single acting cylinder,Hydraulic+Pneumatic,Cylinders,fl.*.cyl.single.ret,pending,F6,No spring drawn (return by external force); distinct from existing spring-return fl.*.cyl.single
+HO-T08,HO,Energy Transformations r8,Single acting cylinder,Hydraulic+Pneumatic,Cylinders,fl.hyd.cyl.single.ret; fl.pneu.cyl.single.ret,validated,F6,No spring drawn (return by external force); distinct from existing spring-return fl.*.cyl.single; No spring (external return); the chart's rod-end stub is drawn as a vent without a port
 HO-T09,HO,Energy Transformations r9,Double acting cylinder,Hydraulic+Pneumatic,Cylinders,fl.*.cyl.double,existing,-,
-HO-T10,HO,Energy Transformations r10,Double acting cylinder with variable damping at one end,Hydraulic+Pneumatic,Cylinders,fl.*.cyl.double.damp1,pending,F6,
-HO-T11,HO,Energy Transformations r11,Double acting cylinder with variable damping at both ends,Hydraulic+Pneumatic,Cylinders,fl.*.cyl.double.damp2,pending,F6,
-HO-T12,HO,Energy Transformations r12,Double acting telescopic cylinder,Hydraulic+Pneumatic,Cylinders,fl.*.cyl.tele.double,pending,F6,
-HO-T13,HO,Energy Transformations r13,Single acting telescopic cylinder,Hydraulic+Pneumatic,Cylinders,fl.*.cyl.tele.single,pending,F6,
+HO-T10,HO,Energy Transformations r10,Double acting cylinder with variable damping at one end,Hydraulic+Pneumatic,Cylinders,fl.hyd.cyl.double.damp1; fl.pneu.cyl.double.damp1,validated,F6,"Library ISO style (single-line rod, ports on top)"
+HO-T11,HO,Energy Transformations r11,Double acting cylinder with variable damping at both ends,Hydraulic+Pneumatic,Cylinders,fl.hyd.cyl.double.damp2; fl.pneu.cyl.double.damp2,validated,F6,
+HO-T12,HO,Energy Transformations r12,Double acting telescopic cylinder,Hydraulic+Pneumatic,Cylinders,fl.hyd.cyl.tele.double; fl.pneu.cyl.tele.double,validated,F6,
+HO-T13,HO,Energy Transformations r13,Single acting telescopic cylinder,Hydraulic+Pneumatic,Cylinders,fl.hyd.cyl.tele.single; fl.pneu.cyl.tele.single,validated,F6,
 HO-T14,HO,Energy Transformations r14,Double acting double rod cylinder,Hydraulic+Pneumatic,Cylinders,fl.*.cyl.doublerod,existing,-,
 HO-T15,HO,Energy Transformations r15,Accumulator with gas pre-charge,Hydraulic,Reservoirs & accumulators,fl.hyd.accumulator.gas,validated,F3,Existing fl.hyd.accumulator is the general form without gas mark
 HO-C01,HO,Energy Control C01,Adjustable 3-way flow control with reverse flow check,Hydraulic,Flow control,fl.hyd.flow.3way.check,pending,F8,
@@ -190,18 +190,18 @@ Y32-5.4.2,Y32,p7 cl.5.4.2,Filter - separator with automatic drain,Hydraulic+Pneu
 Y32-5.5,Y32,p7 cl.5.5,Desiccator (chemical dryer),Pneumatic,Fluid conditioning,fl.pneu.dryer,validated,F4,
 Y32-5.6.1,Y32,p7 cl.5.6.1,"Lubricator, less drain",Pneumatic,Fluid conditioning,fl.pneu.lubricator,validated,F4,
 Y32-5.6.2,Y32,p7 cl.5.6.2,Lubricator with manual drain,Pneumatic,Fluid conditioning,fl.pneu.lubricator.drain,validated,F4,
-Y32-6.1.1,Y32,p7 cl.6.1.1,"Cylinder, single acting",Hydraulic+Pneumatic,Cylinders,fl.*.cyl.single.ret.ansi,pending,F6,Director Q1: ANSI-style variant of fl.*.cyl.single.ret; becomes 'equivalent' if the ANSI drawing is identical. Same as HO-T08
-Y32-6.1.2,Y32,p7 cl.6.1.2,"Cylinder, double acting",Hydraulic+Pneumatic,Cylinders,fl.*.cyl.double.ansi,pending,F6,Director Q1: ANSI-style variant of fl.*.cyl.double; becomes 'equivalent' if the ANSI drawing is identical.
-Y32-6.1.2.1,Y32,p7 cl.6.1.2.1,"Cylinder, double acting, single end rod",Hydraulic+Pneumatic,Cylinders,fl.*.cyl.double,existing,F6,
-Y32-6.1.2.2,Y32,p7 cl.6.1.2.2,"Cylinder, double acting, double end rod",Hydraulic+Pneumatic,Cylinders,fl.*.cyl.doublerod.ansi,pending,F6,Director Q1: ANSI-style variant of fl.*.cyl.doublerod; becomes 'equivalent' if the ANSI drawing is identical.
-Y32-6.1.2.3,Y32,p8 cl.6.1.2.3,"Cylinder, fixed cushion advance and retract",Hydraulic+Pneumatic,Cylinders,fl.*.cyl.cushion2,pending,F6,
-Y32-6.1.2.4,Y32,p8 cl.6.1.2.4,"Cylinder, adjustable cushion advance only",Hydraulic+Pneumatic,Cylinders,fl.*.cyl.cushion.adj1,pending,F6,
-Y32-6.1.2.5a,Y32,p8 cl.6.1.2.5,"Cylinder, rod diameter significant, non cushion",Hydraulic+Pneumatic,Cylinders,fl.*.cyl.bigrod,pending,F6,
-Y32-6.1.2.5b,Y32,p8 cl.6.1.2.5,"Cylinder, rod diameter significant, cushion advance and retract",Hydraulic+Pneumatic,Cylinders,fl.*.cyl.bigrod.cushion2,pending,F6,
-Y32-6.2,Y32,p8 cl.6.2,Pressure intensifier,Hydraulic+Pneumatic,Cylinders,fl.*.intensifier,pending,F6,
-Y32-6.3a,Y32,p8 cl.6.3,"Servo positioner, hydraulic (simplified)",Hydraulic,Cylinders,fl.hyd.servopositioner,pending,F6,
-Y32-6.3b,Y32,p8 cl.6.3,"Servo positioner, pneumatic (simplified)",Pneumatic,Cylinders,fl.pneu.servopositioner,pending,F6,
-Y32-6.4,Y32,p8 cl.6.4,Discrete positioner (combined cylinders),Hydraulic+Pneumatic,Cylinders,fl.*.cyl.multiposition,pending,F6,
+Y32-6.1.1,Y32,p7 cl.6.1.1,"Cylinder, single acting",Hydraulic+Pneumatic,Cylinders,fl.hyd.cyl.single.ret.ansi; fl.pneu.cyl.single.ret.ansi,validated,F6,"Director Q1: ANSI-style variant of fl.*.cyl.single.ret; becomes 'equivalent' if the ANSI drawing is identical. Same as HO-T08; Body open at the rod end, double-line piston"
+Y32-6.1.2,Y32,p7 cl.6.1.2,"Cylinder, double acting",Hydraulic+Pneumatic,Cylinders,fl.hyd.cyl.double.ansi; fl.pneu.cyl.double.ansi,validated,F6,Director Q1: ANSI-style variant of fl.*.cyl.double; becomes 'equivalent' if the ANSI drawing is identical.; Drawn as the complete single-end-rod form (6.1.2.1)
+Y32-6.1.2.1,Y32,p7 cl.6.1.2.1,"Cylinder, double acting, single end rod",Hydraulic+Pneumatic,Cylinders,fl.hyd.cyl.double.ansi; fl.pneu.cyl.double.ansi,equivalent,F6,Same symbol as 6.1.2
+Y32-6.1.2.2,Y32,p7 cl.6.1.2.2,"Cylinder, double acting, double end rod",Hydraulic+Pneumatic,Cylinders,fl.hyd.cyl.doublerod.ansi; fl.pneu.cyl.doublerod.ansi,validated,F6,Director Q1: ANSI-style variant of fl.*.cyl.doublerod; becomes 'equivalent' if the ANSI drawing is identical.
+Y32-6.1.2.3,Y32,p8 cl.6.1.2.3,"Cylinder, fixed cushion advance and retract",Hydraulic+Pneumatic,Cylinders,fl.hyd.cyl.cushion2; fl.pneu.cyl.cushion2,validated,F6,
+Y32-6.1.2.4,Y32,p8 cl.6.1.2.4,"Cylinder, adjustable cushion advance only",Hydraulic+Pneumatic,Cylinders,fl.hyd.cyl.cushion.adj1; fl.pneu.cyl.cushion.adj1,validated,F6,
+Y32-6.1.2.5a,Y32,p8 cl.6.1.2.5,"Cylinder, rod diameter significant, non cushion",Hydraulic+Pneumatic,Cylinders,fl.hyd.cyl.bigrod; fl.pneu.cyl.bigrod,validated,F6,
+Y32-6.1.2.5b,Y32,p8 cl.6.1.2.5,"Cylinder, rod diameter significant, cushion advance and retract",Hydraulic+Pneumatic,Cylinders,fl.hyd.cyl.bigrod.cushion2; fl.pneu.cyl.bigrod.cushion2,validated,F6,
+Y32-6.2,Y32,p8 cl.6.2,Pressure intensifier,Hydraulic+Pneumatic,Cylinders,fl.hyd.intensifier; fl.pneu.intensifier,validated,F6,"Ports 1 low-pressure inlet, 2 high-pressure outlet"
+Y32-6.3a,Y32,p8 cl.6.3,"Servo positioner, hydraulic (simplified)",Hydraulic,Cylinders,fl.hyd.servopositioner,validated,F6,"Return drawn to a reservoir symbol, as in the source"
+Y32-6.3b,Y32,p8 cl.6.3,"Servo positioner, pneumatic (simplified)",Pneumatic,Cylinders,fl.pneu.servopositioner,validated,F6,"Exhaust to atmosphere, as in the source"
+Y32-6.4,Y32,p8 cl.6.4,Discrete positioner (combined cylinders),Hydraulic+Pneumatic,Cylinders,-,convention,F6,Composition rule ('combine two or more basic cylinder symbols'): build from the cylinder symbols; no separate symbol
 Y32-7.1,Y32,p8 cl.7.1,Spring,Hydraulic+Pneumatic,Valve operators,dcv operator 'spring',existing,F1,
 Y32-7.2,Y32,p8 cl.7.2,"Manual, general",Hydraulic+Pneumatic,Valve operators,dcv operator 'manual',existing,F1,
 Y32-7.2.1,Y32,p8 cl.7.2.1,Push button,Hydraulic+Pneumatic,Valve operators,dcv operator 'pushbutton',existing,F1,
