@@ -1,47 +1,59 @@
-# OpenSchematix AI Agent Coordination Protocol
+# OpenSchematix — working with AI agents
 
-This document governs AI-assisted development. Human project director retains final authority.
+## Roles
 
-## Start-of-task procedure
-1. Read this file, [`docs/FUTURE_RELEASE_BACKLOG.md`](docs/FUTURE_RELEASE_BACKLOG.md), `.agents/README.md`, `.agents/TASKS.md`, `.agents/INTEGRATION.md`, and `.agents/RELEASE_STATUS.md` from the latest default branch. The backlog records Director-requested future bugs/features; it is not an active assignment or release authorization.
-2. Read your assigned GitHub Issue, linked PRs, and their most recent comments. Check actual head SHAs and CI before acting.
-3. Confirm the issue has a named owner, scope, acceptance criteria, and no competing implementation owner. If ambiguous, comment and wait.
-4. Use an isolated branch for changes. Never modify another agent's branch without explicit authorization.
-5. Treat documents as coordination snapshots; GitHub PR state, CI, and issue discussion are authoritative for live facts.
+- **Director (`nrobertson152`)** decides what to build, merges pull requests and approves releases. Only the Director merges, releases, tags, deletes branches or changes the licence.
+- **Claude** is the primary developer and architect. It implements issues and opens pull requests.
+- **ChatGPT / Codex** does independent review and testing. Codex reviews every pull request automatically. Comment `@codex <request>` on a PR to ask it for a fix.
+- **GitHub** holds the record: issues, pull requests and CI (`.github/workflows/tests.yml`).
 
-## Communication
-- Assignment, decisions, questions, blockers, and handoffs: comment on the task's GitHub Issue.
-- Code-specific findings and review verdicts: comment/review on the PR, and link the issue.
-- Include: agent name, UTC timestamp, issue/PR number, branch and exact SHA, changed paths, tests run and results, outstanding blockers, next requested action.
-- Read new comments at the start of each work session and before pushing or declaring completion.
-- No silent assumptions that other agents received messages. No automatic notifications unless a separate integration is configured.
+## How work flows
 
-## Ownership and authority
-- One implementation owner per branch and per overlapping set of files.
-- Independent reviewers must not change the reviewed branch.
-- Cross-cutting changes require an Issue comment requesting coordination before editing.
-- Never merge PRs, publish releases, close another agent's work, delete branches, change licenses, or weaken tests without project-director authorization.
-- Never expose tokens, secrets, private project contents, or sensitive logs in public issues.
-- A green CI run is evidence for its exact SHA, not blanket approval.
-- When a task is blocked, post a blocker comment and stop rather than overwrite someone else's work.
+1. The Director opens an issue.
+2. One branch and one focused PR per issue. The PR description says `Closes #<n>`.
+3. CI and Codex review run on the PR. Address the findings, or explain on the PR why a finding is wrong.
+4. The Director merges.
 
-## Handoff format
-```text
-AGENT:
-TASK / ISSUE:
-PR / BRANCH / HEAD SHA:
-SUMMARY:
-FILES CHANGED:
-VALIDATION (commands, environment, counts, skips):
-CI (run URL, exact SHA, individual failing jobs):
-KNOWN RISKS / CONFLICTS:
-NEXT OWNER / REQUESTED DECISION:
+Report results, blockers and questions on the issue or PR, not only in chat. For every test claim, give the exact command, the OS and Python version, the commit, and the pass/fail/skip counts. "Not run" is not "passed". Never weaken, skip or delete a test to get green. Don't push to someone else's open PR branch unless asked.
+
+## Product rules
+
+- GPL-3.0-or-later, free and open source.
+- Fully offline: no network access, accounts, telemetry, ads or feature limits.
+- Standard library only at runtime. `[dev]` extras are for tests and builds only.
+- The engineering core never imports Tkinter.
+- Windows and Linux; Python 3.10–3.13; Tk 8.6 and 9.0.
+- Existing `.schematix`, legacy `.osch`, `.osym` and `.osymlib` files must keep opening. Document any format change, version it, and test it.
+
+## Priorities
+
+1. Data loss, corruption, unsafe writes and recovery.
+2. Wrong engineering output: connectivity, netlist, symbols.
+3. Security, crashes and runaway resource use.
+4. Regressions and platform compatibility.
+5. Performance, features, cosmetics.
+
+Requested future work is in `docs/FUTURE_RELEASE_BACKLOG.md`. It's only planning input; work starts when the Director opens an issue.
+
+## Commands
+
+```sh
+python -m pip install -e ".[dev]"            # Linux also: sudo apt-get install -y xvfb python3-tk
+python -m compileall -q openschematix tests
+xvfb-run -a python -m pytest -q -ra          # Windows: python -m pytest -q -ra
+xvfb-run -a python tests/gui_smoke.py <tmpdir>
 ```
 
-## Release rules
-Release decisions are: AWAITING VERIFICATION, CHANGES REQUIRED, READY FOR REVIEW, READY TO MERGE, DEFERRED.
-Only the project director can authorize a merge or release.
-OpenSchematix application remains GPLv3, free/open-source, offline-first, without telemetry or account requirements.
+CI runs the full suite and GUI smoke tests on Ubuntu and Windows, Python 3.10 and 3.13, for every PR.
 
-## Active-session task continuity
-Read [the standing autonomous engineering protocol](.agents/AGENT_PROTOCOL.md) at session start. After a verified task handoff, check GitHub for your next explicitly assigned task and continue during the active session. This is not background execution; no agent can act when disconnected. The project director retains merge and release authority.
+## Code Review Rules
+
+Reviewers (Codex reads this section) should treat these as blocking:
+
+- Any path that can lose wire-to-terminal attachments or change a net: reopen, undo/redo, revision restore, symbol update, move, rotate.
+- One project's custom symbols affecting another project's saved file, analysis, BOM or exports.
+- Saves that aren't atomic or verified, and malformed files that crash instead of showing a message.
+- Breaking compatibility with existing project or symbol files.
+- Behaviour changes without a regression test, or tests that would pass on the old buggy code.
+- New network access, telemetry, runtime dependencies or Tkinter imports in the core.
+- Windows/Linux differences that the change didn't consider.
