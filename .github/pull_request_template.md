@@ -1,38 +1,24 @@
 ## Summary
+<!-- What changed and what behaviour is now observable. -->
 
-What changed, and why?
+## Issue
+<!-- Closes #<n> -->
 
 ## Scope
-
-- [ ] Focused change; unrelated refactoring excluded
-- [ ] Existing project and symbol compatibility considered
-- [ ] Offline-only behavior preserved (no accounts, network dependencies, or telemetry)
-- [ ] Documentation and release notes updated if needed
+<!-- Files changed and why; anything left out on purpose. -->
 
 ## Verification
+<!-- Exact commands, environment (OS / Python / Tk), SHA, pass/fail/skip/xfail counts. Write "not run" where true.
+     GUI/manual scenarios exercised (or not run, with reason). File-format checks as applicable: project save/reopen, SVG / PDF / DXF export.
+     Windows behaviour counts as verified only from CI on this exact SHA. -->
 
-**Environment:** OS / Python / Tk version:
+## Risks
+<!-- Effects on existing projects, revisions, symbols and libraries; Windows/Linux and Tk versions; exports.
+     Offline-only preserved (no network, accounts or telemetry)? Write "none known" only after checking. -->
 
-**Automated tests:** Command(s) and exact passed / failed / skipped counts:
+## Handoff
+<!-- Paste the handoff block from AGENTS.md and keep it current. -->
 
-**GUI/manual tests:** Scenarios exercised and results (or **not run**, with reason):
-
-**Export/file-format checks:** SVG / PDF / DXF / project save-reopen, as applicable:
-
-- [ ] Regression tests added or updated for changed behavior
-- [ ] Optional export-test dependencies available, or skips explicitly identified
-- [ ] No test results claimed without execution
-
-## Compatibility and risk
-
-Describe effects on existing projects, revisions, symbols, Windows/Linux, Tk versions, and export behavior. Write **none known** only after checking.
-
-## Evidence
-
-Screenshots, example projects, test logs, issue references, or reproduction steps.
-
-## Known limitations / follow-up
-
-List unresolved issues, unverified environments, or explicit exclusions.
-
-**Maintainer review required before merge.**
+<!-- Keep these two lines. Implemented-by-model is your exact model id, or "human". -->
+ARF-Rules: 
+Implemented-by-model: 

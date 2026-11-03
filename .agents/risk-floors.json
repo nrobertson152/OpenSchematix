@@ -1,0 +1,28 @@
+{
+  "comment": "Minimum risk for any change touching these paths (a directory covers everything under it). Enforced when the coordinator sets risk and again at review. Protected file: changes need rules-change and the Director's approval run.",
+  "floors": {
+    "AGENTS.md": "high",
+    "CLAUDE.md": "high",
+    ".agents/": "high",
+    ".github/": "critical",
+    "tools/arf.py": "critical",
+    "tools/arf_tests/": "critical",
+    "openschematix/projectio.py": "high",
+    "openschematix/fileio.py": "high",
+    "openschematix/safejson.py": "high",
+    "openschematix/project.py": "high",
+    "openschematix/model.py": "high",
+    "openschematix/revisions.py": "high",
+    "openschematix/recovery.py": "high",
+    "openschematix/symbols/": "high",
+    "openschematix/userlib.py": "high",
+    "openschematix/connectivity.py": "high",
+    "openschematix/netlist.py": "high",
+    "openschematix/check.py": "high",
+    "openschematix/editing.py": "high",
+    "openschematix/dxf.py": "high",
+    "packaging/": "high",
+    "LICENSE": "critical",
+    "pyproject.toml": "high"
+  }
+}
