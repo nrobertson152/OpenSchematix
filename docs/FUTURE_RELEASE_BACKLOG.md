@@ -3,7 +3,7 @@
 **Source:** Project Director's 2026-11-02 report. **Scope:** future OpenSchematix releases; no release version assigned.
 **Status:** Intake only. These are user-reported observations and requested capabilities, **not independently reproduced defects, implemented features, accepted designs, or assigned work**.
 
-**Agent instruction:** Read this backlog at the start of future development planning (see `AGENTS.md`). Before implementation, check existing Issues/PRs and the current application architecture; create or update a focused issue with one owner, scope, acceptance criteria, regression coverage, dependencies and target release approved by the Director. Do **not** silently include these items in an in-flight release, modify another agent's branch, or claim that the bugs have been verified. Maintain stable IDs below when moving work to issues/PRs.
+**Agent instruction:** This backlog is planning input, not an assignment. Work on an item starts when the Director opens an issue that cites its ID. Don't fold these items into other work or claim the bugs are verified. Keep the stable IDs below when referring to items in issues and PRs.
 
 ## Triage and priority guidance
 
