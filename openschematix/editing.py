@@ -345,30 +345,36 @@ def _end_dir(doc: Document, ref):
     return c.terminal_dirs().get(ref[1]) if c else None
 
 
-def reroute(doc: Document, w: Wire):
-    """Recompute a wire's path from its end points and terminal directions."""
+def reroute(doc: Document, w: Wire, pending=()):
+    """Recompute a wire's path from its end points and terminal directions.
+
+    `pending`: ids of other wires about to be re-routed in the same edit.
+    Their current paths are out of date, so only their loose ends (which
+    stay where they are) are treated as obstacles."""
+    from .geometry import point_on_segment
     p, q = w.points[0], w.points[-1]
     if w.start:
         p = doc.terminal_pos(w.start) or p
     if w.end:
         q = doc.terminal_pos(w.end) or q
     own = {tuple(r) for r in (w.start, w.end) if r}
+    pending = set(pending) - {w.id}
     avoid = [doc.components[r[0]].bbox() for r in (w.start, w.end) if r and r[0] in doc.components]
-    segs = [(a, b) for o in doc.wires.values() if o.id != w.id for a, b in zip(o.points, o.points[1:])]
+    segs = [(a, b) for o in doc.wires.values() if o.id != w.id and o.id not in pending
+            for a, b in zip(o.points, o.points[1:])]
     pts = [tp for c in doc.components.values() for n, tp in c.terminals().items() if (c.id, n) not in own]
-    # Another wire's end point on this path would join the two nets at a
-    # T-junction (netlist): avoid it like a foreign terminal. Its own two
-    # end points are excluded: they are where this wire must go anyway.
-    # A wire end that already lies on this wire is a junction made on purpose:
-    # the new path must keep passing through it instead.
-    from .geometry import point_on_segment
+    # Another wire's end on this path would join the two nets at a T-junction
+    # (netlist): avoid it like a foreign terminal. This wire's own two end
+    # points are excluded: it must go there anyway. A loose wire end already on
+    # this wire is a junction made on purpose: the new path must keep it.
+    # (A wire end on a terminal is covered by the terminal itself.)
     ends = (tuple(p), tuple(q))
     keep = []
     for o in doc.wires.values():
         if o.id == w.id or not o.points:
             continue
-        for pt in (o.points[0], o.points[-1]):
-            if any(same(pt, e) for e in ends):
+        for ref, pt in ((o.start, o.points[0]), (o.end, o.points[-1])):
+            if ref or any(same(pt, e) for e in ends):
                 continue
             if any(point_on_segment(pt, a, b) for a, b in zip(w.points, w.points[1:])):
                 keep.append(pt)
@@ -392,6 +398,7 @@ def sync_wire_ends(doc: Document, wire_ids: Optional[Iterable[int]] = None):
     re-routed; hand-shaped wires are adjusted minimally so their shape is
     preserved."""
     targets = doc.wires.values() if wire_ids is None else [doc.wires[i] for i in wire_ids if i in doc.wires]
+    todo = []
     for w in targets:
         moved = False
         for attr, idx in (("start", 0), ("end", -1)):
@@ -407,7 +414,7 @@ def sync_wire_ends(doc: Document, wire_ids: Optional[Iterable[int]] = None):
         if not moved:
             continue
         if w.auto or len(w.points) <= 3:
-            reroute(doc, w)
+            todo.append(w.id)
         else:
             for attr, which, idx in (("start", "start", 0), ("end", "end", -1)):
                 ref = getattr(w, attr)
@@ -415,6 +422,16 @@ def sync_wire_ends(doc: Document, wire_ids: Optional[Iterable[int]] = None):
                     tp = doc.terminal_pos(ref)
                     if tp and not same(tp, w.points[idx]):
                         w.points = set_endpoint(w.points, which, tp)
+    reroute_all(doc, todo)
+
+
+def reroute_all(doc: Document, wire_ids) -> None:
+    """Re-route several wires of one edit; each avoids those already done."""
+    pending = set(wire_ids)
+    for wid in wire_ids:
+        pending.discard(wid)
+        if wid in doc.wires:
+            reroute(doc, doc.wires[wid], pending)
 
 
 def drag_segment(points: list, index: int, delta: float) -> tuple[list, int]:
@@ -535,10 +552,8 @@ def _transform_items(doc, comp_ids, wire_ids, fn_point, fn_comp, shape_ids=(), f
     sync_wire_ends(doc)
     # A pin a part turns about stays put, so its wire is not re-routed; but
     # another pin of the part can now lie on that wire and would join it.
-    for wid in _own_pin_hits(doc, comp_ids, rigid) - hits_before:
-        w = doc.wires.get(wid)
-        if w is not None and (w.auto or len(w.points) <= 3):
-            reroute(doc, w)
+    reroute_all(doc, [wid for wid in sorted(_own_pin_hits(doc, comp_ids, rigid) - hits_before)
+                      if doc.wires[wid].auto or len(doc.wires[wid].points) <= 3])
 
 
 def _own_pin_hits(doc, comp_ids, rigid) -> set:
