@@ -6,6 +6,18 @@ All notable changes to this project are documented here. Versions follow [Semant
 
 ### Fixed
 
+- Saving no longer gets slower as the revision history grows (#75). The check that reads a project back
+  before replacing the file parsed every stored revision again on every save; revisions already verified in
+  the session, and byte-identical in the new file, are now accepted without parsing them again. With 25
+  automatic snapshots of a 2 MB drawing a save took 1.56 s instead of 0.24 s; it now takes the same time as
+  the first save.
+- That check is also stricter: a save is refused, and the previous file kept, if any part of the new file
+  (a revision or an embedded symbol) would be left out as damaged when reopened. Before, such a file was
+  written and the damaged part silently dropped on the next open.
+- The *Recent files* menu no longer checks whether each file exists when it is rebuilt after every save and
+  open. On Windows that check can block for many seconds per file on a disconnected network drive or share.
+  A recent file that has gone is reported when it is chosen and removed from the list if its folder is still
+  there.
 - Moving, rotating, mirroring or scaling a component no longer creates or breaks connections when its attached
   wires are re-routed. A new route could run over another wire's loose end or along another wire, which joined
   the nets (for example, rotating a transformer with short wires on each terminal shorted S1 to S2), and it
