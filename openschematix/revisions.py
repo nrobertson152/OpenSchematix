@@ -235,7 +235,7 @@ class RevisionStore:
         st, problems = cls(), []
         if not isinstance(index, dict) or not isinstance(index.get("entries"), list):
             return st, ["the revision index is not in the expected format; no revisions could be read"]
-        verdict: dict[str, str | None] = {}     # hash -> problem (None = verified)
+        verdict: dict[tuple[str, str], str | None] = {}  # (hash, semantic kind) -> problem
         seen = set()
         for i, raw in enumerate(index["entries"]):
             try:
@@ -243,10 +243,11 @@ class RevisionStore:
                 if e["n"] in seen:
                     raise RevisionDataError(f"duplicate revision number {e['n']}")
                 for h, kind in [(e["head"], "head")] + [(sh[2], "sheet") for sh in e["sheets"]]:
-                    if h not in verdict:
-                        verdict[h] = _verify_object(st, h, kind, read_object, trusted)
-                    if verdict[h]:
-                        raise RevisionDataError(verdict[h])
+                    key = (h, kind)
+                    if key not in verdict:
+                        verdict[key] = _verify_object(st, h, kind, read_object, trusted)
+                    if verdict[key]:
+                        raise RevisionDataError(verdict[key])
             except RevisionDataError as exc:
                 problems.append(f"{_describe(raw, i)}: {exc}")
                 continue
