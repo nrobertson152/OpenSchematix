@@ -2,6 +2,20 @@
 
 All notable changes to this project are documented here. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.2.0] - unreleased
+
+The release date is set when the release is published. On rebase, the `[Unreleased]` entries of #66 and #79 are folded into this section.
+
+### Fixed
+
+- **Wire numbering (#80, #83).** *Number wires* reserves every manual wire number before it keeps or hands out an automatic one. An automatic number that a connection later in the drawing has set by hand is replaced; other automatic numbers stay where they are. *Set wire number* moves any other connection that had the number automatically, and reports both that and a duplicate manual number. Before, two connections could share a number, which Check drawing reported as an error.
+- **PDF text (#81, #84).** PDF export and Print no longer turn Greek letters and common maths, technical and arrow characters (Ω, Δ, μ, ≤, ≥, ≠, ≈, ∞, √, →, …) into "?". They are drawn with the standard Symbol font; no font is embedded. Characters neither font has are still drawn as "?", but Export PDF and Print now list them in a warning and in the Output panel. `export_pdf` and `export_project_pdf` return the list.
+- **Print temporary files (#82, #85).** *Print* no longer leaves a temporary PDF behind for every print. Print files go into a private folder for each user: per user ID on Linux, created with mode 0700, never followed through a link, and only used when owned by the user. This session's files are deleted when the program closes, except files printed in the last 10 minutes, which a PDF viewer may still be opening. Files left over are deleted at a later start once they are more than a day old, as are leftover 1.1.x print files in the temporary folder.
+
+### Changed
+
+- Version 1.2.0: application, `pyproject.toml`, Windows version resource, README download names, and the writer version of the bundled examples.
+
 ## [1.1.0] - 2026-11-01
 
 ### Fixed

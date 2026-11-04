@@ -23,7 +23,7 @@ def test_ui_version_labels_share_application_constant():
     import inspect
     from openschematix.gui import app
     from openschematix import __version__
-    assert VERSION == __version__ == "1.1.0"
+    assert VERSION == __version__ == "1.2.0"
     assert dialogs.VERSION == app.VERSION == VERSION
     assert 'text=f"Version {VERSION}"' in inspect.getsource(dialogs.AboutDialog)
     assert 'text=f"Version {VERSION}"' in inspect.getsource(app)
