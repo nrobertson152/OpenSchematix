@@ -293,13 +293,16 @@ def _require_same_connections(doc: Document, before: frozenset, action: str, c: 
         comp = doc.components.get(m[1])
         return f"{(comp.designator if comp else '') or m[1]}:{m[2]}"
     old_net = {m: net for net in before for m in net}
-    # a net now holding members of several earlier nets joins them; otherwise a net was split
-    joined = [net for net in after - before if len({old_net.get(m) for m in net} - {None}) > 1]
+    # A net now holding members of several earlier nets joins them. A member
+    # that was on no net before (an unconnected terminal) counts as its own.
+    joined = [net for net in after - before if len({old_net.get(m, m) for m in net}) > 1]
+    split = sorted(before - after, key=len)
     if joined:
         detail = f"it would connect {', '.join(sorted(map(name, max(joined, key=len))))}"
+    elif split:
+        detail = f"it would disconnect {', '.join(sorted(map(name, split[-1])))} from each other"
     else:
-        split = max(before - after, key=len)
-        detail = f"it would disconnect {', '.join(sorted(map(name, split)))} from each other"
+        detail = "its connections would change"
     raise InvalidOperationError(
         f"cannot {action} {c.designator or c.id}: re-routing its wires would change the circuit ({detail}). "
         "Nothing was changed; remove or redraw the affected wires first")

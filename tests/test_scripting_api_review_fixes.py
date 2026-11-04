@@ -201,3 +201,17 @@ def test_save_as_with_a_relative_path_is_anchored(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path / "b")
     p.save()
     assert not (tmp_path / "b" / "x.schematix").exists() and (tmp_path / "a" / "x.schematix").exists()
+
+
+def test_joining_two_unconnected_terminals_raises_the_api_error():
+    """Codex review of #33 at 30522ed: two resistors without wires at (200, 200)
+    and (400, 200); moving the second by (-160, 0) lays its terminal 1 on the
+    first's terminal 2. Before, building the message raised ValueError."""
+    p = api.new_project("isolated")
+    s = p.sheets[0]
+    a = s.place("el.resistor.iec", 200, 200)
+    b = s.place("el.resistor.iec", 400, 200)
+    with pytest.raises(api.InvalidOperationError, match="would change the circuit.*connect"):
+        b.move_by(-160, 0)
+    assert b.position == (400, 200) and p.nets() == []
+    assert issubclass(api.InvalidOperationError, api.ApiError)
