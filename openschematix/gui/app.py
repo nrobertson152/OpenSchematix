@@ -2380,6 +2380,13 @@ class App:
             res = projectio.open_any(path)
         except (OSError, projectio.ProjectFormatError) as e:
             messagebox.showerror("Could not open", f"{path}\n\n{e}", parent=self.root)
+            # Forget a recent file only if it is really gone: its folder is still
+            # there. A file on a drive or share that is offline (Windows also
+            # reports that as "not found") stays for when it is back.
+            if (isinstance(e, FileNotFoundError) and os.path.isdir(os.path.dirname(os.path.abspath(path)))
+                    and self.settings.remove_recent(path)):
+                self.settings.save()
+                self._rebuild_recent()
             return
         self.settings["last_dir"] = os.path.dirname(os.path.abspath(path))
         if res.needs_new_name:
@@ -2507,7 +2514,11 @@ class App:
     def _rebuild_recent(self):
         m = self.recent_menu
         m.delete(0, "end")
-        rec = [p for p in self.settings["recent_files"] if os.path.exists(p)]
+        # No existence check here: this runs after every save and open, on the
+        # UI thread, and on Windows a stat() of a file on a disconnected network
+        # drive or share can block for many seconds (#75). A recent file that
+        # has gone is reported, and removed, when it is chosen (open_path).
+        rec = list(self.settings["recent_files"])
         if not rec:
             m.add_command(label="(none)", state="disabled")
         for p in rec:
