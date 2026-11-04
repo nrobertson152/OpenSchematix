@@ -1,28 +1,21 @@
-# OpenSchematix — three-role engineering workflow
+# OpenSchematix — development workflow
 
-This is the current operating instruction for AI-assisted development. The Director is the decision authority; **Coder**, **Reviewer**, and **Engineering Coordinator** are the only three agent roles. Assignments are per issue or pull request, not permanent ownership by a particular model. See [the coordination playbook](docs/agents/README.md).
+## Roles (Director decision, 2026-11-04)
 
-## Roles and authority
+- **Director (`nrobertson152`)** has sole authority over releases, release/version tags and licensing. The Director may override any decision.
+- **Developer (Claude)** is the only developer. It plans, implements, tests, reviews and merges its own work. No independent reviewer, coordinator or second coding agent is required, and merges need no Director approval.
 
-- **Director (`nrobertson152`)** selects and authorizes work, resolves priorities and disputed risks, and alone approves merges, releases, tags, branch deletion, licence changes and changes to this operating policy.
-- **Coder (Claude or ChatGPT, one assigned owner per task)** investigates, designs, implements, adds regression tests, runs available checks, documents material changes and opens a focused PR. The Coder fixes review findings but does not approve their own work. Do not start a second coding agent on the same task.
-- **Reviewer (ChatGPT, independent of the Coder)** reviews the actual PR diff and latest head SHA, runs or evaluates proportionate tests, checks compatibility and engineering invariants, and reports blocking defects with reproducible evidence. Codex GitHub reviews may provide this review; a comment or green CI is not automatically approval. If ChatGPT is the Coder, a separate ChatGPT review session must be used.
-- **Engineering Coordinator** maintains the authorized issue/PR queue, checks ownership and dependencies, tracks exact-SHA CI/review evidence, identifies conflicts and blockers, and reports merge readiness to the Director. The Coordinator does **not** implement features, approve their own changes, merge, tag, release or independently start scheduled agents.
-
-GitHub issues, PRs, commits, review threads and CI are the authoritative record. Historical multi-agent names, assignments and checkout protocols are not current instructions.
+GitHub issues, PRs, commits and CI are the record. Older role names (Coder, Reviewer, Coordinator, numbered agents) in historical issues and PRs are not current instructions.
 
 ## Work cycle
 
-1. **Authorize:** The Director authorizes an issue or a bounded request. The Coordinator checks existing issues/PRs, records the scope, acceptance criteria, priority, dependencies and assigned Coder. Backlog entries alone are not authorization.
-2. **Implement:** One Coder works on one dedicated branch and opens one focused PR per issue, with `Closes #<n>` where applicable. Do not edit another agent's branch or create overlapping implementations without Director approval.
-3. **Verify:** The Coder posts the exact head SHA, commands actually run, OS/Python/Tk versions as applicable, pass/fail/skip counts, compatibility considerations and unverified cases. A failing or skipped test must not be described as passed.
-4. **Review:** The independent ChatGPT Reviewer checks the latest commit and records actionable findings on the PR. A review of an earlier SHA does not approve later changes. The Coder resolves findings and adds regression tests; the Reviewer rechecks the changes.
-5. **Coordinate:** The Coordinator confirms CI on the current head, review disposition, unresolved threads, dependencies, draft state, conflicts and release scope. Mark ready for Director only when evidence is sufficient; otherwise report a specific blocker.
-6. **Decide:** Only the Director merges or authorizes release. No agent may self-merge, bypass required checks or change branch protections to obtain approval.
+1. Work on a dedicated branch and open a focused PR, with `Closes #<n>` where applicable.
+2. Add regression tests that fail on the old code. Run the commands below locally.
+3. Post the exact head SHA, commands run, versions and pass/fail/skip counts on the PR. Never describe a failing or skipped test as passed.
+4. Merge when the required CI passes on the exact head and the self-review checklist below is clear. Record the merge rationale on the PR. State anything unverified, such as native Windows behaviour, rather than claiming it.
+5. Release-preparation PRs may be merged, but creating, drafting or publishing GitHub Releases and pushing release/version tags is for the Director only.
 
-Keep one active Coder assignment per issue and avoid unnecessary parallel changes to shared subsystems. Do not require GitHub assignment locks, extra agent roles, hourly check-ins or recurring model runs. Existing scheduled agents stay paused unless the Director explicitly authorizes resumption.
-
-Report results and blockers on the relevant issue or PR, not only in chat. For long tasks, leave a durable branch/commit checkpoint with completed work, tests, next steps and blockers. Never weaken, skip or delete tests to make CI green.
+Never weaken, skip or delete tests to make CI green, and never bypass CI.
 
 ## Product rules
 
@@ -41,7 +34,7 @@ Report results and blockers on the relevant issue or PR, not only in chat. For l
 4. Regressions and platform compatibility.
 5. Performance, features, cosmetics.
 
-Requested future work is in `docs/FUTURE_RELEASE_BACKLOG.md`. It is planning input only; work starts when the Director authorizes an issue.
+Requested future work is in `docs/FUTURE_RELEASE_BACKLOG.md`. It is planning input: the Developer picks work from it and from open issues, and the Director decides what goes into each release.
 
 ## Commands
 
@@ -54,9 +47,9 @@ xvfb-run -a python tests/gui_smoke.py <tmpdir>
 
 CI runs the full suite and GUI smoke tests on Ubuntu and Windows, Python 3.10 and 3.13, for PRs. Record the actual run and commit rather than assuming CI passed.
 
-## Code Review Rules
+## Self-review checklist
 
-The independent Reviewer should treat these as blocking:
+Treat any of these as a blocking defect in your own change:
 
 - Any path that can lose wire-to-terminal attachments or change a net: reopen, undo/redo, revision restore, symbol update, move, rotate.
 - One project's custom symbols affecting another project's saved file, analysis, BOM or exports.

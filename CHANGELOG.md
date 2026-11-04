@@ -21,6 +21,32 @@ All notable changes to this project are documented here. Versions follow [Semant
   out must be saved under a new name (`Project.needs_new_name`, `source_path`, `save(...,
   overwrite_original=True)` to replace the original deliberately).
 
+### Fixed
+
+- Saving no longer gets slower as the revision history grows (#75). The check that reads a project back
+  before replacing the file parsed every stored revision again on every save; revisions already verified in
+  the session, and byte-identical in the new file, are now accepted without parsing them again. With 25
+  automatic snapshots of a 2 MB drawing a save took 1.56 s instead of 0.24 s; it now takes the same time as
+  the first save.
+- That check is also stricter: a save is refused, and the previous file kept, if any part of the new file
+  (a revision or an embedded symbol) would be left out as damaged when reopened. Before, such a file was
+  written and the damaged part silently dropped on the next open.
+- The *Recent files* menu no longer checks whether each file exists when it is rebuilt after every save and
+  open. On Windows that check can block for many seconds per file on a disconnected network drive or share.
+  A recent file that has gone is reported when it is chosen and removed from the list if its folder is still
+  there.
+- Moving, rotating, mirroring or scaling a component no longer creates or breaks connections when its attached
+  wires are re-routed. A new route could run over another wire's loose end, along another wire or over another
+  pin of the same part, which joined the nets (for example, rotating a transformer with short wires on each
+  terminal shorted S1 to S2), and it could also leave behind a T-junction made on the wire. The router now
+  always prefers a route without such contacts, keeps existing junctions on the wire, and falls back to a grid
+  search around the wire when the usual route shapes all touch something.
+
+### Performance
+
+- Re-routing attached wires only considers wires and terminals near the route: rotating a part on a sheet with
+  3,600 wires is about 30 times faster.
+
 ## [1.1.0] - 2026-11-01
 
 ### Fixed

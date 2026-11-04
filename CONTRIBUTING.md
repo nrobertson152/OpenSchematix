@@ -12,7 +12,7 @@ OpenSchematix is a free and open-source, local-first schematic editor for electr
 
 ## Before starting
 
-Follow the [three-role engineering workflow](AGENTS.md): one assigned Coder (Claude or ChatGPT), independent ChatGPT Reviewer, and Engineering Coordinator. The Coordinator manages the queue and merge-readiness reporting, not implementation. Only the Director authorizes merges and releases. See [the coordination playbook](docs/agents/README.md).
+Follow the [development workflow](AGENTS.md): a single AI developer (Claude) implements, tests and merges changes through CI. Only the Director authorizes releases, release tags and licensing changes.
 
 
 Review the [future-release backlog](docs/FUTURE_RELEASE_BACKLOG.md) for Director-reported defects and requested capabilities. Entries are intake records, not verified defects or authorized work; use their stable IDs when opening focused issues.

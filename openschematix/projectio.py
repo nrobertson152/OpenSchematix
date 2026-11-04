@@ -189,7 +189,7 @@ def save_project(project: Project, path: str, snapshot: bool = True):
             project.revisions.create(project, "auto", description="Saved")
         data = project_bytes(project)
         # verify before replacing the user's file: the bytes must load back
-        _verify(data)
+        verified = _verify(data, project.revisions)
         atomic_write_bytes(path, data)
     except BaseException:
         _restore_symbols(project, original_symbols)
@@ -203,14 +203,28 @@ def save_project(project: Project, path: str, snapshot: bool = True):
             original_store._schema_cache.update(original_state[2])
             project.revisions = original_store
         raise
+    if verified is not None and verified.project.revisions is not None:
+        # history now known to be intact: later saves need not parse it again
+        project.revisions.mark_verified(verified.project.revisions._verified)
 
 
-def _verify(data: bytes):
+def _verify(data: bytes, revisions: RevisionStore | None = None) -> OpenResult:
+    """Check that `data` reads back as a complete project; raise OSError if not.
+
+    The bytes must load with nothing left out: a part that reopening would
+    drop as damaged is as bad as an unreadable file. Revision objects that
+    `revisions` has already verified, and that are byte-identical in `data`,
+    are not parsed again, so the cost of a save does not grow with the
+    length of the history."""
     import io
     try:
-        read_zip(io.BytesIO(data))
+        res = read_zip(io.BytesIO(data), trusted_revisions=revisions)
     except Exception as e:  # noqa: BLE001 - never replace a good file with a bad one
         raise OSError(f"internal error: the project could not be verified before saving ({e})") from e
+    if res.recovered:
+        raise OSError("internal error: the project could not be verified before saving (parts of it would "
+                      "not reopen: " + "; ".join(res.warnings) + ")")
+    return res
 
 
 # ================================================================ reading
@@ -251,10 +265,11 @@ def _str_list(v) -> bool:
     return isinstance(v, list) and all(isinstance(x, str) for x in v)
 
 
-def read_zip(fileobj) -> OpenResult:
+def read_zip(fileobj, trusted_revisions: RevisionStore | None = None) -> OpenResult:
     """Read a .schematix container. Raises ProjectFormatError if the
     project cannot be read; damaged revisions and embedded symbols are left
-    out with a warning (OpenResult.recovered). Changes no global state."""
+    out with a warning (OpenResult.recovered). Changes no global state.
+    `trusted_revisions`: see RevisionStore.from_file (used by the pre-save check)."""
     try:
         z = zipfile.ZipFile(fileobj)
     except (zipfile.BadZipFile, EOFError, ValueError) as e:
@@ -311,7 +326,7 @@ def read_zip(fileobj) -> OpenResult:
             raise ProjectFormatError(f"the project is damaged: {e}") from None
         store = RevisionStore()
         if manifest.get("revisions"):
-            store, problems = _read_revisions(z)
+            store, problems = _read_revisions(z, trusted_revisions)
             if problems:
                 recovered = True
                 warnings.append(
@@ -366,7 +381,7 @@ def _read_symbols(z: zipfile.ZipFile, entries) -> tuple[dict, list]:
     return out, problems
 
 
-def _read_revisions(z: zipfile.ZipFile) -> tuple[RevisionStore, list]:
+def _read_revisions(z: zipfile.ZipFile, trusted: RevisionStore | None = None) -> tuple[RevisionStore, list]:
     try:
         index = _read_json(z, "revisions/index.json")
     except ProjectFormatError as e:
@@ -381,7 +396,7 @@ def _read_revisions(z: zipfile.ZipFile) -> tuple[RevisionStore, list]:
             return _read_member(z, name)
         except ProjectFormatError as e:
             raise RevisionDataError(str(e)) from None
-    return RevisionStore.from_file(index, read_object)
+    return RevisionStore.from_file(index, read_object, trusted)
 
 
 def open_any(path: str, activate: bool = True) -> OpenResult:
