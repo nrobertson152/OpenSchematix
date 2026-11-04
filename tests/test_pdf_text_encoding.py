@@ -135,3 +135,38 @@ def test_gui_export_tells_the_user_about_characters_shown_as_question_marks(tmp_
         app.recovery.end()
     finally:
         root.destroy()
+
+
+def test_gui_print_reports_unshown_characters_and_uses_the_print_folder(tmp_path, monkeypatch):
+    """Print combines #85 (private print folder) and #84 (report what PDF cannot show)."""
+    import os
+    import sys
+    from openschematix import printtemp
+    monkeypatch.setenv("OPENSCHEMATIX_CONFIG_DIR", str(tmp_path / "config"))
+    try:
+        import tkinter as tk
+        root = tk.Tk()
+        root.withdraw()
+    except Exception as e:  # noqa: BLE001
+        pytest.skip(f"Tk GUI display not available: {e}")
+    try:
+        from openschematix.gui import app as app_mod
+        app = app_mod.App(root, check_recovery=False)
+        (tmp_path / "tmp").mkdir()
+        app.print_files = printtemp.PrintFiles(str(tmp_path / "tmp"))
+        opened, toasts = [], []
+        if sys.platform.startswith("win"):
+            monkeypatch.setattr(os, "startfile", lambda p: opened.append(p), raising=False)
+        else:
+            monkeypatch.setattr(app_mod.subprocess, "Popen", lambda args, **k: opened.append(args[-1]))
+        monkeypatch.setattr(app_mod.messagebox, "showerror", lambda *a, **k: pytest.fail(f"error dialog: {a}"))
+        monkeypatch.setattr(app, "toast", lambda m, kind="info": toasts.append((kind, m)))
+        d = app.doc
+        d.add_shape(Shape(d.new_id(), "text", pts=[(60, 60)], s="10 kΩ Ж", size=12))
+        app.print_()
+        [path] = opened
+        assert os.path.dirname(path) == printtemp.folder(str(tmp_path / "tmp"))
+        assert toasts and toasts[-1][0] == "warning" and "Ж" in toasts[-1][1] and "Ω" not in toasts[-1][1]
+        app.recovery.end()
+    finally:
+        root.destroy()
