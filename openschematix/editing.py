@@ -125,13 +125,20 @@ DIRV = {"l": (-1, 0), "r": (1, 0), "u": (0, -1), "d": (0, 1)}
 STUB = 2 * GRID
 
 
-def route(p: Point, dp: Optional[str], q: Point, dq: Optional[str], avoid=(), avoid_segs=(), avoid_points=()) -> list:
+def route(p: Point, dp: Optional[str], q: Point, dq: Optional[str], avoid=(), avoid_segs=(), avoid_points=(),
+          keep_points=()) -> list:
     """Orthogonal route from p to q. dp/dq are the outward directions of the
     terminals at each end (or None for a free end). The route leaves and
     enters terminals along their lead direction, does not double back, and
     where possible avoids component bodies (`avoid` bounding boxes), running
     on top of other wires (`avoid_segs`) and passing over foreign terminals
-    (`avoid_points`)."""
+    (`avoid_points`).
+
+    Running along another wire or over a foreign point would connect to it,
+    so a route without any such contact is always preferred, however long;
+    if the usual candidates all make contact, wider detours are tried.
+    `keep_points` (junctions on the wire being re-routed) must stay on the
+    route, with the same priority."""
     from .geometry import point_on_segment
 
     def stub(pt, d, n):
@@ -153,6 +160,20 @@ def route(p: Point, dp: Optional[str], q: Point, dq: Optional[str], avoid=(), av
         if not dp and not dq:
             break
 
+    all_boxes, all_segs, all_points = list(avoid), list(avoid_segs), list(avoid_points)
+
+    def near(cands):
+        """Score against obstacles near the candidates only (fast on large sheets)."""
+        nonlocal avoid, avoid_segs, avoid_points
+        xs = [pt[0] for core in cands for pt in core] + [p[0], q[0]]
+        ys = [pt[1] for core in cands for pt in core] + [p[1], q[1]]
+        x0, x1, y0, y1 = min(xs) - 1, max(xs) + 1, min(ys) - 1, max(ys) + 1
+        avoid = [b for b in all_boxes if b[0] <= x1 and b[2] >= x0 and b[1] <= y1 and b[3] >= y0]
+        avoid_segs = [(a, b) for a, b in all_segs
+                      if max(min(a[0], b[0]), x0) <= min(max(a[0], b[0]), x1)
+                      and max(min(a[1], b[1]), y0) <= min(max(a[1], b[1]), y1)]
+        avoid_points = [t for t in all_points if x0 <= t[0] <= x1 and y0 <= t[1] <= y1]
+
     def cost(path):
         raw = []
         for pt in path:  # keep reversals visible: only drop repeated points
@@ -160,6 +181,7 @@ def route(p: Point, dp: Optional[str], q: Point, dq: Optional[str], avoid=(), av
                 raw.append(pt)
         pts = simplify_orthogonal(path)
         c = 0.0
+        contacts = 0
         prev = None
         for a, b in zip(raw, raw[1:]):
             d = (b[0] - a[0], b[1] - a[1])
@@ -174,13 +196,133 @@ def route(p: Point, dp: Optional[str], q: Point, dq: Optional[str], avoid=(), av
             for sa, sb in avoid_segs:
                 if _overlap(a, b, sa, sb):
                     c += 600
+                    contacts += 1
             for t in avoid_points:
                 if point_on_segment(t, a, b):
                     c += 600
+                    contacts += 1
+        for t in keep_points:
+            if not any(point_on_segment(t, a, b) for a, b in zip(raw, raw[1:])):
+                contacts += 1
         c += 8 * len(pts)
-        return c, pts
-    best = min((cost([p] + core + [q]) for core in cores), key=lambda t: t[0])
-    return best[1]
+        return contacts, c, pts
+    near(cores)
+    best = min((cost([p] + core + [q]) for core in cores), key=lambda t: t[:2])
+    if best[0]:
+        # every usual candidate touches something: try lanes further out
+        wide = []
+        # also without the lead-direction stub: a wire end right in front of a
+        # terminal blocks every route that leaves along the lead
+        for sp in ((STUB, 3 * GRID, 0) if dp else (0,)):
+            for sq in ((STUB, 3 * GRID, 0) if dq else (0,)):
+                ps, qs = stub(p, dp, sp), stub(q, dq, sq)
+                lo_x, hi_x = min(ps[0], qs[0]), max(ps[0], qs[0])
+                lo_y, hi_y = min(ps[1], qs[1]), max(ps[1], qs[1])
+                for k in range(1, 9):
+                    for x in (snap(lo_x - k * GRID), snap(hi_x + k * GRID), snap(ps[0] + k * GRID),
+                              snap(ps[0] - k * GRID), snap(qs[0] + k * GRID), snap(qs[0] - k * GRID)):
+                        wide.append([ps, (x, ps[1]), (x, qs[1]), qs])
+                    # bends just before a junction to keep let the route reach it straight
+                    kx = [snap(t[0] + s * k * GRID) for t in keep_points for s in (-1, 1)]
+                    ky = [snap(t[1] + s * k * GRID) for t in keep_points for s in (-1, 1)]
+                    for y in [snap(lo_y - k * GRID), snap(hi_y + k * GRID), snap(ps[1] + k * GRID),
+                              snap(ps[1] - k * GRID), snap(qs[1] + k * GRID), snap(qs[1] - k * GRID)] + ky:
+                        wide.append([ps, (ps[0], y), (qs[0], y), qs])
+                        for x in [snap(lo_x - k * GRID), snap(hi_x + k * GRID)] + kx:
+                            wide.append([ps, (ps[0], y), (x, y), (x, qs[1]), qs])
+                            wide.append([ps, (x, ps[1]), (x, y), (qs[0], y), qs])
+        near(wide)
+        best = min([best] + [cost([p] + core + [q]) for core in wide], key=lambda t: t[:2])
+    if best[0] and not keep_points:
+        # still touching something: search the grid around the route for a clean path
+        found = _grid_route(p, dp, q, dq, all_boxes, all_segs, all_points)
+        if found is not None:
+            return found
+    return best[2]
+
+
+def _grid_route(p, dp, q, dq, boxes, segs, points, margin=12 * GRID, max_nodes=40000):
+    """Orthogonal path from p to q on the grid around them that passes over no
+    point of `points` and runs along no segment of `segs` (crossing is fine);
+    fewest bends and shortest otherwise, avoiding `boxes` where possible.
+    None if there is no such path in the window (or the window is too big)."""
+    import heapq
+    x0, x1 = min(p[0], q[0]) - margin, max(p[0], q[0]) + margin
+    y0, y1 = min(p[1], q[1]) - margin, max(p[1], q[1]) + margin
+    inside = lambda pt: x0 <= pt[0] <= x1 and y0 <= pt[1] <= y1  # noqa: E731
+    pts = [t for t in points if inside(t) and not same(t, p) and not same(t, q)]
+    segs = [(a, b) for a, b in segs if max(min(a[0], b[0]), x0) <= min(max(a[0], b[0]), x1)
+            and max(min(a[1], b[1]), y0) <= min(max(a[1], b[1]), y1)]
+    xs = {snap(x0) + i * GRID for i in range(int((snap(x1) - snap(x0)) / GRID) + 1)} | {p[0], q[0]}
+    ys = {snap(y0) + i * GRID for i in range(int((snap(y1) - snap(y0)) / GRID) + 1)} | {p[1], q[1]}
+    # off-grid obstacles become lattice lines, so "on an edge" means "is a node"
+    xs |= {t[0] for t in pts} | {c[0] for a, b in segs for c in (a, b) if x0 <= c[0] <= x1}
+    ys |= {t[1] for t in pts} | {c[1] for a, b in segs for c in (a, b) if y0 <= c[1] <= y1}
+    xs, ys = sorted(xs), sorted(ys)
+    if len(xs) * len(ys) > max_nodes:
+        return None
+    xi, yi = {x: i for i, x in enumerate(xs)}, {y: i for i, y in enumerate(ys)}
+    blocked = {(xi[t[0]], yi[t[1]]) for t in pts if t[0] in xi and t[1] in yi}
+    hsegs, vsegs = {}, {}     # other wires' segments by row / column
+    for a, b in segs:
+        if abs(a[1] - b[1]) < 0.01:
+            hsegs.setdefault(round(a[1], 2), []).append((min(a[0], b[0]), max(a[0], b[0])))
+        elif abs(a[0] - b[0]) < 0.01:
+            vsegs.setdefault(round(a[0], 2), []).append((min(a[1], b[1]), max(a[1], b[1])))
+    shrunk = [(b[0] + 0.5, b[1] + 0.5, b[2] - 0.5, b[3] - 0.5) for b in boxes
+              if b[0] <= x1 and b[2] >= x0 and b[1] <= y1 and b[3] >= y0]
+
+    def edge_cost(a, b):
+        mx, my = (a[0] + b[0]) / 2, (a[1] + b[1]) / 2
+        if abs(a[1] - b[1]) < 0.01:
+            if any(lo < mx < hi for lo, hi in hsegs.get(round(a[1], 2), ())):
+                return None
+        elif any(lo < my < hi for lo, hi in vsegs.get(round(a[0], 2), ())):
+            return None
+        c = abs(a[0] - b[0]) + abs(a[1] - b[1])
+        if any(bx0 < mx < bx1 and by0 < my < by1 for bx0, by0, bx1, by1 in shrunk):
+            c += 400
+        return c
+
+    start, goal = (xi[p[0]], yi[p[1]]), (xi[q[0]], yi[q[1]])
+    steps = {"l": (-1, 0), "r": (1, 0), "u": (0, -1), "d": (0, 1)}
+    enter = {"l": "r", "r": "l", "u": "d", "d": "u"}.get(dq) if dq else None
+    h = lambda n: abs(xs[n[0]] - q[0]) + abs(ys[n[1]] - q[1])  # noqa: E731
+    best = {(start, None): 0.0}
+    heap = [(h(start), 0.0, start, None, None)]
+    prev = {}
+    while heap:
+        _f, g, node, d, _ = heapq.heappop(heap)
+        if best.get((node, d), float("inf")) < g:
+            continue
+        if node == goal:
+            path = [(xs[node[0]], ys[node[1]])]
+            key = (node, d)
+            while key in prev:
+                key = prev[key]
+                path.append((xs[key[0][0]], ys[key[0][1]]))
+            return simplify_orthogonal(path[::-1])
+        for nd, (sx, sy) in steps.items():
+            nxt = (node[0] + sx, node[1] + sy)
+            if not (0 <= nxt[0] < len(xs) and 0 <= nxt[1] < len(ys)) or nxt in blocked:
+                continue
+            if d is not None and steps[d] == (-sx, -sy):
+                continue
+            c = edge_cost((xs[node[0]], ys[node[1]]), (xs[nxt[0]], ys[nxt[1]]))
+            if c is None:
+                continue
+            if d is None:
+                c += 0 if (dp is None or nd == dp) else 200   # leave along the lead
+            elif nd != d:
+                c += 8                                         # a bend
+            if nxt == goal and enter is not None and nd != enter:
+                c += 200                                       # arrive along the lead
+            ng = g + c
+            if ng < best.get((nxt, nd), float("inf")):
+                best[(nxt, nd)] = ng
+                prev[(nxt, nd)] = (node, d)
+                heapq.heappush(heap, (ng + h(nxt), ng, nxt, nd, None))
+    return None
 
 
 def _overlap(a, b, c, d) -> bool:
@@ -208,18 +350,42 @@ def _end_dir(doc: Document, ref):
     return c.terminal_dirs().get(ref[1]) if c else None
 
 
-def reroute(doc: Document, w: Wire):
-    """Recompute a wire's path from its end points and terminal directions."""
+def reroute(doc: Document, w: Wire, pending=()):
+    """Recompute a wire's path from its end points and terminal directions.
+
+    `pending`: ids of other wires about to be re-routed in the same edit.
+    Their current paths are out of date, so only their loose ends (which
+    stay where they are) are treated as obstacles."""
+    from .geometry import point_on_segment
     p, q = w.points[0], w.points[-1]
     if w.start:
         p = doc.terminal_pos(w.start) or p
     if w.end:
         q = doc.terminal_pos(w.end) or q
     own = {tuple(r) for r in (w.start, w.end) if r}
+    pending = set(pending) - {w.id}
     avoid = [doc.components[r[0]].bbox() for r in (w.start, w.end) if r and r[0] in doc.components]
-    segs = [(a, b) for o in doc.wires.values() if o.id != w.id for a, b in zip(o.points, o.points[1:])]
+    segs = [(a, b) for o in doc.wires.values() if o.id != w.id and o.id not in pending
+            for a, b in zip(o.points, o.points[1:])]
     pts = [tp for c in doc.components.values() for n, tp in c.terminals().items() if (c.id, n) not in own]
-    w.points = route(p, _end_dir(doc, w.start), q, _end_dir(doc, w.end), avoid, segs, pts)
+    # Another wire's end on this path would join the two nets at a T-junction
+    # (netlist): avoid it like a foreign terminal. This wire's own two end
+    # points are excluded: it must go there anyway. A loose wire end already on
+    # this wire is a junction made on purpose: the new path must keep it.
+    # (A wire end on a terminal is covered by the terminal itself.)
+    ends = (tuple(p), tuple(q))
+    keep = []
+    for o in doc.wires.values():
+        if o.id == w.id or not o.points:
+            continue
+        for ref, pt in ((o.start, o.points[0]), (o.end, o.points[-1])):
+            if ref or any(same(pt, e) for e in ends):
+                continue
+            if any(point_on_segment(pt, a, b) for a, b in zip(w.points, w.points[1:])):
+                keep.append(pt)
+            else:
+                pts.append(pt)
+    w.points = route(p, _end_dir(doc, w.start), q, _end_dir(doc, w.end), avoid, segs, pts, keep)
     w.auto = True
 
 
@@ -237,6 +403,7 @@ def sync_wire_ends(doc: Document, wire_ids: Optional[Iterable[int]] = None):
     re-routed; hand-shaped wires are adjusted minimally so their shape is
     preserved."""
     targets = doc.wires.values() if wire_ids is None else [doc.wires[i] for i in wire_ids if i in doc.wires]
+    todo = []
     for w in targets:
         moved = False
         for attr, idx in (("start", 0), ("end", -1)):
@@ -252,7 +419,7 @@ def sync_wire_ends(doc: Document, wire_ids: Optional[Iterable[int]] = None):
         if not moved:
             continue
         if w.auto or len(w.points) <= 3:
-            reroute(doc, w)
+            todo.append(w.id)
         else:
             for attr, which, idx in (("start", "start", 0), ("end", "end", -1)):
                 ref = getattr(w, attr)
@@ -260,6 +427,16 @@ def sync_wire_ends(doc: Document, wire_ids: Optional[Iterable[int]] = None):
                     tp = doc.terminal_pos(ref)
                     if tp and not same(tp, w.points[idx]):
                         w.points = set_endpoint(w.points, which, tp)
+    reroute_all(doc, todo)
+
+
+def reroute_all(doc: Document, wire_ids) -> None:
+    """Re-route several wires of one edit; each avoids those already done."""
+    pending = set(wire_ids)
+    for wid in wire_ids:
+        pending.discard(wid)
+        if wid in doc.wires:
+            reroute(doc, doc.wires[wid], pending)
 
 
 def drag_segment(points: list, index: int, delta: float) -> tuple[list, int]:
@@ -357,6 +534,7 @@ def _transform_items(doc, comp_ids, wire_ids, fn_point, fn_comp, shape_ids=(), f
     single = len(comp_ids) == 1 and not wire_ids and not shape_ids and center is None
     cx, cy = center if center is not None else selection_center(doc, comp_ids, wire_ids, shape_ids)
     rigid = _rigid_wires(doc, comp_ids, wire_ids)
+    hits_before = _own_pin_hits(doc, comp_ids, rigid)
     for cid in comp_ids:
         c = doc.components.get(cid)
         if not c:
@@ -377,6 +555,28 @@ def _transform_items(doc, comp_ids, wire_ids, fn_point, fn_comp, shape_ids=(), f
             if s:
                 fn_shape(s, (cx, cy))
     sync_wire_ends(doc)
+    # A pin a part turns about stays put, so its wire is not re-routed; but
+    # another pin of the part can now lie on that wire and would join it.
+    reroute_all(doc, [wid for wid in sorted(_own_pin_hits(doc, comp_ids, rigid) - hits_before)
+                      if doc.wires[wid].auto or len(doc.wires[wid].points) <= 3])
+
+
+def _own_pin_hits(doc, comp_ids, rigid) -> set:
+    """Wires (not moved rigidly) attached to one of `comp_ids` that pass over
+    another pin of the same component."""
+    from .geometry import point_on_segment
+    out = set()
+    for w in doc.wires.values():
+        if w.id in rigid:
+            continue
+        for ref in (w.start, w.end):
+            c = doc.components.get(ref[0]) if ref else None
+            if c is None or c.id not in comp_ids:
+                continue
+            if any(n != ref[1] and any(point_on_segment(t, a, b) for a, b in zip(w.points, w.points[1:]))
+                   for n, t in c.terminals().items()):
+                out.add(w.id)
+    return out
 
 
 def rotate_items(doc: Document, comp_ids, wire_ids, clockwise: bool = True, shape_ids=(), center=None):
