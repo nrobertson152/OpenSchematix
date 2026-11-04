@@ -158,6 +158,37 @@ def test_a_folder_others_can_write_to_is_not_used(tmp_path):
     assert os.path.dirname(p) != d
 
 
+@pytest.mark.skipif(not hasattr(os, "getuid"), reason="POSIX permissions")
+def test_private_fallback_folders_are_cleaned_by_a_later_start(tmp_path):
+    """Codex review of #85: a session that printed into a fallback folder keeps
+    its recent files at exit; a later start must still remove them by age."""
+    d = printtemp.folder(str(tmp_path))
+    os.mkdir(d)
+    os.chmod(d, 0o777)                                       # untrusted: forces the fallback
+    pf = printtemp.PrintFiles(str(tmp_path))
+    p = pf.new_path()
+    fallback = os.path.dirname(p)
+    assert fallback != d and pf.cleanup() == [p]             # just printed: kept at exit
+    assert printtemp.cleanup_stale(str(tmp_path)) == 0 and os.path.exists(p)   # still young
+    _age(p, 25)
+    assert printtemp.cleanup_stale(str(tmp_path)) == 1
+    assert not os.path.exists(p) and not os.path.exists(fallback)
+    assert os.path.isdir(d)                                  # the untrusted folder is left alone
+
+
+@pytest.mark.skipif(sys.platform.startswith("win"), reason="symlinks need privileges on Windows")
+def test_a_linked_fallback_name_is_not_followed(tmp_path):
+    docs = tmp_path / "documents"
+    docs.mkdir()
+    report = docs / "print-report.pdf"
+    report.write_bytes(b"%PDF")
+    _age(str(report), 100)
+    base = tmp_path / "tmp"
+    base.mkdir()
+    os.symlink(docs, base / "openschematix-print-abcd1234")
+    assert printtemp.cleanup_stale(str(base)) == 0 and report.exists()
+
+
 @pytest.mark.skipif(not hasattr(os, "getuid"), reason="POSIX ownership")
 def test_a_folder_owned_by_another_user_is_not_trusted(tmp_path, monkeypatch):
     d = tmp_path / "x"
