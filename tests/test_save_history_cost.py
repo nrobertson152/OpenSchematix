@@ -122,3 +122,25 @@ def test_verification_state_is_not_written_to_the_file(tmp_path):
     p.revisions._verified.clear()
     assert projectio.project_bytes(p) == _read(b)
     assert os.path.getsize(a) == os.path.getsize(b)
+
+
+def test_revision_head_cannot_masquerade_as_sheet_during_save(tmp_path):
+    """An object valid as a project header is not valid as a sheet.
+
+    A hash-only verification cache previously let a header referenced as a
+    sheet bypass the sheet schema check, allowing a damaged revision index
+    to be written even though restore would reconstruct the wrong content.
+    """
+    p = _project()
+    path = str(tmp_path / "p.schematix")
+    projectio.save_project(p, path)
+    original = _read(path)
+    entry = p.revisions.entries[0]
+    assert entry["head"] != entry["sheets"][0][2]
+    entry["sheets"][0][2] = entry["head"]
+    with pytest.raises(OSError, match="would not reopen|could not be verified"):
+        projectio.save_project(p, path, snapshot=False)
+    assert _read(path) == original
+    reopened = projectio.open_any(path)
+    assert not reopened.recovered
+    assert len(reopened.project.revisions.entries) == 1
