@@ -238,7 +238,11 @@ def test_inventory_traces_every_new_symbol():
                 assert t in built, (r["key"], t)
 
 
-ALLOWED = ("openschematix/symbols/", "openschematix/gui/dialogs.py", "tests/", "docs/", "tools/", "CHANGELOG.md")
+# openschematix/bom.py: one predicate keeping built-in drafting elements out of the BOM even with a part
+# number (the drafting-element exemption's "never in the BOM" rule; Codex review of #66). Scope extension
+# reported to the director on the PR.
+ALLOWED = ("openschematix/symbols/", "openschematix/gui/dialogs.py", "openschematix/bom.py", "tests/", "docs/",
+           "tools/", "CHANGELOG.md")
 BRANCH = "feature/expanded-default-symbol-libraries"
 
 
