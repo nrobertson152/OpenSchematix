@@ -143,3 +143,47 @@ def test_gui_reports_the_renumbered_connection_and_undo_restores_both(tmp_path, 
         app.recovery.end()
     finally:
         root.destroy()
+
+
+def test_override_uses_the_projects_own_symbols_when_another_project_is_active():
+    """Codex review of #83: set_net_number must resolve terminal domains as its
+    own project. Here a custom symbol id is electrical in A but hydraulic in the
+    active project B; resolving through B made A's connection look hydraulic, so
+    its automatic number was not moved and two connections shared it."""
+    from openschematix import symbols
+    from openschematix.model import Wire
+    from openschematix.symbols.custom import blank_symbol, normalise
+
+    sid = "user:numbering-scope"
+
+    def definition(ptype, name):
+        d = blank_symbol(name)
+        d["id"] = sid
+        d["prims"] = [{"k": "circle", "c": [0, 0], "r": 10}]
+        d["pins"] = [{"id": "1", "name": "1", "x": 20, "y": 0, "dir": "r", "type": ptype}]
+        return normalise(d)
+
+    def project(ptype, name, n):
+        p = new_project(name)
+        p.symbols[sid] = definition(ptype, name)
+        p.activate_symbols()
+        d = p.sheets[0]
+        ws = []
+        for k in range(n):
+            c = editing.place(d, sid, 100, 100 + 100 * k)
+            x, y = c.terminals()["1"]
+            w = Wire(d.new_id(), [(x, y), (x + 60, y)], [c.id, "1"], None)
+            d.add_wire(w)
+            ws.append(w)
+        return p, d, ws
+
+    try:
+        a, da, (w1, w2) = project("elec.passive", "A", 2)
+        netlist.assign_wire_numbers(a)
+        assert (w1.number, w2.number) == ("1", "2")
+        project("hyd.work", "B", 1)                          # B is now the active project
+        res = netlist.set_net_number(a, da.uid, w2.id, "1")
+        assert w2.number == "1" and w1.number not in ("", "1"), (w1.number, w2.number)
+        assert res.renumbered == [("1", w1.number)]
+    finally:
+        symbols.set_project_symbols([])

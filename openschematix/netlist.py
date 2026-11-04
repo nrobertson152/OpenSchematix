@@ -397,6 +397,7 @@ class NumberChange:
     manual_clash: int = 0                               # other connections with the same manual number
 
 
+@symbols.project_scoped
 def set_net_number(project, sheet_uid: str, wire_id: int, number: str) -> NumberChange:
     """Manual override: give the whole net of a wire this number (empty
     string clears the override).
