@@ -193,7 +193,7 @@ packaging/          PyInstaller spec, Windows and Linux build scripts, installer
 docs/               reference documentation
 ```
 
-Development uses one assigned **Coder** (Claude or ChatGPT), one independent **ChatGPT Reviewer**, and an **Engineering Coordinator**, with the Director retaining merge and release authority. See [AGENTS.md](AGENTS.md) and [the coordination playbook](docs/agents/README.md).
+Development is done by a single AI developer (Claude) that tests and merges its own work through CI; the Director retains release and licensing authority. See [AGENTS.md](AGENTS.md).
 
 Contributions should keep the core dependency-free and include tests. Please keep the drawing conventions
 honest: if a symbol's geometry cannot be confirmed, leave it out and list it in `docs/SYMBOLS.md`.
