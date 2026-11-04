@@ -233,7 +233,91 @@ def route(p: Point, dp: Optional[str], q: Point, dq: Optional[str], avoid=(), av
                             wide.append([ps, (x, ps[1]), (x, y), (qs[0], y), qs])
         near(wide)
         best = min([best] + [cost([p] + core + [q]) for core in wide], key=lambda t: t[:2])
+    if best[0] and not keep_points:
+        # still touching something: search the grid around the route for a clean path
+        found = _grid_route(p, dp, q, dq, all_boxes, all_segs, all_points)
+        if found is not None:
+            return found
     return best[2]
+
+
+def _grid_route(p, dp, q, dq, boxes, segs, points, margin=12 * GRID, max_nodes=40000):
+    """Orthogonal path from p to q on the grid around them that passes over no
+    point of `points` and runs along no segment of `segs` (crossing is fine);
+    fewest bends and shortest otherwise, avoiding `boxes` where possible.
+    None if there is no such path in the window (or the window is too big)."""
+    import heapq
+    x0, x1 = min(p[0], q[0]) - margin, max(p[0], q[0]) + margin
+    y0, y1 = min(p[1], q[1]) - margin, max(p[1], q[1]) + margin
+    inside = lambda pt: x0 <= pt[0] <= x1 and y0 <= pt[1] <= y1  # noqa: E731
+    pts = [t for t in points if inside(t) and not same(t, p) and not same(t, q)]
+    segs = [(a, b) for a, b in segs if max(min(a[0], b[0]), x0) <= min(max(a[0], b[0]), x1)
+            and max(min(a[1], b[1]), y0) <= min(max(a[1], b[1]), y1)]
+    xs = {snap(x0) + i * GRID for i in range(int((snap(x1) - snap(x0)) / GRID) + 1)} | {p[0], q[0]}
+    ys = {snap(y0) + i * GRID for i in range(int((snap(y1) - snap(y0)) / GRID) + 1)} | {p[1], q[1]}
+    # off-grid obstacles become lattice lines, so "on an edge" means "is a node"
+    xs |= {t[0] for t in pts} | {c[0] for a, b in segs for c in (a, b) if x0 <= c[0] <= x1}
+    ys |= {t[1] for t in pts} | {c[1] for a, b in segs for c in (a, b) if y0 <= c[1] <= y1}
+    xs, ys = sorted(xs), sorted(ys)
+    if len(xs) * len(ys) > max_nodes:
+        return None
+    xi, yi = {x: i for i, x in enumerate(xs)}, {y: i for i, y in enumerate(ys)}
+    blocked = {(xi[t[0]], yi[t[1]]) for t in pts if t[0] in xi and t[1] in yi}
+    hsegs = [(a[1], min(a[0], b[0]), max(a[0], b[0])) for a, b in segs if abs(a[1] - b[1]) < 0.01]
+    vsegs = [(a[0], min(a[1], b[1]), max(a[1], b[1])) for a, b in segs if abs(a[0] - b[0]) < 0.01]
+    shrunk = [(b[0] + 0.5, b[1] + 0.5, b[2] - 0.5, b[3] - 0.5) for b in boxes]
+
+    def edge_cost(a, b):
+        mx, my = (a[0] + b[0]) / 2, (a[1] + b[1]) / 2
+        if abs(a[1] - b[1]) < 0.01:
+            if any(abs(y - my) < 0.01 and lo < mx < hi for y, lo, hi in hsegs):
+                return None
+        elif any(abs(x - mx) < 0.01 and lo < my < hi for x, lo, hi in vsegs):
+            return None
+        c = abs(a[0] - b[0]) + abs(a[1] - b[1])
+        if any(bx0 < mx < bx1 and by0 < my < by1 for bx0, by0, bx1, by1 in shrunk):
+            c += 400
+        return c
+
+    start, goal = (xi[p[0]], yi[p[1]]), (xi[q[0]], yi[q[1]])
+    steps = {"l": (-1, 0), "r": (1, 0), "u": (0, -1), "d": (0, 1)}
+    enter = {"l": "r", "r": "l", "u": "d", "d": "u"}.get(dq) if dq else None
+    h = lambda n: abs(xs[n[0]] - q[0]) + abs(ys[n[1]] - q[1])  # noqa: E731
+    best = {(start, None): 0.0}
+    heap = [(h(start), 0.0, start, None, None)]
+    prev = {}
+    while heap:
+        _f, g, node, d, _ = heapq.heappop(heap)
+        if best.get((node, d), float("inf")) < g:
+            continue
+        if node == goal:
+            path = [(xs[node[0]], ys[node[1]])]
+            key = (node, d)
+            while key in prev:
+                key = prev[key]
+                path.append((xs[key[0][0]], ys[key[0][1]]))
+            return simplify_orthogonal(path[::-1])
+        for nd, (sx, sy) in steps.items():
+            nxt = (node[0] + sx, node[1] + sy)
+            if not (0 <= nxt[0] < len(xs) and 0 <= nxt[1] < len(ys)) or nxt in blocked:
+                continue
+            if d is not None and steps[d] == (-sx, -sy):
+                continue
+            c = edge_cost((xs[node[0]], ys[node[1]]), (xs[nxt[0]], ys[nxt[1]]))
+            if c is None:
+                continue
+            if d is None:
+                c += 0 if (dp is None or nd == dp) else 200   # leave along the lead
+            elif nd != d:
+                c += 8                                         # a bend
+            if nxt == goal and enter is not None and nd != enter:
+                c += 200                                       # arrive along the lead
+            ng = g + c
+            if ng < best.get((nxt, nd), float("inf")):
+                best[(nxt, nd)] = ng
+                prev[(nxt, nd)] = (node, d)
+                heapq.heappush(heap, (ng + h(nxt), ng, nxt, nd, None))
+    return None
 
 
 def _overlap(a, b, c, d) -> bool:
