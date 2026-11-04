@@ -45,7 +45,7 @@ feature limits. If you find it useful you can optionally [support development on
 - **DXF import and export**, **revision history** with graphical comparison, **autosave and crash recovery**,
   reusable **circuit templates**, layers, grouping, locking, alignment.
 
-The full release history is in [`CHANGELOG.md`](CHANGELOG.md); see the [v1.1.0 release notes](docs/RELEASE_NOTES_1.1.0.md) for highlights and compatibility details.
+The full release history is in [`CHANGELOG.md`](CHANGELOG.md); see the [v1.1.0 release notes](docs/RELEASE_NOTES_1.1.0.md) for highlights and compatibility details. For reported bugs and requested future improvements, see the [future release backlog](docs/FUTURE_RELEASE_BACKLOG.md) (not a release commitment).
 
 ## Installing
 
