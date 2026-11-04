@@ -263,16 +263,21 @@ def _grid_route(p, dp, q, dq, boxes, segs, points, margin=12 * GRID, max_nodes=4
         return None
     xi, yi = {x: i for i, x in enumerate(xs)}, {y: i for i, y in enumerate(ys)}
     blocked = {(xi[t[0]], yi[t[1]]) for t in pts if t[0] in xi and t[1] in yi}
-    hsegs = [(a[1], min(a[0], b[0]), max(a[0], b[0])) for a, b in segs if abs(a[1] - b[1]) < 0.01]
-    vsegs = [(a[0], min(a[1], b[1]), max(a[1], b[1])) for a, b in segs if abs(a[0] - b[0]) < 0.01]
-    shrunk = [(b[0] + 0.5, b[1] + 0.5, b[2] - 0.5, b[3] - 0.5) for b in boxes]
+    hsegs, vsegs = {}, {}     # other wires' segments by row / column
+    for a, b in segs:
+        if abs(a[1] - b[1]) < 0.01:
+            hsegs.setdefault(round(a[1], 2), []).append((min(a[0], b[0]), max(a[0], b[0])))
+        elif abs(a[0] - b[0]) < 0.01:
+            vsegs.setdefault(round(a[0], 2), []).append((min(a[1], b[1]), max(a[1], b[1])))
+    shrunk = [(b[0] + 0.5, b[1] + 0.5, b[2] - 0.5, b[3] - 0.5) for b in boxes
+              if b[0] <= x1 and b[2] >= x0 and b[1] <= y1 and b[3] >= y0]
 
     def edge_cost(a, b):
         mx, my = (a[0] + b[0]) / 2, (a[1] + b[1]) / 2
         if abs(a[1] - b[1]) < 0.01:
-            if any(abs(y - my) < 0.01 and lo < mx < hi for y, lo, hi in hsegs):
+            if any(lo < mx < hi for lo, hi in hsegs.get(round(a[1], 2), ())):
                 return None
-        elif any(abs(x - mx) < 0.01 and lo < my < hi for x, lo, hi in vsegs):
+        elif any(lo < my < hi for lo, hi in vsegs.get(round(a[0], 2), ())):
             return None
         c = abs(a[0] - b[0]) + abs(a[1] - b[1])
         if any(bx0 < mx < bx1 and by0 < my < by1 for bx0, by0, bx1, by1 in shrunk):
