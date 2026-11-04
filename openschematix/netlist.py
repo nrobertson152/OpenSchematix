@@ -13,6 +13,9 @@ one sheet), so drawings, reports and checks always agree.
 
 Also provides automatic wire numbering, terminal-strip reports and
 connection / wiring lists.
+
+Performance: ``_sheet_nodes`` uses the same spatial wire index as
+``connectivity.analyse`` so wire-end queries stay near-linear in drawing size.
 """
 from __future__ import annotations
 
@@ -23,6 +26,7 @@ import re
 from dataclasses import dataclass, field
 
 from . import symbols
+from .connectivity import _WireIndex
 from .geometry import point_on_segment, same
 from .symbols.general import OFFPAGE_IDS
 
@@ -170,6 +174,11 @@ def _sheet_nodes(doc, uf: _UF):
         for n in nodes[1:]:
             uf.union(nodes[0], n)
     resolve, cache = symbol_resolver_for(doc), {}
+    # Wire-to-wire unions at end points: same geometric rules as connectivity.analyse.
+    # A spatial index (shared with connectivity) avoids the O(W^2) full scan; candidates
+    # are a superset of wires that can touch each end point, so union-find membership is
+    # unchanged.
+    index = _WireIndex(wires)
     for w in wires:
         for ref in (w.start, w.end):
             if pin_ref_connects(doc, ref, resolve, cache):
@@ -178,7 +187,7 @@ def _sheet_nodes(doc, uf: _UF):
             p = w.points[idx]
             for n in term_at.get(_key(p), []):
                 uf.union(("w", uid, w.id), n)
-            for o in wires:
+            for o in index.candidates(p, wires):
                 if o.id == w.id:
                     continue
                 if any(point_on_segment(p, a, b) for a, b in zip(o.points, o.points[1:])):
