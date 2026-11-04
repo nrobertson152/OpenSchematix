@@ -14,7 +14,7 @@ from .. import (APP_NAME, COPYRIGHT, DONATE_URL, LICENSE_NAME, LICENSE_URL, VERS
 from ..model import STANDARD_SCALES, Component
 from ..project import META_FIELDS, NUMBERING_SCHEMES
 from ..render import CROSSING_STYLES, component_prims
-from ..symbols.fluid import OPERATORS, PATTERNS, VALVE_TYPES, default_valve_params
+from ..symbols.fluid import OPERATORS, PATTERNS, VALVE_OPTIONS, VALVE_TYPES, default_valve_params
 from . import theme as th
 from .canvas_view import draw_items
 from .widgets import SearchEntry, Tooltip, current_theme  # noqa: F401  (Tooltip re-exported)
@@ -463,6 +463,8 @@ class SymbolPickerDialog(Dialog):
 
 # ================================================================ valve
 class ValveDialog(Dialog):
+    OP_SLOTS = 3          # operators per side (e.g. spring + solenoid-operated pilot + manual override)
+
     def __init__(self, app, comp_id):
         super().__init__(app, "Configure directional control valve")
         self.comp = app.doc.components[comp_id]
@@ -489,12 +491,19 @@ class ValveDialog(Dialog):
             box.grid(row=0, column=col, sticky="nw", padx=(0, 24))
             ttk.Label(box, text=f"{side.title()} operators (next to valve → outer)", style="Surface.TLabel").pack(anchor="w")
             cur = self.params.get(side, [])
-            for i in range(2):
-                v = tk.StringVar(value=OPERATORS[cur[i]] if i < len(cur) else "(none)")
+            for i in range(self.OP_SLOTS):
+                v = tk.StringVar(value=OPERATORS[cur[i]] if i < len(cur) and cur[i] in OPERATORS else "(none)")
                 c = ttk.Combobox(box, textvariable=v, values=names, state="readonly", width=18)
                 c.pack(anchor="w", pady=2)
                 c.bind("<<ComboboxSelected>>", lambda e: self._update())
                 self.op_vars[(side, i)] = v
+        opts = ttk.Frame(f, style="Surface.TFrame")
+        opts.pack(fill="x", pady=(8, 0))
+        self.opt_vars = {}
+        for key, label in VALVE_OPTIONS.items():
+            v = tk.BooleanVar(value=bool(self.params.get(key)))
+            ttk.Checkbutton(opts, text=label, variable=v, command=self._update).pack(anchor="w")
+            self.opt_vars[key] = v
         t = app.theme
         self.preview = tk.Canvas(f, width=560, height=170, bg=t["paper"], highlightthickness=1,
                                  highlightbackground=t.ui["border"])
@@ -537,7 +546,13 @@ class ValveDialog(Dialog):
         p["positions"] = [keys[labels.index(v.get())] for v, keys, labels in self.pos_vars]
         rev = {v: k for k, v in OPERATORS.items()}
         for side in ("left", "right"):
-            p[side] = [rev[self.op_vars[(side, i)].get()] for i in range(2) if self.op_vars[(side, i)].get() in rev]
+            p[side] = [rev[self.op_vars[(side, i)].get()] for i in range(self.OP_SLOTS)
+                       if self.op_vars[(side, i)].get() in rev]
+        for key, v in self.opt_vars.items():
+            if v.get():
+                p[key] = True
+            else:
+                p.pop(key, None)       # an unset option is not stored (existing valves keep their params)
         return p
 
     def _update(self):

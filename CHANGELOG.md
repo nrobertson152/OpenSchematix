@@ -4,6 +4,35 @@ All notable changes to this project are documented here. Versions follow [Semant
 
 ## [Unreleased]
 
+### Added
+
+- Directional-valve configurator: 28 more operators (detent with one notch per position, push-pull knob,
+  single and double acting pedal, plunger with and without stroke limit, roller, lever with roller, roller on
+  cam, push/pull and proportional solenoids, direct / applied / remote / internal pilot, released-pressure
+  pilots, solenoid-or-pilot and solenoid-operated pilot stages with internal or external supply, electric,
+  reversing and other drive units, pressure compensated, thermal with local or remote bulb, servo), five more
+  three-position centre conditions (ANSI Y32.10 10.11.3), a third operator per side, and proportional
+  (infinite-positioning) and transition-position options. Every operator is also available on its own in the
+  new "Valve operators" group of the hydraulic and pneumatic libraries. Existing valves are unchanged.
+- Bundled symbol libraries expanded by 425 native, connectable symbols (all existing symbols unchanged):
+  - Hydraulic and pneumatic (ISO 1219 style from the HydraulicsOnline chart, and ANSI Y32.10 style): lines,
+    hoses, couplings and test points; reservoirs and accumulators; heaters, coolers, separators, dryers and
+    lubricators; pumps, motors, pump-motors and rotary actuators; cylinders (cushioned, telescopic, large rod,
+    intensifier, servo positioner); pressure, flow and non-return valves (pilot-operated checks, logic element,
+    3-way flow controls, dividers, priority valve, seated and solenoid check valves, 6-port diverter,
+    infinite-positioning valves); measuring instruments and sensing devices; simplified FRL.
+  - Electrical and electronic (from the CC0 Electric Components Library): thermistors, rheostats, trimmers,
+    LDRs, cored and tapped inductors; DC and current sources, batteries, grounds, supply terminals, coaxial
+    connector, antenna; Schottky / varicap / photo diodes, DIAC, TRIAC, thyristor, TVS, rectifiers; photo-
+    transistors, JFETs, MOSFETs; transformers with polarity dots, centre tap, two secondaries,
+    autotransformers; changeover, two-pole and rotary switches, relays; logic gates (2-5 inputs), latches,
+    flip-flops, full adder, Schmitt triggers; meters, buzzers, DC motor, microphone, loudspeaker, op-amps with
+    supply pins, regulator, vacuum tubes.
+  - Drafting elements (no terminals, not in the BOM): direction, rotation and adjustment arrows, energy and
+    marking symbols, bus-width marker.
+  - Every source item is traced in `docs/symbol-library-expansion/inventory.csv`, including the items left out
+    and why.
+
 ### Fixed
 
 - Saving no longer gets slower as the revision history grows (#75). The check that reads a project back
