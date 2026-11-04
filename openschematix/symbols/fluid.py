@@ -288,7 +288,7 @@ def _pilot_name(medium, side, positions, nports):
     if nports == 5:
         return "14" if pos == "1-4" else "12"
     if nports in (2, 3):
-        return "12" if pos in ("open", "P-A") else "10"
+        return "12" if pos in ("open", "open.both", "P-A") else "10"   # ISO 5599: 12 opens 1→2, 10 closes
     return "X" if side < 0 else "Y"
 
 

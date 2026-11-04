@@ -361,6 +361,20 @@ def test_ansi_cylinder_ports_enter_their_own_chambers(medium, sid):
         assert max(xs) < t["B"].x, f"{sd.id}: piston is not on the cap side of port B"
 
 
+@pytest.mark.parametrize("opening", ["open", "open.both"])
+def test_pneumatic_pilot_that_opens_a_2_2_valve_is_named_12(opening):
+    """ISO 5599: the pilot that connects 1 to 2 is 12, the one that closes is 10. The bidirectional
+    on-off position (open.both, added by the expansion) opens the valve just as 'open' does.
+    Codex review of #66: its pilot was named 10."""
+    sd = symbols.get("fl.pneu.dcv")
+    vtype = next(v for v, (n, npos) in fluid.VALVE_TYPES["pneu"].items() if (n, npos) == (2, 2))
+    d = fluid.default_valve_params("pneu", vtype)
+    g = sd.build({**d, "left": ["pilot"], "right": ["spring"], "positions": [opening, "closed"]})
+    assert "12" in {t.name for t in g.terminals} and "10" not in {t.name for t in g.terminals}
+    g = sd.build({**d, "left": ["spring"], "right": ["pilot"], "positions": [opening, "closed"]})
+    assert "10" in {t.name for t in g.terminals} and "12" not in {t.name for t in g.terminals}
+
+
 # ---------------------------------------------------------------- inventory generator safety
 def _load_generator():
     import importlib.util
