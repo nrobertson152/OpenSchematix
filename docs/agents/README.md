@@ -5,10 +5,10 @@
 ## Assignment and handoff
 
 1. Inspect the live issue/PR queue and the current `main` branch. Never rely on a fixed list of PR numbers or a previous chat's status.
-2. Confirm Director authorization, acceptance criteria, one named Coder (Claude **or** ChatGPT), target branch, priority and dependencies. If ownership is ambiguous, ask the Director rather than starting parallel implementations.
+2. Confirm existing authorization or use delegated authority to approve bounded in-scope work, with acceptance criteria, one named Coder, target branch, priority and dependencies. Resolve ownership ambiguity without starting duplicate implementations.
 3. Keep the issue or PR as the handoff record. The Coder supplies a branch, latest commit SHA, test evidence and known limitations. The independent ChatGPT Reviewer supplies findings against that exact SHA.
 4. On fixes, require a new review of the changed code. Review comments that are merely `COMMENTED` or unresolved are not proof of approval. Track any explicitly accepted risk.
-5. Summarize readiness to the Director. The Coordinator cannot merge, change required checks, tag, release, delete branches or reassign active work without authorization.
+5. After confirming current-head CI, independent review and safety gates, the Coordinator may make and execute the merge decision. Record its evidence in the PR, and summarize merged work and remaining blockers to the Director. Never bypass required checks, create releases/tags or change licensing.
 
 ## Coordinator status report
 
@@ -18,4 +18,8 @@ Report the current Coder assignment, Reviewer queue and Coordinator decisions. D
 
 ## Automation and resource discipline
 
-No standing scheduled engineering runs are authorized by this document. The Director must explicitly request any new schedule or resumption; a request for a status update is not permission to resume agents. Prefer one focused implementation PR at a time per shared subsystem, asynchronous independent review, and existing GitHub Actions for deterministic checks. Avoid extra coordination bots, artificial check-in intervals and GitHub ref-based assignment locks.
+The Director authorized staggered hourly coordination and coding schedules on 2026-11-03. Scheduling or changing additional runs still requires explicit authorization; a status request alone is not authorization. Prefer one focused implementation PR at a time per shared subsystem, asynchronous independent review, and existing GitHub Actions for deterministic checks. Avoid extra coordination bots, artificial check-in intervals and GitHub ref-based assignment locks.
+
+## Delegated merge checklist
+
+Before merging, verify current-head required CI, a current independent review, no unresolved blocking findings, correct base/dependencies, regression and platform evidence proportionate to risk, and no draft/release-only scope. For filesystem integrity/concurrent authority changes, require actual appropriate failure-mode evidence; do not use hosted CI alone to claim production multi-user safety. Document SHA, evidence and merge rationale. The Director exclusively controls releases, release tags and licensing.
