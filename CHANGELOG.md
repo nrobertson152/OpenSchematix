@@ -6,6 +6,21 @@ All notable changes to this project are documented here. Versions follow [Semant
 
 ### Added
 
+- Python scripting API (`openschematix.api`, phase 1): create, open, edit, inspect, check and save projects
+  from Python scripts without the GUI (no tkinter or display needed). Supports sheets; placing symbols with
+  position, rotation, mirroring and valve parameters; wires (drawn or auto-routed); component properties;
+  terminals; nets; per-sheet connectivity; BOM; Check Drawing; wire numbering; native `.schematix` saving;
+  and opening legacy drawings. Invalid input raises clear exceptions instead of being snapped or replaced.
+  Guide and reference: `docs/SCRIPTING_API.md`; complete example: `docs/examples/motor_starter.py`.
+  Edits that create objects are atomic, respect locked layers and never leave a partial wire; projects
+  with identically named custom symbols stay independent; invalid numbers and arguments, and damaged
+  project files, raise the documented API exceptions.
+  Moving, rotating, mirroring and changing parameters keep attached wires on their terminals and never
+  change the circuit (a re-route that would short or disconnect terminals is refused); components whose
+  symbol is unavailable cannot be moved or wired. Projects converted or opened with damaged parts left
+  out must be saved under a new name (`Project.needs_new_name`, `source_path`, `save(...,
+  overwrite_original=True)` to replace the original deliberately).
+
 - Directional-valve configurator: 28 more operators (detent with one notch per position, push-pull knob,
   single and double acting pedal, plunger with and without stroke limit, roller, lever with roller, roller on
   cam, push/pull and proportional solenoids, direct / applied / remote / internal pilot, released-pressure
