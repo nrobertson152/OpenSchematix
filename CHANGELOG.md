@@ -58,6 +58,9 @@ All notable changes to this project are documented here. Versions follow [Semant
 
 - Re-routing attached wires only considers wires and terminals near the route: rotating a part on a sheet with
   3,600 wires is about 30 times faster.
+- The netlist (used by Check, reports, wire numbering and exports) finds touching wires through a spatial
+  index instead of comparing every wire with every other: about 230 times faster on large sheets, with
+  identical nets.
 
 ## [1.1.0] - 2026-11-01
 
