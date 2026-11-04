@@ -12,6 +12,9 @@ OpenSchematix is a free and open-source, local-first schematic editor for electr
 
 ## Before starting
 
+Follow the [development workflow](AGENTS.md): a single AI developer (Claude) implements, tests and merges changes through CI. Only the Director authorizes releases, release tags and licensing changes.
+
+
 Review the [future-release backlog](docs/FUTURE_RELEASE_BACKLOG.md) for Director-reported defects and requested capabilities. Entries are intake records, not verified defects or authorized work; use their stable IDs when opening focused issues.
 
 

@@ -221,8 +221,8 @@ def export_svg(doc: Document, path: str, use_sheet: bool = True, project=None):
 _K = 0.5522847498
 
 
-def _pdf_str(s: str) -> str:
-    b = s.encode("cp1252", errors="replace")
+def _pdf_bytes(b: bytes) -> str:
+    """Escaped PDF string body for encoded bytes."""
     out = []
     for ch in b:
         c = chr(ch)
@@ -235,7 +235,70 @@ def _pdf_str(s: str) -> str:
     return "".join(out)
 
 
-def _page_content(items, extent) -> tuple[bytes, float, float]:
+def _pdf_str(s: str) -> str:
+    return _pdf_bytes(s.encode("cp1252", errors="replace"))
+
+
+# Text is drawn with the standard Helvetica fonts in WinAnsiEncoding (= cp1252). Characters it lacks
+# that the standard Symbol font has - Greek letters, maths, arrows, all common on schematics (10 Ω,
+# Δp, ≤, →) - are drawn in Symbol (its built-in encoding; no font is embedded). Anything else is
+# drawn as "?" and reported to the caller (#81).
+_SYMBOL_GREEK = "ΑΒΧΔΕΦΓΗΙϑΚΛΜΝΟΠΘΡΣΤΥςΩΞΨΖ"
+_SYMBOL = {ch: 0x41 + i for i, ch in enumerate(_SYMBOL_GREEK)}
+_SYMBOL.update({ch: 0x61 + i for i, ch in enumerate("αβχδεφγηιϕκλμνοπθρστυϖωξψζ")})
+_SYMBOL.update({
+    "\u2126": 0x57,   # OHM SIGN -> Omega
+    "\u2206": 0x44,   # INCREMENT -> Delta
+    "\u03f5": 0x65,   # lunate epsilon
+    "\u2200": 0x22, "\u2203": 0x24, "\u220b": 0x27, "\u2217": 0x2A, "\u2212": 0x2D, "\u2245": 0x40,
+    "\u2234": 0x5C, "\u22a5": 0x5E, "\u223c": 0x7E, "\u03d2": 0xA1, "\u2032": 0xA2, "\u2264": 0xA3,
+    "\u2044": 0xA4, "\u221e": 0xA5, "\u2663": 0xA7, "\u2666": 0xA8, "\u2665": 0xA9, "\u2660": 0xAA,
+    "\u2194": 0xAB, "\u2190": 0xAC, "\u2191": 0xAD, "\u2192": 0xAE, "\u2193": 0xAF, "\u2033": 0xB2,
+    "\u2265": 0xB3, "\u221d": 0xB5, "\u2202": 0xB6, "\u2260": 0xB9, "\u2261": 0xBA, "\u2248": 0xBB,
+    "\u21b5": 0xBF, "\u2135": 0xC0, "\u2111": 0xC1, "\u211c": 0xC2, "\u2118": 0xC3, "\u2297": 0xC4,
+    "\u2295": 0xC5, "\u2205": 0xC6, "\u2229": 0xC7, "\u222a": 0xC8, "\u2283": 0xC9, "\u2287": 0xCA,
+    "\u2284": 0xCB, "\u2282": 0xCC, "\u2286": 0xCD, "\u2208": 0xCE, "\u2209": 0xCF, "\u2220": 0xD0,
+    "\u2207": 0xD1, "\u220f": 0xD5, "\u221a": 0xD6, "\u22c5": 0xD7, "\u2227": 0xD9, "\u2228": 0xDA,
+    "\u21d4": 0xDB, "\u21d0": 0xDC, "\u21d1": 0xDD, "\u21d2": 0xDE, "\u21d3": 0xDF, "\u25ca": 0xE0,
+    "\u2329": 0xE1, "\u2211": 0xE5, "\u232a": 0xF1, "\u222b": 0xF2,
+})
+
+
+def _pdf_runs(s: str, missing: set | None = None) -> list[tuple[bool, str]]:
+    """Split text into (symbol_font, escaped string) runs. Characters neither
+    font can draw become "?" and are added to `missing`."""
+    runs: list[tuple[bool, bytearray]] = []
+    for ch in s:
+        try:
+            sym, b = False, ch.encode("cp1252")
+        except UnicodeEncodeError:
+            code = _SYMBOL.get(ch)
+            if code is not None:
+                sym, b = True, bytes([code])
+            else:
+                sym, b = False, b"?"
+                if missing is not None:
+                    missing.add(ch)
+        if runs and runs[-1][0] == sym:
+            runs[-1][1].extend(b)
+        else:
+            runs.append((sym, bytearray(b)))
+    return [(sym, _pdf_bytes(bytes(b))) for sym, b in runs]
+
+
+def _pdf_show(runs, font: str, size: str) -> str:
+    """Text-showing operators for runs; the text font is already selected."""
+    out = []
+    current = False
+    for sym, body in runs:
+        if sym != current:
+            out.append(f"/F3 {size} Tf" if sym else f"{font} {size} Tf")
+            current = sym
+        out.append(f"({body}) Tj")
+    return " ".join(out) if out else "() Tj"
+
+
+def _page_content(items, extent, missing: set | None = None) -> tuple[bytes, float, float]:
     x0, y0, x1, y1 = extent
     k = UNIT_MM * 72.0 / 25.4  # points per drawing unit
     pw, ph = (x1 - x0) * k, (y1 - y0) * k
@@ -285,11 +348,12 @@ def _page_content(items, extent) -> tuple[bytes, float, float]:
             ax, ay = it["p"]
             x = ax + ox * co + oy * si
             y = ay - ox * si + oy * co
-            ops.append(f"BT {font} {_fmt(it.get('size', 10))} Tf {_fmt(co)} {_fmt(-si)} {_fmt(-si)} {_fmt(-co)} "
-                       f"{_fmt(x)} {_fmt(y)} Tm ({_pdf_str(it['s'])}) Tj ET")
+            matrix = f"{_fmt(co)} {_fmt(-si)} {_fmt(-si)} {_fmt(-co)} {_fmt(x)} {_fmt(y)}"
         else:
             x, y = text_origin(it)
-            ops.append(f"BT {font} {_fmt(it.get('size', 10))} Tf 1 0 0 -1 {_fmt(x)} {_fmt(y)} Tm ({_pdf_str(it['s'])}) Tj ET")
+            matrix = f"1 0 0 -1 {_fmt(x)} {_fmt(y)}"
+        size = _fmt(it.get("size", 10))
+        ops.append(f"BT {font} {size} Tf {matrix} Tm {_pdf_show(_pdf_runs(it['s'], missing), font, size)} ET")
     ops.append("Q")
     return zlib.compress("\n".join(ops).encode("latin-1")), pw, ph
 
@@ -303,27 +367,29 @@ def _pdf_text(s: str) -> str:
         return "<FEFF" + s.encode("utf-16-be").hex().upper() + ">"
 
 
-def build_pdf(pages, title: str = "Schematic", author: str = "") -> bytes:
+def build_pdf(pages, title: str = "Schematic", author: str = "", missing: set | None = None) -> bytes:
     """pages: list of (label, items, extent). Writes one PDF page per entry,
-    each with its own size, plus bookmarks (outline) and page labels."""
+    each with its own size, plus bookmarks (outline) and page labels.
+    Characters of drawing text that cannot be shown are added to `missing`
+    (drawn as "?"); titles and bookmarks are Unicode and always exact."""
     from . import APP_NAME, VERSION
     n = len(pages)
     if n == 0:
         raise ValueError("nothing to export")
     # object numbering
-    # 1 catalog, 2 pages, 3 font F1, 4 font F2, 5 info, 6 outlines root,
+    # 1 catalog, 2 pages, 3 font F1, 4 font F2, 5 info, 6 outlines root, 7 font F3 (Symbol),
     # then per page: page obj, content obj, outline item
     objs: dict[int, bytes] = {}
-    first = 7
+    first = 8
     page_ids, content_ids, outline_ids = [], [], []
     for i in range(n):
         page_ids.append(first + 3 * i)
         content_ids.append(first + 3 * i + 1)
         outline_ids.append(first + 3 * i + 2)
     for i, (label, items, extent) in enumerate(pages):
-        content, pw, ph = _page_content(items, extent)
+        content, pw, ph = _page_content(items, extent, missing)
         objs[page_ids[i]] = (f"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {_fmt(pw)} {_fmt(ph)}] "
-                             f"/Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents {content_ids[i]} 0 R >>"
+                             f"/Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 7 0 R >> >> /Contents {content_ids[i]} 0 R >>"
                              ).encode()
         objs[content_ids[i]] = (f"<< /Length {len(content)} /Filter /FlateDecode >>\nstream\n".encode() + content +
                                 b"\nendstream")
@@ -337,6 +403,7 @@ def build_pdf(pages, title: str = "Schematic", author: str = "") -> bytes:
     objs[2] = f"<< /Type /Pages /Kids [{kids}] /Count {n} >>".encode()
     objs[3] = b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>"
     objs[4] = b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>"
+    objs[7] = b"<< /Type /Font /Subtype /Type1 /BaseFont /Symbol >>"
     objs[5] = (f"<< /Title {_pdf_text(title or 'Schematic')} /Author {_pdf_text(author)} "
                f"/Producer ({APP_NAME} {VERSION}) /Creator ({APP_NAME} {VERSION}) >>").encode("latin-1")
     objs[6] = f"<< /Type /Outlines /First {outline_ids[0]} 0 R /Last {outline_ids[-1]} 0 R /Count {n} >>".encode()
@@ -355,15 +422,15 @@ def build_pdf(pages, title: str = "Schematic", author: str = "") -> bytes:
 
 
 @symbols.project_scoped
-def to_pdf(doc: Document, use_sheet: bool = True, project=None) -> bytes:
+def to_pdf(doc: Document, use_sheet: bool = True, project=None, missing: set | None = None) -> bytes:
     items, extent = paper_items(doc, use_sheet, project)
     proj = project if project is not None else getattr(doc, "project", None)
     title = doc.sheet.title or (proj.meta.get("title") if proj is not None else "") or "Schematic"
-    return build_pdf([(doc.name or title, items, extent)], title=title)
+    return build_pdf([(doc.name or title, items, extent)], title=title, missing=missing)
 
 
 @symbols.project_scoped
-def project_pdf(project, sheet_uids=None) -> bytes:
+def project_pdf(project, sheet_uids=None, missing: set | None = None) -> bytes:
     """All (or the selected) sheets of a project in one PDF, in project
     order, each page at its own sheet size and orientation."""
     pages = []
@@ -372,12 +439,20 @@ def project_pdf(project, sheet_uids=None) -> bytes:
             continue
         items, extent = paper_items(doc, True, project)
         pages.append((f"{project.sheet_number(doc)}. {doc.name}", items, extent))
-    return build_pdf(pages, title=project.meta.get("title") or "Schematic", author=project.meta.get("author", ""))
+    return build_pdf(pages, title=project.meta.get("title") or "Schematic", author=project.meta.get("author", ""),
+                     missing=missing)
 
 
-def export_project_pdf(project, path: str, sheet_uids=None):
-    _atomic_write(path, project_pdf(project, sheet_uids))
+def export_project_pdf(project, path: str, sheet_uids=None) -> list[str]:
+    """Write the PDF. Returns the characters of drawing text that PDF output
+    cannot show (drawn as "?"), sorted; empty if everything was shown."""
+    missing: set = set()
+    _atomic_write(path, project_pdf(project, sheet_uids, missing))
+    return sorted(missing)
 
 
-def export_pdf(doc: Document, path: str, use_sheet: bool = True, project=None):
-    _atomic_write(path, to_pdf(doc, use_sheet, project))
+def export_pdf(doc: Document, path: str, use_sheet: bool = True, project=None) -> list[str]:
+    """As export_project_pdf, for one sheet."""
+    missing: set = set()
+    _atomic_write(path, to_pdf(doc, use_sheet, project, missing))
+    return sorted(missing)

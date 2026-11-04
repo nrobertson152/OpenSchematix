@@ -19,16 +19,17 @@ import os
 import subprocess
 import sys
 import time
-import tempfile
 import tkinter as tk
 import webbrowser
 from tkinter import filedialog, messagebox, simpledialog, ttk
 
+from .. import printtemp
 from .. import (APP_NAME, DONATE_URL, PROJECT_EXTENSION, VERSION, commands as cmdparse, editing, export, netlist,
                 projectio, symbols, templates)
 from ..geometry import GRID, UNIT_MM, norm_rotation, snap
 from ..model import Component, Shape, Wire, format_scale, parse_scale
 from ..project import Project, new_project
+from ..printtemp import PrintFiles
 from ..recovery import RecoveryManager
 from ..settings import Settings
 from ..userlib import UserLibrary, add_recent_symbol
@@ -95,6 +96,7 @@ class App:
         self.runner = ia.CommandRunner(self)
         self.keymap = KeyMap(self)
         self.recovery = RecoveryManager()
+        self.print_files = PrintFiles()
         self._autosave_job = None
         self._load_icon()
         root.title(APP_NAME)
@@ -112,6 +114,7 @@ class App:
             orphans = self.recovery.orphans() if check_recovery else []
         except OSError:
             orphans = []
+        printtemp.cleanup_stale()           # print PDFs left by earlier sessions (never raises)
         try:
             self.recovery.start()
         except OSError:
@@ -1594,9 +1597,21 @@ class App:
 
     def set_wire_number(self, wire, number):
         s = self.begin_change()
-        netlist.set_net_number(self.project, self.doc.uid, wire.id, number)
-        self.commit_change(s, f"Wire number set to {number} for the whole connection." if number else
-                              "Manual wire number removed.")
+        res = netlist.set_net_number(self.project, self.doc.uid, wire.id, number)
+        if not number:
+            self.commit_change(s, "Manual wire number removed.")
+            return
+        msg = f"Wire number set to {number} for the whole connection."
+        if res.renumbered:
+            moved = ", ".join(new for _old, new in res.renumbered)
+            msg += (f" {len(res.renumbered)} other connection(s) that had {number} automatically "
+                    f"now have {moved}.")
+        if res.manual_clash:
+            msg += (f" Warning: {res.manual_clash} other connection(s) also have {number} as a manual number "
+                    f"(Check drawing reports this).")
+        self.commit_change(s, msg)
+        if res.manual_clash:
+            self.toast(f"Wire number {number} is also set manually on another connection.", "warning")
 
     def edit_text_shape(self, sid):
         sh = self.doc.shapes[sid]
@@ -2380,6 +2395,13 @@ class App:
             res = projectio.open_any(path)
         except (OSError, projectio.ProjectFormatError) as e:
             messagebox.showerror("Could not open", f"{path}\n\n{e}", parent=self.root)
+            # Forget a recent file only if it is really gone: its folder is still
+            # there. A file on a drive or share that is offline (Windows also
+            # reports that as "not found") stays for when it is back.
+            if (isinstance(e, FileNotFoundError) and os.path.isdir(os.path.dirname(os.path.abspath(path)))
+                    and self.settings.remove_recent(path)):
+                self.settings.save()
+                self._rebuild_recent()
             return
         self.settings["last_dir"] = os.path.dirname(os.path.abspath(path))
         if res.needs_new_name:
@@ -2507,7 +2529,11 @@ class App:
     def _rebuild_recent(self):
         m = self.recent_menu
         m.delete(0, "end")
-        rec = [p for p in self.settings["recent_files"] if os.path.exists(p)]
+        # No existence check here: this runs after every save and open, on the
+        # UI thread, and on Windows a stat() of a file on a disconnected network
+        # drive or share can block for many seconds (#75). A recent file that
+        # has gone is reported, and removed, when it is chosen (open_path).
+        rec = list(self.settings["recent_files"])
         if not rec:
             m.add_command(label="(none)", state="disabled")
         for p in rec:
@@ -2525,11 +2551,24 @@ class App:
         if not path:
             return
         try:
-            export.export_project_pdf(self.project, path, set(uids))
+            missing = export.export_project_pdf(self.project, path, set(uids))
         except OSError as e:
             messagebox.showerror("Export failed", f"{path}\n\n{e}", parent=self.root)
             return
-        self.toast(f"Exported {len(uids)} sheet(s) to {os.path.basename(path)}", "success")
+        if not self._report_pdf_missing(missing):
+            self.toast(f"Exported {len(uids)} sheet(s) to {os.path.basename(path)}", "success")
+
+    def _report_pdf_missing(self, missing) -> bool:
+        """Tell the user which characters a PDF could not show (#81). True if any."""
+        if not missing:
+            return False
+        shown = " ".join(missing[:20]) + (" …" if len(missing) > 20 else "")
+        codes = ", ".join(f"U+{ord(c):04X}" for c in missing[:20])
+        self.log(f"PDF: {len(missing)} character(s) in the drawing text cannot be shown in PDF output and were "
+                 f"printed as '?': {shown} ({codes}). SVG and DXF exports keep them.", "warning")
+        self.toast(f"PDF written, but {len(missing)} character(s) appear as '?': {shown} — see the Output panel.",
+                   "warning")
+        return True
 
     def export_file(self, kind):
         ext = "." + kind
@@ -2594,13 +2633,16 @@ class App:
             self.toast("DXF imported. " + rep.summary(), "warning")
 
     def print_(self):
+        path = None
         try:
-            fd, path = tempfile.mkstemp(prefix="openschematix-", suffix=".pdf")
-            os.close(fd)
-            export.export_project_pdf(self.project, path, {self.doc.uid})
+            path = self.print_files.new_path()      # deleted on exit, or at a later start (#82)
+            missing = export.export_project_pdf(self.project, path, {self.doc.uid})
         except OSError as e:
+            if path:
+                self.print_files.discard(path)
             messagebox.showerror("Print failed", str(e), parent=self.root)
             return
+        self._report_pdf_missing(missing)
         try:
             if sys.platform.startswith("win"):
                 os.startfile(path)  # noqa: S606 - opens the user's PDF viewer
@@ -2672,6 +2714,7 @@ class App:
             self.recovery.end()
         except OSError:
             pass
+        self.print_files.cleanup()          # files still open in a viewer are left for a later start
         self.root.destroy()
 
 

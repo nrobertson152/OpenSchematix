@@ -468,7 +468,7 @@ def test_failed_verification_rolls_back_new_snapshot(tmp_path, monkeypatch):
     before_objects = dict(store.objects)
     editing.place(p.sheets[0], "el.resistor.iec", 100, 100)
 
-    def fail_verify(_data):
+    def fail_verify(_data, *_args):
         raise OSError("verification failed")
 
     monkeypatch.setattr(projectio, "_verify", fail_verify)

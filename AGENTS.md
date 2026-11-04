@@ -1,20 +1,21 @@
-# OpenSchematix — working with AI agents
+# OpenSchematix — development workflow
 
-## Roles
+## Roles (Director decision, 2026-11-04)
 
-- **Director (`nrobertson152`)** decides what to build, merges pull requests and approves releases. Only the Director merges, releases, tags, deletes branches or changes the licence.
-- **Claude** is the primary developer and architect. It implements issues and opens pull requests.
-- **ChatGPT / Codex** does independent review and testing. Codex reviews every pull request automatically. Comment `@codex <request>` on a PR to ask it for a fix.
-- **GitHub** holds the record: issues, pull requests and CI (`.github/workflows/tests.yml`).
+- **Director (`nrobertson152`)** has sole authority over releases, release/version tags and licensing. The Director may override any decision.
+- **Developer (Claude)** is the only developer. It plans, implements, tests, reviews and merges its own work. No independent reviewer, coordinator or second coding agent is required, and merges need no Director approval.
 
-## How work flows
+GitHub issues, PRs, commits and CI are the record. Older role names (Coder, Reviewer, Coordinator, numbered agents) in historical issues and PRs are not current instructions.
 
-1. The Director opens an issue.
-2. One branch and one focused PR per issue. The PR description says `Closes #<n>`.
-3. CI and Codex review run on the PR. Address the findings, or explain on the PR why a finding is wrong.
-4. The Director merges.
+## Work cycle
 
-Report results, blockers and questions on the issue or PR, not only in chat. For every test claim, give the exact command, the OS and Python version, the commit, and the pass/fail/skip counts. "Not run" is not "passed". Never weaken, skip or delete a test to get green. Don't push to someone else's open PR branch unless asked.
+1. Work on a dedicated branch and open a focused PR, with `Closes #<n>` where applicable.
+2. Add regression tests that fail on the old code. Run the commands below locally.
+3. Post the exact head SHA, commands run, versions and pass/fail/skip counts on the PR. Never describe a failing or skipped test as passed.
+4. Merge when the required CI passes on the exact head and the self-review checklist below is clear. Record the merge rationale on the PR. State anything unverified, such as native Windows behaviour, rather than claiming it.
+5. Release-preparation PRs may be merged, but creating, drafting or publishing GitHub Releases and pushing release/version tags is for the Director only.
+
+Never weaken, skip or delete tests to make CI green, and never bypass CI.
 
 ## Product rules
 
@@ -33,7 +34,7 @@ Report results, blockers and questions on the issue or PR, not only in chat. For
 4. Regressions and platform compatibility.
 5. Performance, features, cosmetics.
 
-Requested future work is in `docs/FUTURE_RELEASE_BACKLOG.md`. It's only planning input; work starts when the Director opens an issue.
+Requested future work is in `docs/FUTURE_RELEASE_BACKLOG.md`. It is planning input: the Developer picks work from it and from open issues, and the Director decides what goes into each release.
 
 ## Commands
 
@@ -44,11 +45,11 @@ xvfb-run -a python -m pytest -q -ra          # Windows: python -m pytest -q -ra
 xvfb-run -a python tests/gui_smoke.py <tmpdir>
 ```
 
-CI runs the full suite and GUI smoke tests on Ubuntu and Windows, Python 3.10 and 3.13, for every PR.
+CI runs the full suite and GUI smoke tests on Ubuntu and Windows, Python 3.10 and 3.13, for PRs. Record the actual run and commit rather than assuming CI passed.
 
-## Code Review Rules
+## Self-review checklist
 
-Reviewers (Codex reads this section) should treat these as blocking:
+Treat any of these as a blocking defect in your own change:
 
 - Any path that can lose wire-to-terminal attachments or change a net: reopen, undo/redo, revision restore, symbol update, move, rotate.
 - One project's custom symbols affecting another project's saved file, analysis, BOM or exports.
