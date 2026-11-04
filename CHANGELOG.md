@@ -18,6 +18,17 @@ All notable changes to this project are documented here. Versions follow [Semant
   open. On Windows that check can block for many seconds per file on a disconnected network drive or share.
   A recent file that has gone is reported when it is chosen and removed from the list if its folder is still
   there.
+- Moving, rotating, mirroring or scaling a component no longer creates or breaks connections when its attached
+  wires are re-routed. A new route could run over another wire's loose end, along another wire or over another
+  pin of the same part, which joined the nets (for example, rotating a transformer with short wires on each
+  terminal shorted S1 to S2), and it could also leave behind a T-junction made on the wire. The router now
+  always prefers a route without such contacts, keeps existing junctions on the wire, and falls back to a grid
+  search around the wire when the usual route shapes all touch something.
+
+### Performance
+
+- Re-routing attached wires only considers wires and terminals near the route: rotating a part on a sheet with
+  3,600 wires is about 30 times faster.
 
 ## [1.1.0] - 2026-11-01
 
