@@ -329,10 +329,18 @@ def _verify_object(st: "RevisionStore", h: str, kind: str, read_object,
         obj = safejson.loads(raw)
         if kind == "sheet":
             from .model import Document
+            # Model readers accept missing fields for legacy compatibility.
+            # Revision objects need a stronger kind boundary: otherwise a
+            # project header can be interpreted as an empty sheet on restore.
+            if not isinstance(obj, dict) or "sheet" not in obj:
+                raise ValueError("not a sheet snapshot")
             Document.from_dict(obj)
         else:
             from .project import Project
-            if not isinstance(obj, dict) or "sheets" in obj:
+            # A stored header is the project dictionary with sheets removed.
+            # Reject sheet-shaped objects before the permissive model reader.
+            if (not isinstance(obj, dict)
+                    or any(k in obj for k in ("sheets", "sheet", "components", "wires"))):
                 raise ValueError("not a project header")
             Project.from_dict(obj)
     except ValueError as e:
