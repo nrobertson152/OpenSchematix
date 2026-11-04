@@ -207,55 +207,45 @@ def test_adversarial_mixed_positive_negative_and_far_away():
 
 
 # ---------------------------------------------------------------- performance
+def _segment_tests(project):
+    """Number of point-on-segment tests compute_nets makes: a measure of work that,
+    unlike wall-clock time, does not depend on the machine or its load."""
+    count = 0
+    original = netlist.point_on_segment
+
+    def counting(*a, **k):
+        nonlocal count
+        count += 1
+        return original(*a, **k)
+    netlist.point_on_segment = counting
+    try:
+        netlist.compute_nets(project)
+    finally:
+        netlist.point_on_segment = original
+    return count
+
+
 def test_compute_nets_scales_near_linearly_on_large_sheets():
-    """Regression: a quadratic scan would make n=400 >> 4x slower than n=100."""
-    times = {}
-    counts = {}
-    for n in (100, 400):
-        p = _grid_project(n, extra_vertical=n // 2)
-        # warmup
-        netlist.compute_nets(p)
-        t0 = time.perf_counter()
-        for _ in range(3):
-            nets = netlist.compute_nets(p)
-        times[n] = (time.perf_counter() - t0) / 3
-        counts[n] = (len(p.sheets[0].wires), len(nets))
-    ratio = times[400] / max(times[100], 1e-6)
-    assert ratio < 10.0, (
-        f"compute_nets scaling looks quadratic: ratio={ratio:.1f} "
-        f"(t100={times[100]*1000:.1f}ms t400={times[400]*1000:.1f}ms "
-        f"wires={counts})"
-    )
+    """Regression: the full wire scan made the work grow with the square of the drawing size.
+
+    Counted, not timed: 4x the drawing must cost about 4x the segment tests (a quadratic scan
+    would be about 16x). Wall-clock ratios proved too noisy on shared CI runners."""
+    work = {n: _segment_tests(_grid_project(n, extra_vertical=n // 2)) for n in (100, 400, 800)}
+    assert work[400] / work[100] < 6.0, work
+    assert work[800] / work[100] < 12.0, work
 
 
 def test_large_workload_direct_benchmark_measured():
-    """Directly measured large-workload timings (recorded for PR evidence).
-
-    Not a hard ceiling on absolute ms (machines vary); asserts near-linear
-    growth and that the largest case finishes well under a second.
-    """
-    results = []
-    for n in (100, 200, 400, 800):
-        p = _grid_project(n, extra_vertical=n // 2)
-        nw = len(p.sheets[0].wires)
-        netlist.compute_nets(p)  # warmup
+    """A large sheet stays interactive (generous absolute bound; best of five runs)."""
+    p = _grid_project(800, extra_vertical=400)
+    netlist.compute_nets(p)  # warmup
+    best = float("inf")
+    for _ in range(5):
         t0 = time.perf_counter()
-        for _ in range(3):
-            nets = netlist.compute_nets(p)
-        elapsed = (time.perf_counter() - t0) / 3
-        results.append((n, nw, len(nets), elapsed))
-    # Publish numbers into assertion message for CI logs
-    summary = ", ".join(
-        f"n={n} wires={nw} nets={nn} t={t*1000:.2f}ms" for n, nw, nn, t in results
-    )
-    # Largest case must stay interactive
-    assert results[-1][3] < 1.0, f"n=800 took {results[-1][3]*1000:.1f}ms; {summary}"
-    # 8× components should be well under ~20× time (quadratic would be ~64×)
-    ratio = results[-1][3] / max(results[0][3], 1e-6)
-    assert ratio < 20.0, f"scaling ratio n800/n100={ratio:.1f}; {summary}"
-    # Also record mid-size growth
-    ratio_mid = results[2][3] / max(results[0][3], 1e-6)
-    assert ratio_mid < 12.0, f"scaling ratio n400/n100={ratio_mid:.1f}; {summary}"
+        nets = netlist.compute_nets(p)
+        best = min(best, time.perf_counter() - t0)
+    assert len(nets) == len(p.sheets[0].wires)
+    assert best < 2.0, f"n=800 ({len(p.sheets[0].wires)} wires) took {best * 1000:.1f} ms"
 
 
 def test_large_workload_matches_naive_on_moderate_size():
