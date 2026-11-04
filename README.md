@@ -63,6 +63,9 @@ There are no other dependencies.
 python -m openschematix [project.schematix | drawing.osch]
 ```
 
+Python scripts can create and edit projects without the GUI through the scripting API; see
+[`docs/SCRIPTING_API.md`](docs/SCRIPTING_API.md).
+
 Examples are in `examples/`: `demo_project.schematix` (three sheets: supply, motor control, hydraulics),
 and the single-sheet drawings `start_stop_latch.osch` and `hydraulic_cylinder_circuit.osch`.
 
@@ -185,6 +188,7 @@ openschematix/
   dxf.py            DXF import/export (no dependencies)
   bom.py search.py check.py compare.py revisions.py recovery.py templates.py userlib.py commands.py
   symbols/          symbol framework, built-in libraries, custom symbols
+  api/              public headless Python scripting API (docs/SCRIPTING_API.md)
   gui/              Tkinter interface: theme (design system), icons, widgets, canvas, command line,
                     panels, inspector, dialogs, reports, revisions, symbol editor
 tests/              pytest suites and the GUI smoke test
@@ -193,7 +197,7 @@ packaging/          PyInstaller spec, Windows and Linux build scripts, installer
 docs/               reference documentation
 ```
 
-Development uses one assigned **Coder** (Claude or ChatGPT), one independent **ChatGPT Reviewer**, and an **Engineering Coordinator**, with the Director retaining merge and release authority. See [AGENTS.md](AGENTS.md) and [the coordination playbook](docs/agents/README.md).
+Development is done by a single AI developer (Claude) that tests and merges its own work through CI; the Director retains release and licensing authority. See [AGENTS.md](AGENTS.md).
 
 Contributions should keep the core dependency-free and include tests. Please keep the drawing conventions
 honest: if a symbol's geometry cannot be confirmed, leave it out and list it in `docs/SYMBOLS.md`.

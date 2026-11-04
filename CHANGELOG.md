@@ -4,17 +4,87 @@ All notable changes to this project are documented here. Versions follow [Semant
 
 ## [1.2.0] - unreleased
 
-The release date is set when the release is published. On rebase, the `[Unreleased]` entries of #66 and #79 are folded into this section.
+The release date is set when the Director publishes the release.
 
-### Fixed
+### Added
 
-- **Wire numbering (#80, #83).** *Number wires* reserves every manual wire number before it keeps or hands out an automatic one. An automatic number that a connection later in the drawing has set by hand is replaced; other automatic numbers stay where they are. *Set wire number* moves any other connection that had the number automatically, and reports both that and a duplicate manual number. Before, two connections could share a number, which Check drawing reported as an error.
-- **PDF text (#81, #84).** PDF export and Print no longer turn Greek letters and common maths, technical and arrow characters (Ω, Δ, μ, ≤, ≥, ≠, ≈, ∞, √, →, …) into "?". They are drawn with the standard Symbol font; no font is embedded. Characters neither font has are still drawn as "?", but Export PDF and Print now list them in a warning and in the Output panel. `export_pdf` and `export_project_pdf` return the list.
-- **Print temporary files (#82, #85).** *Print* no longer leaves a temporary PDF behind for every print. Print files go into a private folder for each user: per user ID on Linux, created with mode 0700, never followed through a link, and only used when owned by the user. This session's files are deleted when the program closes, except files printed in the last 10 minutes, which a PDF viewer may still be opening. Files left over are deleted at a later start once they are more than a day old, as are leftover 1.1.x print files in the temporary folder.
+- Python scripting API (`openschematix.api`, phase 1, #33): create, open, edit, inspect, check and save projects
+  from Python scripts without the GUI (no tkinter or display needed). Supports sheets; placing symbols with
+  position, rotation, mirroring and valve parameters; wires (drawn or auto-routed); component properties;
+  terminals; nets; per-sheet connectivity; BOM; Check Drawing; wire numbering; native `.schematix` saving;
+  and opening legacy drawings. Invalid input raises clear exceptions instead of being snapped or replaced.
+  Guide and reference: `docs/SCRIPTING_API.md`; complete example: `docs/examples/motor_starter.py`.
+  Edits that create objects are atomic, respect locked layers and never leave a partial wire; projects
+  with identically named custom symbols stay independent; invalid numbers and arguments, and damaged
+  project files, raise the documented API exceptions.
+  Moving, rotating, mirroring and changing parameters keep attached wires on their terminals and never
+  change the circuit (a re-route that would short or disconnect terminals is refused); components whose
+  symbol is unavailable cannot be moved or wired. Projects converted or opened with damaged parts left
+  out must be saved under a new name (`Project.needs_new_name`, `source_path`, `save(...,
+  overwrite_original=True)` to replace the original deliberately).
+
+- Directional-valve configurator: 28 more operators (detent with one notch per position, push-pull knob,
+  single and double acting pedal, plunger with and without stroke limit, roller, lever with roller, roller on
+  cam, push/pull and proportional solenoids, direct / applied / remote / internal pilot, released-pressure
+  pilots, solenoid-or-pilot and solenoid-operated pilot stages with internal or external supply, electric,
+  reversing and other drive units, pressure compensated, thermal with local or remote bulb, servo), five more
+  three-position centre conditions (ANSI Y32.10 10.11.3), a third operator per side, and proportional
+  (infinite-positioning) and transition-position options. Every operator is also available on its own in the
+  new "Valve operators" group of the hydraulic and pneumatic libraries. Existing valves are unchanged.
+- Bundled symbol libraries expanded by 425 native, connectable symbols (all existing symbols unchanged):
+  - Hydraulic and pneumatic (ISO 1219 style from the HydraulicsOnline chart, and ANSI Y32.10 style): lines,
+    hoses, couplings and test points; reservoirs and accumulators; heaters, coolers, separators, dryers and
+    lubricators; pumps, motors, pump-motors and rotary actuators; cylinders (cushioned, telescopic, large rod,
+    intensifier, servo positioner); pressure, flow and non-return valves (pilot-operated checks, logic element,
+    3-way flow controls, dividers, priority valve, seated and solenoid check valves, 6-port diverter,
+    infinite-positioning valves); measuring instruments and sensing devices; simplified FRL.
+  - Electrical and electronic (from the CC0 Electric Components Library): thermistors, rheostats, trimmers,
+    LDRs, cored and tapped inductors; DC and current sources, batteries, grounds, supply terminals, coaxial
+    connector, antenna; Schottky / varicap / photo diodes, DIAC, TRIAC, thyristor, TVS, rectifiers; photo-
+    transistors, JFETs, MOSFETs; transformers with polarity dots, centre tap, two secondaries,
+    autotransformers; changeover, two-pole and rotary switches, relays; logic gates (2-5 inputs), latches,
+    flip-flops, full adder, Schmitt triggers; meters, buzzers, DC motor, microphone, loudspeaker, op-amps with
+    supply pins, regulator, vacuum tubes.
+  - Drafting elements (no terminals, not in the BOM): direction, rotation and adjustment arrows, energy and
+    marking symbols, bus-width marker.
+  - Every source item is traced in `docs/symbol-library-expansion/inventory.csv`, including the items left out
+    and why.
 
 ### Changed
 
 - Version 1.2.0: application, `pyproject.toml`, Windows version resource, README download names, and the writer version of the bundled examples.
+
+### Fixed
+
+- Saving no longer gets slower as the revision history grows (#75, #79). The check that reads a project back
+  before replacing the file parsed every stored revision again on every save; revisions already verified in
+  the session, and byte-identical in the new file, are now accepted without parsing them again. With 25
+  automatic snapshots of a 2 MB drawing a save took 1.56 s instead of 0.24 s; it now takes the same time as
+  the first save.
+- That check is also stricter: a save is refused, and the previous file kept, if any part of the new file
+  (a revision or an embedded symbol) would be left out as damaged when reopened. Before, such a file was
+  written and the damaged part silently dropped on the next open.
+- The *Recent files* menu no longer checks whether each file exists when it is rebuilt after every save and
+  open. On Windows that check can block for many seconds per file on a disconnected network drive or share.
+  A recent file that has gone is reported when it is chosen and removed from the list if its folder is still
+  there.
+- Moving, rotating, mirroring or scaling a component no longer creates or breaks connections when its attached
+  wires are re-routed (#93). A new route could run over another wire's loose end, along another wire or over another
+  pin of the same part, which joined the nets (for example, rotating a transformer with short wires on each
+  terminal shorted S1 to S2), and it could also leave behind a T-junction made on the wire. The router now
+  always prefers a route without such contacts, keeps existing junctions on the wire, and falls back to a grid
+  search around the wire when the usual route shapes all touch something.
+- **Wire numbering (#80, #83).** *Number wires* reserves every manual wire number before it keeps or hands out an automatic one. An automatic number that a connection later in the drawing has set by hand is replaced; other automatic numbers stay where they are. *Set wire number* moves any other connection that had the number automatically, and reports both that and a duplicate manual number. Before, two connections could share a number, which Check drawing reported as an error.
+- **PDF text (#81, #84).** PDF export and Print no longer turn Greek letters and common maths, technical and arrow characters (Ω, Δ, μ, ≤, ≥, ≠, ≈, ∞, √, →, …) into "?". They are drawn with the standard Symbol font; no font is embedded. Characters neither font has are still drawn as "?", but Export PDF and Print now list them in a warning and in the Output panel. `export_pdf` and `export_project_pdf` return the list.
+- **Print temporary files (#82, #85).** *Print* no longer leaves a temporary PDF behind for every print. Print files go into a private folder for each user: per user ID on Linux, created with mode 0700, never followed through a link, and only used when owned by the user. This session's files are deleted when the program closes, except files printed in the last 10 minutes, which a PDF viewer may still be opening. Files left over are deleted at a later start once they are more than a day old, as are leftover 1.1.x print files in the temporary folder.
+
+### Performance
+
+- Re-routing attached wires only considers wires and terminals near the route: rotating a part on a sheet with
+  3,600 wires is about 30 times faster (#93).
+- The netlist (used by Check, reports, wire numbering and exports) finds touching wires through a spatial
+  index instead of comparing every wire with every other, so its work grows in proportion to the drawing
+  rather than with its square; the nets are identical (#41).
 
 ## [1.1.0] - 2026-11-01
 

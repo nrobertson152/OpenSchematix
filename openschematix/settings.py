@@ -151,6 +151,15 @@ class Settings:
     def __setitem__(self, k, v):
         self.data[k] = v
 
+    def remove_recent(self, path: str) -> bool:
+        """Drop `path` from the recent files; True if it was there."""
+        path = os.path.abspath(path)
+        rec = self.data.get("recent_files", [])
+        if path not in rec:
+            return False
+        self.data["recent_files"] = [p for p in rec if p != path]
+        return True
+
     def add_recent(self, path: str):
         path = os.path.abspath(path)
         rec = [p for p in self.data.get("recent_files", []) if p != path]
