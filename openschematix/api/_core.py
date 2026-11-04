@@ -257,17 +257,24 @@ def _require_symbol(c: _Component, action: str) -> None:
 
 
 def _connections(doc: Document) -> frozenset:
-    """The sheet's electrical connections: for each net, the set of
-    (component id, terminal) it joins. Uses the netlist's own per-sheet
-    analysis (wire references, wire ends on terminals, T-junctions), so it
-    agrees with Project.nets(), Check and the exports."""
+    """The sheet's circuit: for each net, the set of its members, terminals
+    ``("t", component id, terminal)`` and wires ``("w", wire id)``. Wires
+    are included, and nets without terminals too, so that a wire leaving a
+    T-junction (a branch cut off) counts as a change even when no terminal
+    changes net. Uses the netlist's own per-sheet analysis (wire references,
+    wire ends on terminals, T-junctions), so it agrees with Project.nets(),
+    Check and the exports."""
     uf = netlist._UF()
     netlist._sheet_nodes(doc, uf)
     groups: dict = {}
     for node in list(uf.p):
         groups.setdefault(uf.find(node), []).append(node)
-    return frozenset(frozenset((n[2], n[3]) for n in nodes if n[0] == "t")
-                     for nodes in groups.values() if len(nodes) > 1 and any(n[0] == "t" for n in nodes))
+
+    def member(n):
+        return ("t", n[2], str(n[3])) if n[0] == "t" else ("w", n[2])
+    return frozenset(frozenset(member(n) for n in nodes if n[0] in ("t", "w"))
+                     for nodes in groups.values()
+                     if any(n[0] == "w" for n in nodes) or sum(n[0] == "t" for n in nodes) > 1)
 
 
 def _require_same_connections(doc: Document, before: frozenset, action: str, c: _Component) -> None:
@@ -280,12 +287,19 @@ def _require_same_connections(doc: Document, before: frozenset, action: str, c: 
     if after == before:
         return
 
-    def name(t):
-        comp = doc.components.get(t[0])
-        return f"{(comp.designator if comp else '') or t[0]}:{t[1]}"
-    joined = sorted(after - before, key=len, reverse=True)
-    detail = (f"it would connect {', '.join(sorted(map(name, joined[0])))}" if joined and len(joined[0]) > 1
-              else "it would disconnect terminals that are connected now")
+    def name(m):
+        if m[0] == "w":
+            return f"wire {m[1]}"
+        comp = doc.components.get(m[1])
+        return f"{(comp.designator if comp else '') or m[1]}:{m[2]}"
+    old_net = {m: net for net in before for m in net}
+    # a net now holding members of several earlier nets joins them; otherwise a net was split
+    joined = [net for net in after - before if len({old_net.get(m) for m in net} - {None}) > 1]
+    if joined:
+        detail = f"it would connect {', '.join(sorted(map(name, max(joined, key=len))))}"
+    else:
+        split = max(before - after, key=len)
+        detail = f"it would disconnect {', '.join(sorted(map(name, split)))} from each other"
     raise InvalidOperationError(
         f"cannot {action} {c.designator or c.id}: re-routing its wires would change the circuit ({detail}). "
         "Nothing was changed; remove or redraw the affected wires first")
@@ -331,7 +345,27 @@ class _Rollback:
     def __exit__(self, exc_type, exc, tb) -> bool:
         if exc_type is not None:
             self.restore()
+            return False
+        changed = self._changed_locked_wires()
+        if changed:
+            # an indirect change (a component moved, rotated, re-parametrised or
+            # removed) would re-route or detach a locked wire: refuse it
+            self.restore()
+            raise InvalidOperationError(
+                f"this edit would change locked wire{'s' if len(changed) > 1 else ''} "
+                f"{', '.join(map(str, changed))} (the wire or its layer is locked); nothing was changed")
         return False
+
+    def _changed_locked_wires(self) -> list[int]:
+        out = []
+        for i, (points, start, end, _auto) in self.wires.items():
+            w = self.doc.wires.get(i)
+            locked = _layer_locked(self.project, w if w is not None else self.wire_objs[i])
+            if not locked:
+                continue
+            if w is None or (list(w.points), w.start, w.end) != (points, start, end):
+                out.append(i)
+        return sorted(out)
 
     def restore(self) -> None:
         doc = self.doc
@@ -613,6 +647,7 @@ class Project(_Handle):
             path = os.fspath(path)
         if not isinstance(path, str) or not path.lower().endswith(PROJECT_EXTENSION):
             raise InvalidOperationError(f"project files must end in {PROJECT_EXTENSION}, got {path!r}")
+        path = os.path.abspath(path)            # later saves without a path go to this file, whatever the cwd
         if self._needs_new_name and self._source and _same_file(path, self._source) and not overwrite_original:
             raise InvalidOperationError(f"{self._why_new_name()}; saving to {path} would overwrite the original "
                                         "file. Choose a new path, or pass overwrite_original=True to replace it "
@@ -1137,6 +1172,13 @@ class Wire(_Handle):
         """Wire number ("" if not numbered; see Project.number_wires)."""
         return self._w().number
 
+    @property
+    def locked(self) -> bool:
+        """True if the wire or its layer is locked. A locked wire cannot be
+        changed, also not indirectly: an edit of an attached component that
+        would re-route or detach it raises InvalidOperationError."""
+        return _layer_locked(self._sheet._project._p, self._w())
+
     def remove(self) -> None:
         doc = self._sheet._use()
         w = self._w()
@@ -1184,6 +1226,10 @@ def open_project(path: str) -> Project:
         reason = "was opened from a damaged file with the damaged parts left out (see Project.warnings)"
     else:
         reason = ""
+    # Remember where the file is, not how it was named: a relative path
+    # would point elsewhere after os.chdir() and defeat the protection of a
+    # damaged or converted original (see Project.save).
+    path = os.path.abspath(path)
     return Project(res.project, None if reason else path, res.warnings, source=path, new_name_reason=reason)
 
 

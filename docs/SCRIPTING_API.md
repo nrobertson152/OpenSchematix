@@ -117,8 +117,8 @@ and may change.
 | Member | Description |
 |---|---|
 | `title` | Project title (read/write). |
-| `path` | File `save()` writes to without a path: the last opened/saved file. `None` for a new project and while `needs_new_name`. |
-| `source_path` | File the project was opened from, or `None`. |
+| `path` | File `save()` writes to without a path: the last opened/saved file, as an absolute path (a relative path is resolved when the file is opened or saved, so a later `os.chdir()` does not change it). `None` for a new project and while `needs_new_name`. |
+| `source_path` | File the project was opened from (absolute), or `None`. |
 | `needs_new_name` | `True` if the project was converted, or opened with damaged parts left out: it must be saved under a new name first. |
 | `warnings` | Tuple of messages from opening (format conversion, unknown symbols, damaged parts left out). |
 | `sheets` | List of `Sheet` in order. |
@@ -174,8 +174,9 @@ setters and methods.
 
 **Transformations keep the circuit.** Moving, rotating, mirroring and `set_params` keep every
 attached wire end exactly on its terminal (wires follow, as in the application), and they never change
-the circuit: the nets (which terminals are connected together) are the same afterwards. Re-routing a
-wire can lay it over another terminal or wire end, or move it off a T-junction; the application
+the circuit: the nets (which terminals and which wires are connected together, including nets of wires
+only) are the same afterwards. Re-routing a wire can lay it over another terminal or wire end, or move
+it off a T-junction (cutting a branch off its net); the application
 allows that silently, the API raises `InvalidOperationError` and changes nothing. A transformation
 that would land a terminal on another net's wire is refused the same way: connect with `connect` or
 `add_wire` instead. Every edit is all-or-nothing: if anything fails part-way, the sheet is restored.
@@ -190,7 +191,9 @@ change raises `InvalidOperationError`, matching the application, where they cann
 creating edits follow the same rule:
 - `place` raises if the *Components* layer is locked, and if the new terminals would attach the free
   end of a locked wire (attaching changes that wire);
-- `add_wire` and `connect` raise if the *Wires* layer is locked.
+- `add_wire` and `connect` raise if the *Wires* layer is locked;
+- an edit of an unlocked component that would re-route or detach a locked wire attached to it (moving,
+  rotating, mirroring, `set_params`, `remove`) raises, and nothing is changed.
 
 A wire may still be attached to a terminal of a locked component (as with the application's wire
 tool): that does not change the component.
@@ -198,7 +201,7 @@ tool): that does not change the component.
 ### `Wire`
 
 `id`, `sheet`, `points`, `start` / `end` (`(component_id, terminal)` or `None`), `style`, `number`,
-`remove()`.
+`locked` (the wire or its layer is locked), `remove()`.
 
 ### Value types
 
