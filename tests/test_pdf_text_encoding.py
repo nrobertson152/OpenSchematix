@@ -41,7 +41,9 @@ def test_engineering_characters_are_kept(tmp_path):
         data = f.read()
     text = pypdf.PdfReader(io.BytesIO(data)).pages[0].extract_text()
     # pypdf names Symbol's "Delta" glyph U+2206 (INCREMENT), which looks the same
-    norm = text.replace("∆", "Δ").replace("Ω", "Ω")
+    # PDF Symbol fonts may extract Greek mu (U+03BC) as micro sign (U+00B5).
+    # They render identically, but PDF extractors do not agree on the code point.
+    norm = text.replace("∆", "Δ").replace("Ω", "Ω").replace("µ", "μ")
     for line in ENGINEERING:
         assert line in norm, (line, text)
     assert "?" not in text
