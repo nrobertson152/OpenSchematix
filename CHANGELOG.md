@@ -19,6 +19,12 @@ All notable changes to this project are documented here. Versions follow [Semant
   A recent file that has gone is reported when it is chosen and removed from the list if its folder is still
   there.
 
+### Performance
+
+- The netlist (used by Check, reports, wire numbering and exports) finds touching wires through a spatial
+  index instead of comparing every wire with every other: about 230 times faster on large sheets, with
+  identical nets.
+
 ## [1.1.0] - 2026-11-01
 
 ### Fixed
