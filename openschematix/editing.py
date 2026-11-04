@@ -211,8 +211,10 @@ def route(p: Point, dp: Optional[str], q: Point, dq: Optional[str], avoid=(), av
     if best[0]:
         # every usual candidate touches something: try lanes further out
         wide = []
-        for sp in ((STUB, 3 * GRID) if dp else (0,)):
-            for sq in ((STUB, 3 * GRID) if dq else (0,)):
+        # also without the lead-direction stub: a wire end right in front of a
+        # terminal blocks every route that leaves along the lead
+        for sp in ((STUB, 3 * GRID, 0) if dp else (0,)):
+            for sq in ((STUB, 3 * GRID, 0) if dq else (0,)):
                 ps, qs = stub(p, dp, sp), stub(q, dq, sq)
                 lo_x, hi_x = min(ps[0], qs[0]), max(ps[0], qs[0])
                 lo_y, hi_y = min(ps[1], qs[1]), max(ps[1], qs[1])
@@ -426,6 +428,7 @@ def _transform_items(doc, comp_ids, wire_ids, fn_point, fn_comp, shape_ids=(), f
     single = len(comp_ids) == 1 and not wire_ids and not shape_ids and center is None
     cx, cy = center if center is not None else selection_center(doc, comp_ids, wire_ids, shape_ids)
     rigid = _rigid_wires(doc, comp_ids, wire_ids)
+    hits_before = _own_pin_hits(doc, comp_ids, rigid)
     for cid in comp_ids:
         c = doc.components.get(cid)
         if not c:
@@ -446,6 +449,30 @@ def _transform_items(doc, comp_ids, wire_ids, fn_point, fn_comp, shape_ids=(), f
             if s:
                 fn_shape(s, (cx, cy))
     sync_wire_ends(doc)
+    # A pin a part turns about stays put, so its wire is not re-routed; but
+    # another pin of the part can now lie on that wire and would join it.
+    for wid in _own_pin_hits(doc, comp_ids, rigid) - hits_before:
+        w = doc.wires.get(wid)
+        if w is not None and (w.auto or len(w.points) <= 3):
+            reroute(doc, w)
+
+
+def _own_pin_hits(doc, comp_ids, rigid) -> set:
+    """Wires (not moved rigidly) attached to one of `comp_ids` that pass over
+    another pin of the same component."""
+    from .geometry import point_on_segment
+    out = set()
+    for w in doc.wires.values():
+        if w.id in rigid:
+            continue
+        for ref in (w.start, w.end):
+            c = doc.components.get(ref[0]) if ref else None
+            if c is None or c.id not in comp_ids:
+                continue
+            if any(n != ref[1] and any(point_on_segment(t, a, b) for a, b in zip(w.points, w.points[1:]))
+                   for n, t in c.terminals().items()):
+                out.add(w.id)
+    return out
 
 
 def rotate_items(doc: Document, comp_ids, wire_ids, clockwise: bool = True, shape_ids=(), center=None):

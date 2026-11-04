@@ -22,7 +22,8 @@ All notable changes to this project are documented here. Versions follow [Semant
   wires are re-routed. A new route could run over another wire's loose end or along another wire, which joined
   the nets (for example, rotating a transformer with short wires on each terminal shorted S1 to S2), and it
   could also leave a T-junction made on the wire behind. The router now prefers any route without such contacts
-  and keeps existing junctions on the wire, trying wider detours when needed.
+  and keeps existing junctions on the wire, trying wider detours when needed. Turning a part about one of its
+  pins also re-routes that pin's wire if another pin of the part has swung onto it.
 
 ### Performance
 

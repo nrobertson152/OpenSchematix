@@ -38,15 +38,34 @@ def test_rotating_a_transformer_does_not_short_its_windings():
     assert _terminal_nets(p) == before
 
 
+def test_a_pin_turned_onto_a_wire_of_the_same_part_does_not_join_it():
+    """Turning a part about one of its pins leaves that pin, and so its wire, in place, but can swing
+    another pin onto that wire. The wire must be re-routed, not joined to the other pin."""
+    p = new_project("t")
+    doc = p.sheets[0]
+    r = editing.place(doc, "el.resistor.iec", 0, 0)
+    t1 = r.terminals()["1"]
+    w = editing.add_wire(doc, [t1, (t1[0] - 6 * GRID, t1[1])])
+    assert w is not None and w.start
+    before = _terminal_nets(p)
+    assert before == [["1"]]
+    editing.rotate_items(doc, [r.id], [], clockwise=True, center=t1)
+    editing.rotate_items(doc, [r.id], [], clockwise=True, center=t1)
+    assert r.terminals()["1"] == t1
+    from openschematix.geometry import point_on_segment
+    assert not any(point_on_segment(r.terminals()["2"], a, b) for a, b in zip(w.points, w.points[1:])), w.points
+    assert _terminal_nets(p) == before
+
+
 @pytest.mark.parametrize("sd", BUILTINS, ids=lambda s: s.id)
 def test_rotating_and_mirroring_never_merges_terminal_nets(sd):
     p, doc, c = _wired(sd.id, -37 * GRID, 23 * GRID)
     before = _terminal_nets(p)
-    for op in ("rot", "rot", "rot", "rot", "mirror", "rot", "rot"):
-        if op == "rot":
-            editing.rotate_items(doc, [c.id], [], clockwise=True)
-        else:
+    for op in ("rot", "rot", "rot", "rot", "mirror", "rot", "rot", "rot", "rot", "mirror", "ccw", "mirror", "ccw"):
+        if op == "mirror":
             editing.mirror_items(doc, [c.id], [])
+        else:
+            editing.rotate_items(doc, [c.id], [], clockwise=(op == "rot"))
         assert _terminal_nets(p) == before, (sd.id, op)
 
 
