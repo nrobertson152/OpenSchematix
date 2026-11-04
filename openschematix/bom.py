@@ -41,6 +41,7 @@ from dataclasses import dataclass, field
 
 from . import symbols
 from .netlist import CONNECTION_COLUMNS, to_csv  # noqa: F401  (re-exported for convenience)
+from .symbols.base import is_drafting_element
 from .symbols.general import OFFPAGE_IDS, UNKNOWN_ID
 
 NON_PURCHASABLE = {"el.earth", "el.earth.pe", "el.chassis", "el.ground.signal", "el.connector.point",
@@ -56,6 +57,10 @@ def purchasable(c) -> bool:
         return False
     sd = symbols.get(c.symbol)
     if sd is None:
+        return False
+    if symbols.is_builtin(c.symbol) and is_drafting_element(sd):
+        # a built-in drafting mark (direction arrow, standalone valve operator)
+        # is never a purchased item, even with a part number typed into it
         return False
     return bool(sd.prefix) or bool(c.props.get("part_number"))
 

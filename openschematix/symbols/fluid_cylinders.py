@@ -27,7 +27,9 @@ def piston_iso(x=-10):
     return [line(x, -10, x, 10, w="thick")]
 
 
-def piston_ansi(x=-26):
+def piston_ansi(x=-12):
+    """ANSI piston (double line) between the cap-end port A (x = -20) and the rod-end port B (x = 10), so
+    each port enters its own chamber."""
     return [rect(x, -10, x + 4, 10)]
 
 
@@ -97,28 +99,28 @@ def symbols():
         add(sd("cyl.single.ret.ansi", "Cylinder, single-acting (ANSI)", ANSI,
                "Single-acting cylinder: body open at the rod end. A = cap-end port.",
                [line(-30, -10, -30, 10), line(-30, -10, 20, -10), line(-30, 10, 20, 10)] + piston_ansi()
-               + rod(-22) + [line(-20, -20, -20, -10)], terms(False)))
+               + rod(-8) + [line(-20, -20, -20, -10)], terms(False)))
         add(sd("cyl.double.ansi", "Cylinder, double-acting (ANSI)", ANSI,
-               "Double-acting cylinder, single end rod.", body() + piston_ansi() + rod(-22) + ports(), terms()))
+               "Double-acting cylinder, single end rod.", body() + piston_ansi() + rod(-8) + ports(), terms()))
         add(sd("cyl.doublerod.ansi", "Cylinder, double-acting, double end rod (ANSI)", ANSI,
                "Double-acting cylinder with rod through both ends.",
                body() + [rect(-7, -10, -3, 10), line(-40, 0, -30, 0), line(-30, 0, -7, 0)] + rod(-3, 30)
                + ports(), terms()))
         add(sd("cyl.cushion2", "Cylinder, fixed cushion, advance and retract (ANSI)", ANSI,
                "Double-acting cylinder with fixed cushions at both ends of the stroke.",
-               body() + piston_ansi() + [rect(-22, -4, -15, 4)] + rod(-15) + ports(), terms(),
+               body() + piston_ansi() + [rect(-8, -4, -1, 4)] + rod(-1) + ports(), terms(),
                keywords=("cushion", "ram")))
         add(sd("cyl.cushion.adj1", "Cylinder, adjustable cushion, advance only (ANSI)", ANSI,
                "Double-acting cylinder with an adjustable cushion on the advance stroke.",
-               body() + piston_ansi() + [rect(-22, -4, -15, 4)] + rod(-15) + ports()
-               + arrow(-25, 8, -13, -7, head=4), terms(), keywords=("cushion", "ram")))
+               body() + piston_ansi() + [rect(-8, -4, -1, 4)] + rod(-1) + ports()
+               + arrow(-11, 8, 1, -7, head=4), terms(), keywords=("cushion", "ram")))
         add(sd("cyl.bigrod", "Cylinder, large rod, non-cushioned (ANSI)", ANSI,
                "Double-acting cylinder; rod drawn wide where the rod-to-bore ratio matters to the circuit.",
-               body() + piston_ansi() + [line(-22, -6, 35, -6), line(-22, 6, 35, 6), line(35, -6, 35, 6)]
+               body() + piston_ansi() + [line(-8, -6, 35, -6), line(-8, 6, 35, 6), line(35, -6, 35, 6)]
                + ports(), terms(), keywords=("differential", "ram")))
         add(sd("cyl.bigrod.cushion2", "Cylinder, large rod, cushioned advance and retract (ANSI)", ANSI,
                "Large-rod double-acting cylinder with cushions at both ends of the stroke.",
-               body() + piston_ansi() + [rect(-22, -4, -15, 4), line(-15, -6, 35, -6), line(-15, 6, 35, 6),
+               body() + piston_ansi() + [rect(-8, -4, -1, 4), line(-1, -6, 35, -6), line(-1, 6, 35, 6),
                                          line(35, -6, 35, 6)] + ports(), terms(),
                keywords=("differential", "cushion", "ram")))
         add(sd("intensifier", "Pressure intensifier (ANSI)", ANSI,
@@ -128,7 +130,7 @@ def symbols():
                 line(-30, -12, -30, 12, w="thick"), line(-30, 0, 22, 0), rect(22, -6, 26, 6),
                 line(-30, -20, -30, -12), line(30, 0, 40, 0)],
                [T("1", -30, -20, "u"), T("2", 40, 0, "r")], keywords=("booster",)))
-        servo = body() + piston_ansi() + rod(-22) + [rect(-15, -18, -5, -10)]
+        servo = body() + piston_ansi(-26) + rod(-22) + [rect(-15, -18, -5, -10)]   # ports on the valve, not the body
         if medium == "hyd":
             servo += [line(-15, -14, -40, -14), line(-40, -14, -40, 10), line(-44, 7, -44, 12),
                       line(-44, 12, -36, 12), line(-36, 12, -36, 7), line(-5, -14, 10, -14), line(10, -14, 10, -20)]

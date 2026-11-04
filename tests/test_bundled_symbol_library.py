@@ -317,6 +317,46 @@ def test_drafting_elements_never_connect_enter_bom_or_raise_checks(tmp_path):
     assert bom.generate(q) == []
 
 
+def test_drafting_elements_stay_out_of_the_bom_with_purchasing_data():
+    """A part number typed into a drafting mark must not make it a purchased item
+    (Codex review of #66: `gen.arrow.move` with a part number entered the BOM)."""
+    from openschematix import bom
+    p = new_project("Drafting with part numbers")
+    doc = p.sheets[0]
+    for i, sd in enumerate(DRAFTING):
+        c = editing.place(doc, sd.id, 200 + (i % 12) * 150, 200 + (i // 12) * 150)
+        c.props.update(part_number=f"PN-{i}", manufacturer="ACME", description="should not be bought")
+    assert DRAFTING and bom.generate(p) == []
+    # control: an ordinary symbol without a designator prefix still enters the BOM with a part number
+    plain = [s for s in BUILTINS if not s.prefix and not is_drafting_element(s) and s.id not in bom.NON_PURCHASABLE]
+    if plain:
+        c = editing.place(doc, plain[0].id, 100, 2000)
+        c.props["part_number"] = "PN-CTRL"
+        assert [ln.part_number for ln in bom.generate(p)] == ["PN-CTRL"]
+
+
+ANSI_CYLINDERS = ["cyl.single.ret.ansi", "cyl.double.ansi", "cyl.cushion2", "cyl.cushion.adj1", "cyl.bigrod",
+                  "cyl.bigrod.cushion2"]
+
+
+@pytest.mark.parametrize("medium", ["hyd", "pneu"])
+@pytest.mark.parametrize("sid", ANSI_CYLINDERS)
+def test_ansi_cylinder_ports_enter_their_own_chambers(medium, sid):
+    """The piston (a full-bore double line) lies between the cap-end port A and
+    the rod-end port B, so A feeds the cap chamber and B the rod chamber. Codex
+    review of #66: the piston was drawn at the cap wall, left of A."""
+    sd = symbols.get(f"fl.{medium}.{sid}")
+    g = symbols.geometry(sd.id)
+    t = {x.name: x for x in g.terminals}
+    pistons = [pr for pr in g.prims if pr["k"] == "poly" and {y for _x, y in pr["pts"]} == {-10, 10}
+               and max(x for x, _y in pr["pts"]) - min(x for x, _y in pr["pts"]) <= 6]
+    assert len(pistons) == 1, sd.id
+    xs = [x for x, _y in pistons[0]["pts"]]
+    assert min(xs) > t["A"].x, f"{sd.id}: piston at x {min(xs)}..{max(xs)} is not on the rod side of port A"
+    if "B" in t:
+        assert max(xs) < t["B"].x, f"{sd.id}: piston is not on the cap side of port B"
+
+
 # ---------------------------------------------------------------- inventory generator safety
 def _load_generator():
     import importlib.util
