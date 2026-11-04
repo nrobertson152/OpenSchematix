@@ -1594,9 +1594,21 @@ class App:
 
     def set_wire_number(self, wire, number):
         s = self.begin_change()
-        netlist.set_net_number(self.project, self.doc.uid, wire.id, number)
-        self.commit_change(s, f"Wire number set to {number} for the whole connection." if number else
-                              "Manual wire number removed.")
+        res = netlist.set_net_number(self.project, self.doc.uid, wire.id, number)
+        if not number:
+            self.commit_change(s, "Manual wire number removed.")
+            return
+        msg = f"Wire number set to {number} for the whole connection."
+        if res.renumbered:
+            moved = ", ".join(new for _old, new in res.renumbered)
+            msg += (f" {len(res.renumbered)} other connection(s) that had {number} automatically "
+                    f"now have {moved}.")
+        if res.manual_clash:
+            msg += (f" Warning: {res.manual_clash} other connection(s) also have {number} as a manual number "
+                    f"(Check drawing reports this).")
+        self.commit_change(s, msg)
+        if res.manual_clash:
+            self.toast(f"Wire number {number} is also set manually on another connection.", "warning")
 
     def edit_text_shape(self, sid):
         sh = self.doc.shapes[sid]

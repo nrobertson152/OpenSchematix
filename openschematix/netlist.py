@@ -309,10 +309,6 @@ def assign_wire_numbers(project, renumber: bool = False) -> int:
     (stable when wires or components move); manual numbers are never
     changed. With `renumber`, automatic numbers are reassigned in drawing
     order. Returns the number of nets that received a new number."""
-    conv = project.settings.get("wire_numbering", {})
-    scheme = conv.get("scheme", "sequential")
-    start = int(conv.get("start", 1) or 1)
-    step = max(1, int(conv.get("step", 1) or 1))
     nets = compute_nets(project)
     wire = lambda uid, wid: project.find_sheet(uid).wires[wid]  # noqa: E731
     if renumber:
@@ -321,7 +317,12 @@ def assign_wire_numbers(project, renumber: bool = False) -> int:
                 w = wire(uid, wid)
                 if not w.number_manual:
                     w.number = ""
-    used = set()
+    # Manual numbers are reserved first: an automatic number may be kept or
+    # given out only if no connection, earlier or later in drawing order, has
+    # it as a manual number (audit F6, #80).
+    reserved = {w.number for n in nets if numberable(project, n)
+                for w in (wire(u, i) for u, i in n.wires) if w.number_manual and w.number}
+    used = set(reserved)
     changed = 0
     pending = []
     for n in nets:
@@ -350,25 +351,8 @@ def assign_wire_numbers(project, renumber: bool = False) -> int:
                 w.number = num
         n.number = num
     counters = {}
-    order = {d.uid: i + 1 for i, d in enumerate(project.sheets)}
     for n in pending:
-        sheet_no = order.get(n.wires[0][0], 1)
-        if scheme == "sheet":
-            k = counters.get(sheet_no, 0)
-            while True:
-                k += 1
-                num = format_number(conv, sheet_no * 100 + k, sheet_no)
-                if num not in used:
-                    break
-            counters[sheet_no] = k
-        else:
-            k = counters.get(0, start - step)
-            while True:
-                k += step
-                num = format_number(conv, k)
-                if num not in used:
-                    break
-            counters[0] = k
+        num = _next_free_number(project, n, used, counters)
         used.add(num)
         n.number = num
         for u, i in n.wires:
@@ -379,18 +363,76 @@ def assign_wire_numbers(project, renumber: bool = False) -> int:
     return changed
 
 
-def set_net_number(project, sheet_uid: str, wire_id: int, number: str):
+def _next_free_number(project, n: Net, used: set, counters: dict) -> str:
+    """Next number of the project's numbering scheme for net `n` that is not in `used`."""
+    conv = project.settings.get("wire_numbering", {})
+    if conv.get("scheme", "sequential") == "sheet":
+        order = {d.uid: i + 1 for i, d in enumerate(project.sheets)}
+        sheet_no = order.get(n.wires[0][0], 1)
+        k = counters.get(sheet_no, 0)
+        while True:
+            k += 1
+            num = format_number(conv, sheet_no * 100 + k, sheet_no)
+            if num not in used:
+                break
+        counters[sheet_no] = k
+    else:
+        start = int(conv.get("start", 1) or 1)
+        step = max(1, int(conv.get("step", 1) or 1))
+        k = counters.get(0, start - step)
+        while True:
+            k += step
+            num = format_number(conv, k)
+            if num not in used:
+                break
+        counters[0] = k
+    return num
+
+
+@dataclass
+class NumberChange:
+    """Result of set_net_number: the net, and the other connections affected."""
+    net: Net | None
+    renumbered: list = field(default_factory=list)     # (old, new) for automatic numbers moved out of the way
+    manual_clash: int = 0                               # other connections with the same manual number
+
+
+def set_net_number(project, sheet_uid: str, wire_id: int, number: str) -> NumberChange:
     """Manual override: give the whole net of a wire this number (empty
-    string clears the override)."""
+    string clears the override).
+
+    Another connection that had this number automatically is given a new
+    automatic number, so the override never creates a duplicate (#80).
+    Another connection with the same number set manually is left alone (it
+    is the user's) and counted in `manual_clash`; Check reports it."""
     nets = compute_nets(project)
-    for n in nets:
-        if (sheet_uid, wire_id) in n.wires:
-            for u, i in n.wires:
-                w = project.find_sheet(u).wires[i]
-                w.number = number
-                w.number_manual = bool(number)
-            return n
-    return None
+    wire = lambda uid, wid: project.find_sheet(uid).wires[wid]  # noqa: E731
+    target = next((n for n in nets if (sheet_uid, wire_id) in n.wires), None)
+    out = NumberChange(target)
+    if target is None:
+        return out
+    for u, i in target.wires:
+        w = wire(u, i)
+        w.number = number
+        w.number_manual = bool(number)
+    if not number:
+        return out
+    others = [n for n in nets if n is not target and numberable(project, n)]
+    used = {w.number for n in others for w in (wire(u, i) for u, i in n.wires) if w.number} | {number}
+    counters: dict = {}
+    for n in others:
+        ws = [wire(u, i) for u, i in n.wires]
+        if any(w.number_manual and w.number == number for w in ws):
+            out.manual_clash += 1
+            continue
+        if any(not w.number_manual and w.number == number for w in ws):
+            new = _next_free_number(project, n, used, counters)
+            used.add(new)
+            for w in ws:
+                if not w.number_manual and w.number == number:
+                    w.number = new
+            out.renumbered.append((number, new))
+    return out
 
 
 def _natural(s: str):
