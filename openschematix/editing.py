@@ -125,13 +125,20 @@ DIRV = {"l": (-1, 0), "r": (1, 0), "u": (0, -1), "d": (0, 1)}
 STUB = 2 * GRID
 
 
-def route(p: Point, dp: Optional[str], q: Point, dq: Optional[str], avoid=(), avoid_segs=(), avoid_points=()) -> list:
+def route(p: Point, dp: Optional[str], q: Point, dq: Optional[str], avoid=(), avoid_segs=(), avoid_points=(),
+          keep_points=()) -> list:
     """Orthogonal route from p to q. dp/dq are the outward directions of the
     terminals at each end (or None for a free end). The route leaves and
     enters terminals along their lead direction, does not double back, and
     where possible avoids component bodies (`avoid` bounding boxes), running
     on top of other wires (`avoid_segs`) and passing over foreign terminals
-    (`avoid_points`)."""
+    (`avoid_points`).
+
+    Running along another wire or over a foreign point would connect to it,
+    so a route without any such contact is always preferred, however long;
+    if the usual candidates all make contact, wider detours are tried.
+    `keep_points` (junctions on the wire being re-routed) must stay on the
+    route, with the same priority."""
     from .geometry import point_on_segment
 
     def stub(pt, d, n):
@@ -153,6 +160,20 @@ def route(p: Point, dp: Optional[str], q: Point, dq: Optional[str], avoid=(), av
         if not dp and not dq:
             break
 
+    all_boxes, all_segs, all_points = list(avoid), list(avoid_segs), list(avoid_points)
+
+    def near(cands):
+        """Score against obstacles near the candidates only (fast on large sheets)."""
+        nonlocal avoid, avoid_segs, avoid_points
+        xs = [pt[0] for core in cands for pt in core] + [p[0], q[0]]
+        ys = [pt[1] for core in cands for pt in core] + [p[1], q[1]]
+        x0, x1, y0, y1 = min(xs) - 1, max(xs) + 1, min(ys) - 1, max(ys) + 1
+        avoid = [b for b in all_boxes if b[0] <= x1 and b[2] >= x0 and b[1] <= y1 and b[3] >= y0]
+        avoid_segs = [(a, b) for a, b in all_segs
+                      if max(min(a[0], b[0]), x0) <= min(max(a[0], b[0]), x1)
+                      and max(min(a[1], b[1]), y0) <= min(max(a[1], b[1]), y1)]
+        avoid_points = [t for t in all_points if x0 <= t[0] <= x1 and y0 <= t[1] <= y1]
+
     def cost(path):
         raw = []
         for pt in path:  # keep reversals visible: only drop repeated points
@@ -160,6 +181,7 @@ def route(p: Point, dp: Optional[str], q: Point, dq: Optional[str], avoid=(), av
                 raw.append(pt)
         pts = simplify_orthogonal(path)
         c = 0.0
+        contacts = 0
         prev = None
         for a, b in zip(raw, raw[1:]):
             d = (b[0] - a[0], b[1] - a[1])
@@ -174,13 +196,42 @@ def route(p: Point, dp: Optional[str], q: Point, dq: Optional[str], avoid=(), av
             for sa, sb in avoid_segs:
                 if _overlap(a, b, sa, sb):
                     c += 600
+                    contacts += 1
             for t in avoid_points:
                 if point_on_segment(t, a, b):
                     c += 600
+                    contacts += 1
+        for t in keep_points:
+            if not any(point_on_segment(t, a, b) for a, b in zip(raw, raw[1:])):
+                contacts += 1
         c += 8 * len(pts)
-        return c, pts
-    best = min((cost([p] + core + [q]) for core in cores), key=lambda t: t[0])
-    return best[1]
+        return contacts, c, pts
+    near(cores)
+    best = min((cost([p] + core + [q]) for core in cores), key=lambda t: t[:2])
+    if best[0]:
+        # every usual candidate touches something: try lanes further out
+        wide = []
+        for sp in ((STUB, 3 * GRID) if dp else (0,)):
+            for sq in ((STUB, 3 * GRID) if dq else (0,)):
+                ps, qs = stub(p, dp, sp), stub(q, dq, sq)
+                lo_x, hi_x = min(ps[0], qs[0]), max(ps[0], qs[0])
+                lo_y, hi_y = min(ps[1], qs[1]), max(ps[1], qs[1])
+                for k in range(1, 9):
+                    for x in (snap(lo_x - k * GRID), snap(hi_x + k * GRID), snap(ps[0] + k * GRID),
+                              snap(ps[0] - k * GRID), snap(qs[0] + k * GRID), snap(qs[0] - k * GRID)):
+                        wide.append([ps, (x, ps[1]), (x, qs[1]), qs])
+                    # bends just before a junction to keep let the route reach it straight
+                    kx = [snap(t[0] + s * k * GRID) for t in keep_points for s in (-1, 1)]
+                    ky = [snap(t[1] + s * k * GRID) for t in keep_points for s in (-1, 1)]
+                    for y in [snap(lo_y - k * GRID), snap(hi_y + k * GRID), snap(ps[1] + k * GRID),
+                              snap(ps[1] - k * GRID), snap(qs[1] + k * GRID), snap(qs[1] - k * GRID)] + ky:
+                        wide.append([ps, (ps[0], y), (qs[0], y), qs])
+                        for x in [snap(lo_x - k * GRID), snap(hi_x + k * GRID)] + kx:
+                            wide.append([ps, (ps[0], y), (x, y), (x, qs[1]), qs])
+                            wide.append([ps, (x, ps[1]), (x, y), (qs[0], y), qs])
+        near(wide)
+        best = min([best] + [cost([p] + core + [q]) for core in wide], key=lambda t: t[:2])
+    return best[2]
 
 
 def _overlap(a, b, c, d) -> bool:
@@ -219,7 +270,25 @@ def reroute(doc: Document, w: Wire):
     avoid = [doc.components[r[0]].bbox() for r in (w.start, w.end) if r and r[0] in doc.components]
     segs = [(a, b) for o in doc.wires.values() if o.id != w.id for a, b in zip(o.points, o.points[1:])]
     pts = [tp for c in doc.components.values() for n, tp in c.terminals().items() if (c.id, n) not in own]
-    w.points = route(p, _end_dir(doc, w.start), q, _end_dir(doc, w.end), avoid, segs, pts)
+    # Another wire's end point on this path would join the two nets at a
+    # T-junction (netlist): avoid it like a foreign terminal. Its own two
+    # end points are excluded: they are where this wire must go anyway.
+    # A wire end that already lies on this wire is a junction made on purpose:
+    # the new path must keep passing through it instead.
+    from .geometry import point_on_segment
+    ends = (tuple(p), tuple(q))
+    keep = []
+    for o in doc.wires.values():
+        if o.id == w.id or not o.points:
+            continue
+        for pt in (o.points[0], o.points[-1]):
+            if any(same(pt, e) for e in ends):
+                continue
+            if any(point_on_segment(pt, a, b) for a, b in zip(w.points, w.points[1:])):
+                keep.append(pt)
+            else:
+                pts.append(pt)
+    w.points = route(p, _end_dir(doc, w.start), q, _end_dir(doc, w.end), avoid, segs, pts, keep)
     w.auto = True
 
 
