@@ -382,6 +382,57 @@ class ChoiceDialog(Dialog):
         self.destroy()
 
 
+class SymbolCollisionDialog(Dialog):
+    """Shown before "Edit symbol" when the open project draws a definition of
+    a custom-symbol id that differs from the user library's. Result:
+    "library" (edit the library symbol in place), "copy" (edit a copy of the
+    project's definition under a new id) or None (Cancel, the default for
+    Return, Escape and closing the window)."""
+
+    def __init__(self, app, sid, drawn, library, differences, wait=True):
+        from ..symbols.compare import label, pin_list
+        super().__init__(app, "Edit symbol")
+        f = self.frame
+        ttk.Label(f, text="This project and your library have different definitions of this symbol",
+                  style="Bold.TLabel").pack(anchor="w")
+        rows = (("Drawn in this project:", f"{label(drawn)}  ·  connection points {pin_list(drawn)}"),
+                ("In your library:", f"{label(library)}  ·  connection points {pin_list(library)}"))
+        grid = ttk.Frame(f, style="Surface.TFrame")
+        grid.pack(anchor="w", pady=(10, 4))
+        for i, (k, v) in enumerate(rows):
+            ttk.Label(grid, text=k, style="Muted.TLabel").grid(row=i, column=0, sticky="w", padx=(0, 10), pady=2)
+            ttk.Label(grid, text=v, style="Surface.TLabel").grid(row=i, column=1, sticky="w", pady=2)
+        self.text = "\n".join(f"• {d}" for d in differences)
+        ttk.Label(f, text=f"Symbol id {sid}. Differences:\n{self.text}", style="Muted.TLabel", wraplength=560,
+                  justify="left").pack(anchor="w", pady=(4, 10))
+        ttk.Label(f, text="Edit the library symbol: saving changes the library for every project; this "
+                          "project's drawings keep their version unless you update them (you will see what "
+                          "an update would disconnect first).\nEdit a copy: opens this project's version as a "
+                          "new symbol with a new id; the drawings and the library symbol are not changed.",
+                  style="Surface.TLabel", wraplength=560, justify="left").pack(anchor="w")
+        bar = ttk.Frame(f, style="Surface.TFrame")
+        bar.pack(fill="x", pady=(16, 0), side="bottom")
+        self.cancel_button = ttk.Button(bar, text="Cancel", style="Accent.TButton", command=self.cancel)
+        self.cancel_button.pack(side="right")
+        self.copy_button = ttk.Button(bar, text="Edit a copy of the project's symbol",
+                                      command=lambda: self.choose("copy"))
+        self.copy_button.pack(side="right", padx=(0, 8))
+        self.library_button = ttk.Button(bar, text="Edit the library symbol", command=lambda: self.choose("library"))
+        self.library_button.pack(side="right", padx=(0, 8))
+        self.bind("<Return>", lambda e: e.widget.invoke() if isinstance(e.widget, ttk.Button) else self.cancel())
+        th.recolor_tree(self, app.theme)
+        self.show_modal(wait=False)
+        # keyboard focus on Cancel once the window is mapped (focus_set before that is not kept)
+        self.cancel_button.focus_set()
+        self.after_idle(self.cancel_button.focus_set)
+        if wait:
+            self.wait_window()
+
+    def choose(self, what):
+        self.result = what
+        self.destroy()
+
+
 class SymbolPickerDialog(Dialog):
     def __init__(self, app, title="Choose a symbol", parent=None, ok_text="Choose"):
         super().__init__(app, title, resizable=True, parent=parent)

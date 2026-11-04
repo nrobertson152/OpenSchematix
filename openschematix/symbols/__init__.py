@@ -9,7 +9,10 @@ Built-in ids can never be overridden by custom symbols.
 """
 from __future__ import annotations
 
+import contextlib
+import functools
 import json
+import weakref
 from functools import lru_cache
 
 from .base import Geometry, SymbolDef, Terminal, validate_geometry, LINE_WIDTHS, PORT_TYPES, port_domain  # noqa: F401
@@ -20,6 +23,7 @@ CATEGORY_ORDER = ["Electrical", "Electronic", "Hydraulic", "Pneumatic", "General
 _REGISTRY: dict[str, SymbolDef] = {}     # built-in
 _USER: dict[str, SymbolDef] = {}         # user libraries
 _PROJECT: dict[str, SymbolDef] = {}      # embedded in the open project
+_OWNER = None                            # weakref to the project whose symbols _PROJECT holds, if known
 
 
 def _register_all():
@@ -39,6 +43,18 @@ def is_builtin(symbol_id: str) -> bool:
 
 def get(symbol_id: str) -> SymbolDef | None:
     return _REGISTRY.get(symbol_id) or _PROJECT.get(symbol_id) or _USER.get(symbol_id)
+
+
+def lookup(symbol_id: str, project_defs: dict | None = None) -> SymbolDef | None:
+    """Definition of a symbol for a project that may not be the active one.
+
+    Searches the built-in symbols, then `project_defs` (that project's own embedded definitions, id ->
+    SymbolDef), then the user libraries. Unlike get(), it never consults the active project's symbols,
+    so reading one project cannot pick up another project's version of a custom symbol."""
+    sd = _REGISTRY.get(symbol_id)
+    if sd is None and project_defs:
+        sd = project_defs.get(symbol_id)
+    return sd or _USER.get(symbol_id)
 
 
 def alias_pairs(defs=None) -> list[tuple[str, tuple, str]]:
@@ -90,10 +106,70 @@ def set_user_symbols(defs):
     _geometry_cached.cache_clear()
 
 
-def set_project_symbols(defs):
+def set_project_symbols(defs, owner=None):
+    """Register a project's embedded symbols. `owner` is that project
+    (Project.activate_symbols passes it); see project_owner()."""
+    global _OWNER
     _PROJECT.clear()
     _PROJECT.update(_clean(defs))
+    _OWNER = weakref.ref(owner) if owner is not None else None
     _geometry_cached.cache_clear()
+
+
+def project_owner():
+    """The project whose embedded symbols are registered, or None if they
+    were registered without one (or that project no longer exists).
+
+    The registry is process-wide: symbols.get() and every geometry lookup
+    see the embedded symbols of whichever project was activated last. Code
+    that works on a project uses project_scope() so that it resolves that
+    project's own definitions, and Project.embed_symbols() only trusts the
+    registry for its owner."""
+    return _OWNER() if _OWNER is not None else None
+
+
+@contextlib.contextmanager
+def project_scope(project):
+    """Resolve symbols as `project` inside the block: its embedded symbols
+    are registered for the duration, and the previous registration (and
+    owner) is restored afterwards, even on error. A no-op if `project` is
+    None or already registered (the normal case: the open project)."""
+    global _OWNER
+    if project is None or project_owner() is project:
+        yield
+        return
+    saved, saved_owner = dict(_PROJECT), _OWNER
+    project.activate_symbols()
+    try:
+        yield
+    finally:
+        _PROJECT.clear()
+        _PROJECT.update(saved)
+        _OWNER = saved_owner
+        _geometry_cached.cache_clear()
+
+
+def _scope_target(args, kwargs):
+    """The project an engine call works on: a `project` argument, else the
+    first argument that is a project, else the first sheet's project."""
+    cands = [kwargs.get("project")] + list(args) + list(kwargs.values())
+    for a in cands:
+        if a is not None and hasattr(a, "activate_symbols") and hasattr(a, "sheets"):
+            return a
+    for a in cands:
+        if a is not None and hasattr(a, "components") and hasattr(a, "project"):
+            return a.project
+    return None
+
+
+def project_scoped(fn):
+    """Decorator for engine functions that take a project (or a sheet that
+    belongs to one): they resolve symbols as that project (project_scope)."""
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        with project_scope(_scope_target(args, kwargs)):
+            return fn(*args, **kwargs)
+    return wrapper
 
 
 def add_project_symbol(sd: SymbolDef):

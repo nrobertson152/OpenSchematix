@@ -19,16 +19,17 @@ import os
 import subprocess
 import sys
 import time
-import tempfile
 import tkinter as tk
 import webbrowser
 from tkinter import filedialog, messagebox, simpledialog, ttk
 
+from .. import printtemp
 from .. import (APP_NAME, DONATE_URL, PROJECT_EXTENSION, VERSION, commands as cmdparse, editing, export, netlist,
                 projectio, symbols, templates)
 from ..geometry import GRID, UNIT_MM, norm_rotation, snap
 from ..model import Component, Shape, Wire, format_scale, parse_scale
 from ..project import Project, new_project
+from ..printtemp import PrintFiles
 from ..recovery import RecoveryManager
 from ..settings import Settings
 from ..userlib import UserLibrary, add_recent_symbol
@@ -37,7 +38,7 @@ from . import interact as ia
 from .canvas_view import SchematicCanvas
 from .cmdline import CommandLine, LogView
 from .dialogs import (AboutDialog, DxfImportDialog, ExportPdfDialog, PreferencesDialog, ProjectDialog, RecoveryDialog,
-                      ScaleDialog, ShortcutsDialog, SymbolPickerDialog, TemplateSaveDialog, TextDialog, ValveDialog,
+                      ScaleDialog, ShortcutsDialog, SymbolCollisionDialog, SymbolPickerDialog, TemplateSaveDialog, TextDialog, ValveDialog,
                       WireNumberDialog)
 from .inspector import Inspector
 from .keymap import KeyMap
@@ -95,6 +96,7 @@ class App:
         self.runner = ia.CommandRunner(self)
         self.keymap = KeyMap(self)
         self.recovery = RecoveryManager()
+        self.print_files = PrintFiles()
         self._autosave_job = None
         self._load_icon()
         root.title(APP_NAME)
@@ -112,6 +114,7 @@ class App:
             orphans = self.recovery.orphans() if check_recovery else []
         except OSError:
             orphans = []
+        printtemp.cleanup_stale()           # print PDFs left by earlier sessions (never raises)
         try:
             self.recovery.start()
         except OSError:
@@ -216,6 +219,9 @@ class App:
         lay = self.settings["layout"]
         self.panel_visible = {"left": lay.get("left", True), "right": lay.get("right", True),
                               "bottom": lay.get("bottom", True)}
+        # True once _restore_layout has applied the saved pane sizes. Until then the panes (and the
+        # drawing canvas) can still be resized by it, up to about 2 s after start-up.
+        self.layout_restored = False
         self.root.after(60, self._restore_layout)
 
     def _restore_layout(self, attempts=0):
@@ -254,6 +260,7 @@ class App:
             if not self.panel_visible[side]:
                 self.panel_visible[side] = True
                 self.toggle_panel(side)
+        self.layout_restored = True
 
     def _save_layout(self):
         lay = self.settings["layout"]
@@ -1590,9 +1597,21 @@ class App:
 
     def set_wire_number(self, wire, number):
         s = self.begin_change()
-        netlist.set_net_number(self.project, self.doc.uid, wire.id, number)
-        self.commit_change(s, f"Wire number set to {number} for the whole connection." if number else
-                              "Manual wire number removed.")
+        res = netlist.set_net_number(self.project, self.doc.uid, wire.id, number)
+        if not number:
+            self.commit_change(s, "Manual wire number removed.")
+            return
+        msg = f"Wire number set to {number} for the whole connection."
+        if res.renumbered:
+            moved = ", ".join(new for _old, new in res.renumbered)
+            msg += (f" {len(res.renumbered)} other connection(s) that had {number} automatically "
+                    f"now have {moved}.")
+        if res.manual_clash:
+            msg += (f" Warning: {res.manual_clash} other connection(s) also have {number} as a manual number "
+                    f"(Check drawing reports this).")
+        self.commit_change(s, msg)
+        if res.manual_clash:
+            self.toast(f"Wire number {number} is also set manually on another connection.", "warning")
 
     def edit_text_shape(self, sid):
         sh = self.doc.shapes[sid]
@@ -1767,7 +1786,7 @@ class App:
             p.sheets[0].sheet.title_block = tb
         else:
             try:
-                p = projectio.open_any(os.path.join(d, choice + PROJECT_EXTENSION)).project
+                p = projectio.open_any(os.path.join(d, choice + PROJECT_EXTENSION), activate=False).project
             except (OSError, projectio.ProjectFormatError) as e:
                 messagebox.showerror("Template", str(e), parent=self.root)
                 return
@@ -1885,11 +1904,32 @@ class App:
         self.set_selection({i for i in self.doc.all_ids() if self.doc.item(i).layer == name})
 
     # ---------------------------------------------------------------- symbols / templates
+    def project_symbol(self, sid):
+        """Definition of symbol `sid` as the open project draws it: built-in,
+        then the project's own embedded definition, then the user library
+        (Project.symbol_resolver). Never the process-wide registry, which may
+        hold another project's definition of the same custom-symbol id."""
+        return self.project.symbol_resolver()(sid)
+
     def open_symbol_editor(self, doc=None, folder=None, from_builtin=None, copy_of=None, params=None):
         """Open the symbol editor: empty, on a custom symbol `doc` (edited in
         place), or on an editable copy of any symbol `copy_of` (built-in,
         library or project; `params` = variant of a parametric symbol)."""
         from .symbol_editor import SymbolEditor
+        src = copy_of or from_builtin
+        if src is not None:
+            # Convert first so a symbol that cannot be copied faithfully gives a
+            # clear message instead of an empty editor window.
+            from ..symbols.custom import SymbolFormatError
+            from ..symbols.explode import symbol_to_doc
+            sd = self.project_symbol(src)
+            try:
+                if sd is None:
+                    raise SymbolFormatError(f"The symbol {src} is not available.")
+                symbol_to_doc(sd, params)
+            except SymbolFormatError as e:
+                messagebox.showerror("Cannot edit a copy", str(e), parent=self.root)
+                return None
         if not self.userlib.folders():
             try:
                 self.userlib.create_folder("", "My symbols")
@@ -1899,23 +1939,106 @@ class App:
 
     def edit_symbol_copy(self, sid, params=None):
         """Open any symbol as an editable copy; the original is never changed."""
-        if symbols.get(sid) is None:
+        if self.project_symbol(sid) is None:
             return None
         return self.open_symbol_editor(copy_of=sid, params=params)
 
-    def edit_custom_symbol(self, sid):
-        sd = symbols.get(sid)
-        if sd is None or not sd.is_custom:
-            return
-        e = self.userlib.entries.get(sid)
-        self.open_symbol_editor(doc=sd.custom, folder=e.folder if e else None)
+    def edit_symbol_file_copy(self, path=None, folder=None):
+        """Open the symbol in an ``.osym`` file as an editable copy (new id,
+        based on the file's symbol). The file itself is only read; saving
+        adds a new symbol to the library. Returns the editor or None."""
+        if path is None:
+            path = filedialog.askopenfilename(parent=self.root, title="Edit a copy of a symbol file",
+                                              filetypes=[("OpenSchematix symbol", "*.osym"), ("All files", "*")])
+            if not path:
+                return None
+        from ..symbols.custom import SymbolFormatError
+        from ..symbols.explode import doc_from_file
+        try:
+            doc = doc_from_file(path)
+        except (OSError, SymbolFormatError) as e:
+            messagebox.showerror("Cannot open symbol file", f"{os.path.basename(path)}:\n{e}", parent=self.root)
+            return None
+        return self.open_symbol_editor(doc=doc, folder=folder)
 
-    def update_project_symbol(self, sid):
-        """Switch the project's embedded copy of a custom symbol to the library version."""
+    def edit_custom_symbol(self, sid):
+        """Edit a custom symbol in place ("Edit symbol"). Saving stores the
+        editor's content as the user library's next revision of `sid`, so a
+        symbol that is in the library is edited from the library's own
+        definition: starting from the project's embedded copy (possibly an
+        older revision) would silently replace the newer library geometry.
+        The drawings keep their version until updated (save offers it). A
+        symbol that exists only in the open project is edited from its
+        embedded definition and saving adds it to the library.
+
+        If the library and the open project hold DIFFERENT definitions of
+        `sid` (an older revision, or another symbol that shares the id), the
+        user chooses first: edit the library symbol, edit a copy of the
+        project's definition (new id; drawings and library unchanged), or
+        Cancel (the default). Returns the editor, or None."""
+        from ..symbols import compare
+        e = self.userlib.entries.get(sid)
+        if e is not None:
+            drawn = self.project.symbols.get(sid)
+            if drawn is not None:
+                dif = compare.diff(drawn, e.doc)
+                if not dif.identical:
+                    choice = self.ask_symbol_collision(sid, drawn, e.doc, dif.summary())
+                    if choice == "copy":
+                        return self.edit_symbol_copy(sid)
+                    if choice != "library":
+                        self.set_status("Edit symbol cancelled.")
+                        return None
+            return self.edit_library_symbol(sid)
+        sd = self.project_symbol(sid)
+        if sd is None or not sd.is_custom:
+            return None
+        return self.open_symbol_editor(doc=sd.custom, folder=None)
+
+    def ask_symbol_collision(self, sid, drawn, library, differences):
+        """"library", "copy" or None (Cancel). Separate so tests can answer it."""
+        return SymbolCollisionDialog(self, sid, drawn, library, differences).result
+
+    def confirm_symbol_update(self, impact, drawn, library) -> bool:
+        """Ask before an update that disconnects, re-routes or renames.
+        Default: No. Separate so tests can answer it."""
+        return messagebox.askyesno("Update drawings?", symbol_update_message(impact, drawn, library),
+                                   icon="warning", default="no", parent=self.root)
+
+    def edit_library_symbol(self, sid):
+        """Edit the user-library symbol `sid` in place, from the library's
+        definition (never the registry or an embedded copy). Returns the
+        editor, or None if `sid` is not in the library."""
         e = self.userlib.entries.get(sid)
         if e is None:
-            return
+            return None
+        drawn = self.project.symbols.get(sid)
+        if drawn is not None and drawn.get("revision", 0) != e.doc.get("revision", 0):
+            self.log(f"Editing “{e.name}” revision {e.doc.get('revision', 0)} from the library; this project "
+                     f"draws revision {drawn.get('revision', 0)} until its drawings are updated.", "info")
+        return self.open_symbol_editor(doc=e.doc, folder=e.folder)
+
+    def update_project_symbol(self, sid) -> bool:
+        """Switch the project's embedded copy of a custom symbol to the library version.
+
+        Every "Update drawings" goes through here. Before anything changes,
+        the wire ends that would be detached (connection point no longer
+        exists) or re-routed (connection point moves) are worked out; if
+        there are any, or the symbol's name differs, the user confirms with
+        both definitions and every affected end listed (default: No). On No
+        the project and its wires are left exactly as they were. Returns True
+        if the drawings were updated."""
+        e = self.userlib.entries.get(sid)
+        if e is None:
+            return False
+        from ..symbols import compare
         from ..symbols.custom import to_symdef
+        drawn = self.project.symbols.get(sid)
+        impact = compare.update_impact(self.project, sid, e.doc)
+        if drawn is not None and not impact.harmless and not self.confirm_symbol_update(impact, drawn, e.doc):
+            self.log(f"Drawings not updated: they keep {compare.label(drawn)}.", "info")
+            self.set_status("Drawings not updated.")
+            return False
         s = self.begin_change()
         before = {(d.uid, w.id): (w.start, w.end) for d in self.project.sheets for w in d.wires.values()}
         self.project.symbols[sid] = json.loads(json.dumps(e.doc))
@@ -1929,7 +2052,9 @@ class App:
                            (f" {lost} wire end(s) were detached from connection points that no longer exist."
                             if lost else ""))
         if lost:
-            self.log(f"{lost} wire end(s) lost their connection point after the symbol update.", "warning")
+            self.log(f"{lost} wire end(s) lost their connection point after the symbol update: "
+                     + ", ".join(w.text() for w in impact.detached) + ". Undo restores them.", "warning")
+        return True
 
     def insert_symbol_dialog(self):
         sid = SymbolPickerDialog(self, "Insert symbol").result
@@ -2190,10 +2315,13 @@ class App:
             m.add_command(label="Zoom to drawing", command=self.canvas_fit_drawing)
             m.add_command(label="Zoom to sheet", command=lambda: self.canvas.fit())
             m.add_command(label="Sheet properties", command=self.focus_properties)
-        try:
-            m.tk_popup(x, y)
-        finally:
-            m.grab_release()
+        # tk_popup installs Tk's native menu grab and keyboard bindings.
+        # Tk's Menu class unposts on Escape and outside clicks, releases its
+        # grab and supports cascades.  Releasing the grab here (tk_popup
+        # returns immediately) disables that behavior; root-level dismissal
+        # handlers can also dispatch Escape to an active CAD command.
+        # Keep the grab under Tk's control, as in the sheet-tab popup.
+        m.tk_popup(x, y)
 
     def _connect_at(self, p):
         s = self.begin_change()
@@ -2267,17 +2395,30 @@ class App:
             res = projectio.open_any(path)
         except (OSError, projectio.ProjectFormatError) as e:
             messagebox.showerror("Could not open", f"{path}\n\n{e}", parent=self.root)
+            # Forget a recent file only if it is really gone: its folder is still
+            # there. A file on a drive or share that is offline (Windows also
+            # reports that as "not found") stays for when it is back.
+            if (isinstance(e, FileNotFoundError) and os.path.isdir(os.path.dirname(os.path.abspath(path)))
+                    and self.settings.remove_recent(path)):
+                self.settings.save()
+                self._rebuild_recent()
             return
         self.settings["last_dir"] = os.path.dirname(os.path.abspath(path))
-        if res.migrated:
+        if res.needs_new_name:
+            # converted, or opened with damaged parts left out: never save over the original
             self._reset(res.project, None)
             self._suggested_path = projectio.suggested_project_path(path)
             self.dirty = True
             self.update_title()
             for w in res.warnings:
                 self.log(w, "warning")
-            self.toast(f"Converted {os.path.basename(path)} to a project. The original file is unchanged; "
-                       f"Save asks for a new name (suggested: {os.path.basename(self._suggested_path)}).", "info")
+            if res.migrated:
+                self.toast(f"Converted {os.path.basename(path)} to a project. The original file is unchanged; "
+                           f"Save asks for a new name (suggested: {os.path.basename(self._suggested_path)}).",
+                           "info")
+            else:
+                self.toast(f"Parts of {os.path.basename(path)} are damaged and were left out (see the Output "
+                           f"panel). The file is unchanged; Save asks for a new name.", "warning")
         else:
             self._reset(res.project, path)
             self.settings.add_recent(path)
@@ -2295,7 +2436,7 @@ class App:
             return self.save_as()
         try:
             projectio.save_project(self.project, self.filename)
-        except OSError as e:
+        except (OSError, projectio.ProjectFormatError) as e:
             messagebox.showerror("Save failed", f"{self.filename}\n\n{e}\n\nYour previous file is unchanged.",
                                  parent=self.root)
             return False
@@ -2332,32 +2473,67 @@ class App:
                                          defaultextension=PROJECT_EXTENSION,
                                          filetypes=[("OpenSchematix project", "*" + PROJECT_EXTENSION)])
         if p:
-            projectio.atomic_write_bytes(p, projectio.project_bytes(self.project))
+            try:
+                projectio.atomic_write_bytes(p, projectio.project_bytes(self.project))
+            except (OSError, projectio.ProjectFormatError) as e:
+                messagebox.showerror("Export failed", f"{p}\n\n{e}", parent=self.root)
+                return
             self.toast(f"Exported {os.path.basename(p)}", "success")
 
     def import_project_sheets(self):
         path = filedialog.askopenfilename(parent=self.root, title="Import sheets from", filetypes=FILETYPES_OPEN)
-        if not path:
-            return
+        if path:
+            self.import_sheets_from(path)
+
+    def import_sheets_from(self, path) -> int:
+        """Append every sheet of another project or drawing to this project. Returns the number of
+        sheets imported. The other file is read without registering its symbols, so the open
+        project's symbols are never replaced by another project's."""
         try:
-            other = projectio.open_any(path).project
+            other = projectio.open_any(path, activate=False).project
         except (OSError, projectio.ProjectFormatError) as e:
             messagebox.showerror("Import", str(e), parent=self.root)
-            return
+            return 0
         s = self.begin_change()
+        # The imported drawings' custom symbols are added and registered BEFORE the drawings are copied:
+        # copying re-validates every wire's terminal reference, and a symbol that is not registered yet
+        # would detach them. A symbol id this project already has keeps this project's version.
+        differing = []
+        for sid, sdoc in other.symbols.items():
+            mine = self.project.symbols.get(sid)
+            if mine is None:
+                self.project.symbols[sid] = json.loads(json.dumps(sdoc))
+            elif mine != sdoc:
+                differing.append(str(sdoc.get("name") or sid))
+        self.project.activate_symbols()
+        lost = 0
         for d in other.sheets:
             new = self.project.add_sheet(d.name)
-            editing.paste(new, editing.copy_items(d, d.all_ids()), 0, 0)
+            clip = editing.copy_items(d, d.all_ids())
+            refs = sum(bool(wd.get("start")) + bool(wd.get("end")) for wd in clip["wires"])
+            ids = editing.paste(new, clip, 0, 0)
+            kept = sum(bool(new.wires[i].start) + bool(new.wires[i].end) for i in ids if i in new.wires)
+            lost += refs - kept
             new.sheet = Sheet_copy(d.sheet)
-        for sid, sdoc in other.symbols.items():
-            self.project.symbols.setdefault(sid, sdoc)
-        self.project.activate_symbols()
-        self.commit_change(s, f"Imported {len(other.sheets)} sheet(s) from {os.path.basename(path)}.")
+        msg = f"Imported {len(other.sheets)} sheet(s) from {os.path.basename(path)}."
+        if lost:
+            msg += f" {lost} wire end(s) were detached from connection points that do not exist in this project."
+        self.commit_change(s, msg)
+        if differing:
+            self.log("Imported sheets use this project's version of: " + ", ".join(sorted(differing)) +
+                     " (the imported file has a different version).", "warning")
+        if lost:
+            self.log(f"{lost} imported wire end(s) lost their connection point.", "warning")
+        return len(other.sheets)
 
     def _rebuild_recent(self):
         m = self.recent_menu
         m.delete(0, "end")
-        rec = [p for p in self.settings["recent_files"] if os.path.exists(p)]
+        # No existence check here: this runs after every save and open, on the
+        # UI thread, and on Windows a stat() of a file on a disconnected network
+        # drive or share can block for many seconds (#75). A recent file that
+        # has gone is reported, and removed, when it is chosen (open_path).
+        rec = list(self.settings["recent_files"])
         if not rec:
             m.add_command(label="(none)", state="disabled")
         for p in rec:
@@ -2375,11 +2551,24 @@ class App:
         if not path:
             return
         try:
-            export.export_project_pdf(self.project, path, set(uids))
+            missing = export.export_project_pdf(self.project, path, set(uids))
         except OSError as e:
             messagebox.showerror("Export failed", f"{path}\n\n{e}", parent=self.root)
             return
-        self.toast(f"Exported {len(uids)} sheet(s) to {os.path.basename(path)}", "success")
+        if not self._report_pdf_missing(missing):
+            self.toast(f"Exported {len(uids)} sheet(s) to {os.path.basename(path)}", "success")
+
+    def _report_pdf_missing(self, missing) -> bool:
+        """Tell the user which characters a PDF could not show (#81). True if any."""
+        if not missing:
+            return False
+        shown = " ".join(missing[:20]) + (" …" if len(missing) > 20 else "")
+        codes = ", ".join(f"U+{ord(c):04X}" for c in missing[:20])
+        self.log(f"PDF: {len(missing)} character(s) in the drawing text cannot be shown in PDF output and were "
+                 f"printed as '?': {shown} ({codes}). SVG and DXF exports keep them.", "warning")
+        self.toast(f"PDF written, but {len(missing)} character(s) appear as '?': {shown} — see the Output panel.",
+                   "warning")
+        return True
 
     def export_file(self, kind):
         ext = "." + kind
@@ -2444,13 +2633,16 @@ class App:
             self.toast("DXF imported. " + rep.summary(), "warning")
 
     def print_(self):
+        path = None
         try:
-            fd, path = tempfile.mkstemp(prefix="openschematix-", suffix=".pdf")
-            os.close(fd)
-            export.export_project_pdf(self.project, path, {self.doc.uid})
+            path = self.print_files.new_path()      # deleted on exit, or at a later start (#82)
+            missing = export.export_project_pdf(self.project, path, {self.doc.uid})
         except OSError as e:
+            if path:
+                self.print_files.discard(path)
             messagebox.showerror("Print failed", str(e), parent=self.root)
             return
+        self._report_pdf_missing(missing)
         try:
             if sys.platform.startswith("win"):
                 os.startfile(path)  # noqa: S606 - opens the user's PDF viewer
@@ -2522,6 +2714,7 @@ class App:
             self.recovery.end()
         except OSError:
             pass
+        self.print_files.cleanup()          # files still open in a viewer are left for a later start
         self.root.destroy()
 
 
@@ -2562,6 +2755,32 @@ def _startup_splash(root):
     return splash
 
 
+def symbol_update_message(impact, drawn, library, limit=12) -> str:
+    """Text of the confirmation before replacing a project's drawn symbol."""
+    from ..symbols.compare import label, pin_list
+
+    def ends(items):
+        shown = ", ".join(w.text() for w in items[:limit])
+        return shown + (f" and {len(items) - limit} more" if len(items) > limit else "")
+
+    lines = [f"This project draws {label(drawn)} (connection points {pin_list(drawn)}).",
+             f"Your library has {label(library)} (connection points {pin_list(library)}) under the same id.",
+             "", f"Updating the drawings ({impact.components} component(s)) would:"]
+    if impact.diff.renamed:
+        lines.append(f"• change the symbol from “{drawn.get('name', '')}” to “{library.get('name', '')}”")
+    if impact.detached:
+        lines.append(f"• DISCONNECT {len(impact.detached)} wire end(s) — connection point(s) "
+                     f"{', '.join(impact.diff.pins_removed)} no longer exist: {ends(impact.detached)}")
+    if impact.moved:
+        lines.append(f"• re-route {len(impact.moved)} wire end(s) to moved connection points: {ends(impact.moved)}")
+    for d in impact.diff.summary():
+        if not d.startswith(("different name", "connection points only in the drawn", "connection points in other")):
+            lines.append(f"• {d}")
+    lines += ["", "Disconnected wires stay in the drawing but are no longer connected. Undo (Ctrl+Z) "
+                  "reverts the update.", "", "Update the drawings anyway?"]
+    return "\n".join(lines)
+
+
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
     if argv and argv[0] in ("--version", "-V"):
@@ -2578,10 +2797,18 @@ def main(argv=None):
                 pass
     root = tk.Tk(className="OpenSchematix")
     root.withdraw()
+    from . import errors
+    errors.install(root)       # the windowed build has no console: never let an error vanish
     splash = _startup_splash(root)
     started_at = time.monotonic()
     try:
         app = App(root, argv[0] if argv else None)
+    except Exception:
+        info = sys.exc_info()
+        splash.destroy()
+        root.destroy()
+        errors.report_startup_failure(*info)
+        return 1
     except BaseException:
         splash.destroy()
         root.destroy()

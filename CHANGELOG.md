@@ -4,6 +4,39 @@ All notable changes to this project are documented here. Versions follow [Semant
 
 ## [Unreleased]
 
+### Fixed
+
+- Saving no longer gets slower as the revision history grows (#75). The check that reads a project back
+  before replacing the file parsed every stored revision again on every save; revisions already verified in
+  the session, and byte-identical in the new file, are now accepted without parsing them again. With 25
+  automatic snapshots of a 2 MB drawing a save took 1.56 s instead of 0.24 s; it now takes the same time as
+  the first save.
+- That check is also stricter: a save is refused, and the previous file kept, if any part of the new file
+  (a revision or an embedded symbol) would be left out as damaged when reopened. Before, such a file was
+  written and the damaged part silently dropped on the next open.
+- The *Recent files* menu no longer checks whether each file exists when it is rebuilt after every save and
+  open. On Windows that check can block for many seconds per file on a disconnected network drive or share.
+  A recent file that has gone is reported when it is chosen and removed from the list if its folder is still
+  there.
+
+## [1.1.0] - 2026-11-01
+
+### Fixed
+
+- Right-click canvas context menus now use Tk's native popup grab so Escape and outside clicks can dismiss them without the application's Escape handler cancelling the active drawing command. This also preserves nested submenus and avoids temporary root-level event bindings.
+- Netlist generation no longer creates phantom terminals from invalid wire terminal
+  references (a missing component, a blank terminal name, or a pin the symbol does
+  not define, e.g. `R1:ghost`). Such ends no longer join nets, connection and wire
+  lists, terminal reports or CSV exports, and Check reports them as
+  `invalid-wire-ref`. Pins are validated against the definition of the project
+  that owns the sheet, never another open project's symbol with the same id.
+  References to a temporarily unavailable custom symbol keep their attachment.
+- Editing or updating a custom symbol whose id the library holds with a different definition (an older
+  revision, or another symbol saved under the same id) no longer disconnects wires without warning.
+  *Edit symbol* first shows both definitions and asks whether to edit the library symbol or a copy of the
+  project's (Cancel is the default). Before *Update drawings*, OpenSchematix lists every wire end that would
+  be disconnected or re-routed and asks again (No is the default); declining leaves the drawing unchanged.
+
 ### Added
 
 - Symbol aliases: a custom symbol can have extra identifiers (symbol editor, *Symbol* tab, "Aliases"). The library
@@ -38,12 +71,45 @@ All notable changes to this project are documented here. Versions follow [Semant
   polylines become real arcs again. Connection points keep their identifiers, positions, lead directions and port
   types. Saving a copy always creates a new symbol (new id) and records what it was derived from; the original is
   never changed.
+- *Edit a copy of a symbol file (.osym)…* (library *Import* menu and folder context menu) opens a symbol file
+  directly in the symbol editor as an editable copy; the file itself is only read, and saving adds a new symbol
+  to the library.
+- Opening a symbol as an editable copy is now checked against the original: if the custom-symbol format cannot
+  hold a primitive, attribute or connection point exactly (an unknown primitive kind, text longer or larger than
+  the format allows, an off-grid or unknown-type connection point), the copy is refused with a message naming
+  what would be lost, instead of silently dropping or altering it.
 - *Save as new symbol…* asks for a name. When a library symbol is edited in place the primary button reads
   *Save changes* and its tooltip says that it overwrites the symbol.
 
 
 ### Fixed
 
+- Wires attached to the connection points of custom symbols lost that attachment, without any message, when a
+  project was opened on a computer whose libraries do not contain the symbol (or while another project with a
+  different version of it was open), on redo after *Import sheets*, on undo of an update to the library version
+  of a symbol, and when restoring a revision. The drawing looked unchanged, but moving the component afterwards
+  left its wires behind. Drawings are now read against the project's own embedded symbols. Wires attached to a
+  component whose symbol is not available at all stay attached and work again once the symbol is installed.
+  File formats are unchanged. *Import sheets* no longer replaces the open project's symbols while reading the
+  other file, and reports imported symbols that differ from the project's version.
+- Project files: damaged or malformed files are always reported as damaged, naming the part and the
+  problem (never quoting file content), instead of failing with an internal error. Non-standard numbers
+  (`NaN`, `Infinity`, `1e999`), oversized integers, excessive nesting and wrong value types are rejected,
+  so they can no longer open and then break Check, the netlist or exports; a project containing a
+  non-finite value is refused on save, leaving the previous file intact.
+- Revision history: a damaged revision (index entry or snapshot object) no longer blocks opening the
+  project or resets the whole history. Only the damaged revisions are left out, and the project must be
+  saved under a new name so the original file is kept. Snapshot objects are size-limited and checked
+  against their SHA-256 when the project is opened.
+- Unexpected errors are no longer invisible in the Windows application (which has no console): they are
+  written to `logs/openschematix-errors.log` in the settings folder and shown in an error dialog. A failure
+  during start-up is reported the same way.
+- Custom symbols with the same id in two projects: saving (and every revision snapshot) of a project could
+  write the other, most recently opened project's definition into the file, permanently replacing the
+  project's own symbol. The netlist, Check, connectivity, wire numbering, BOM, exports and sheet duplication
+  of a project could likewise use the other project's pin geometry. A project now only takes a definition
+  from the shared symbol registry while it is the registered project, and those operations resolve symbols
+  as the project they work on.
 - Symbol editor: clearing "Number this point on drawings" (and changing a connection point's port type or lead
   direction) took effect only after pressing Apply, and was lost if the symbol was saved first; it now applies
   immediately, and pending edits are applied when saving. A point that is not numbered no longer shows its number

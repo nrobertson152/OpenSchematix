@@ -9,7 +9,7 @@ version. See the LICENSE file for details.
 """
 
 APP_NAME = "OpenSchematix"
-__version__ = "1.0.1"
+__version__ = "1.1.0"
 VERSION = __version__
 COPYRIGHT = "Copyright © 2026 Nate Robertson"
 LICENSE_NAME = "GNU General Public License v3.0 or later"

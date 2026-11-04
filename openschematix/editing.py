@@ -223,6 +223,14 @@ def reroute(doc: Document, w: Wire):
     w.auto = True
 
 
+def pin_unverifiable(doc: Document, ref) -> bool:
+    """True if `ref` points at a component whose symbol is not available (drawn as the "missing symbol"
+    placeholder). Its pins are unknown, so the reference is kept rather than detached: it becomes valid
+    again once the symbol is installed. See Document.from_dict."""
+    c = doc.components.get(ref[0]) if ref else None
+    return c is not None and symbols.get(c.symbol) is None
+
+
 def sync_wire_ends(doc: Document, wire_ids: Optional[Iterable[int]] = None):
     """Move attached wire end points onto their terminals' current positions.
     Automatically routed wires and simple wires (at most one bend) are
@@ -237,7 +245,8 @@ def sync_wire_ends(doc: Document, wire_ids: Optional[Iterable[int]] = None):
                 continue
             tp = doc.terminal_pos(ref)
             if tp is None:
-                setattr(w, attr, None)
+                if not pin_unverifiable(doc, ref):
+                    setattr(w, attr, None)
             elif not same(tp, w.points[idx]):
                 moved = True
         if not moved:

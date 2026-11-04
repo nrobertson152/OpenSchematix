@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import csv
 import io
+import json
 import re
 from dataclasses import dataclass, field
 
@@ -64,8 +65,101 @@ class Net:
         return sorted({w[0] for w in self.wires} | {t[0] for t in self.terminals})
 
 
+
+# ================================================================ wire terminal references
+# Outcome of validating a wire end's [component id, terminal name] reference.
+REF_OK = "ok"                        # component exists, its symbol defines the pin
+REF_UNRESOLVED = "unresolved"        # component exists, its symbol is not available: pin unknown, kept
+REF_MALFORMED = "malformed"          # not a [component id, terminal name] pair
+REF_MISSING_COMPONENT = "missing-component"
+REF_BLANK_PIN = "blank-pin"
+REF_UNKNOWN_PIN = "unknown-pin"      # the (resolved) symbol has no such pin
+
+#: Outcomes that join the netlist. An unresolved symbol keeps its named attachment (as at load time,
+#: PR #37): its pins are unknown here and the reference becomes valid again once the symbol is.
+CONNECTING_REFS = frozenset((REF_OK, REF_UNRESOLVED))
+
+
+def symbol_resolver_for(doc):
+    """Function symbol_id -> SymbolDef | None that resolves symbols as the project owning *doc*.
+
+    The symbol registry is process-wide and holds the custom symbols of the project activated last
+    (PR #46). Validating a sheet against it would use another project's definition of the same
+    custom-symbol id - different pins - whenever a foreign project is registered. So:
+
+    * the sheet's project is the registered one (the normal case, and inside every
+      ``@symbols.project_scoped`` engine call): the registry, which also holds symbols added in
+      this session that are not embedded yet;
+    * another project is registered: the owning project's own definitions
+      (``Project.symbol_resolver``: built-in, its embedded symbols, user libraries), never the
+      registered project's;
+    * a standalone sheet (no project): the registry when it has no owner, else built-in and user
+      library symbols only (``symbols.lookup``), as when the sheet is loaded.
+    """
+    project = getattr(doc, "project", None)
+    owner = symbols.project_owner()
+    if project is not None:
+        return symbols.get if owner is project else project.symbol_resolver()
+    return symbols.get if owner is None else symbols.lookup
+
+
+def _pin_names(c, resolve, cache):
+    """Terminal names the component's symbol defines, or None when the symbol is unavailable (or cannot
+    be built, so cannot validate anything)."""
+    try:
+        params = json.dumps(c.params, sort_keys=True) if c.params else ""
+    except (TypeError, ValueError):
+        params = repr(c.params)
+    key = (c.symbol, params)
+    if cache is None or key not in cache:
+        sd = resolve(c.symbol)
+        try:
+            names = None if sd is None else frozenset(t.name for t in sd.build(c.params or None).terminals)
+        except Exception:  # noqa: BLE001 - a symbol that cannot be built cannot validate anything
+            names = None
+        if cache is None:
+            return names
+        cache[key] = names
+    return cache[key]
+
+
+def classify_pin_ref(doc, ref, resolve=None, cache=None) -> str:
+    """Validate one wire end reference on *doc* (see the REF_* outcomes).
+
+    *resolve* defaults to ``symbol_resolver_for(doc)`` (the owning project's definitions); pass one
+    resolver and a shared *cache* dict when validating many references of one sheet."""
+    if not isinstance(ref, (list, tuple)) or len(ref) != 2:
+        return REF_MALFORMED
+    cid, pin = ref
+    if isinstance(cid, bool) or not isinstance(cid, int):
+        return REF_MALFORMED
+    c = doc.components.get(cid)
+    if c is None:
+        return REF_MISSING_COMPONENT
+    if pin is None or not str(pin).strip():
+        return REF_BLANK_PIN
+    names = _pin_names(c, resolve or symbol_resolver_for(doc), cache)
+    if names is None:
+        return REF_UNRESOLVED
+    return REF_OK if str(pin) in names else REF_UNKNOWN_PIN
+
+
+def pin_ref_connects(doc, ref, resolve=None, cache=None) -> bool:
+    """True if wire end reference *ref* joins the electrical netlist: the component exists on *doc* and
+    the pin is a terminal of its symbol as defined by the sheet's own project, or the symbol is
+    temporarily unavailable (the named attachment is kept). Missing components, blank pins and pins the
+    symbol does not define never create netlist terminals."""
+    return classify_pin_ref(doc, ref, resolve, cache) in CONNECTING_REFS
+
+
 def _sheet_nodes(doc, uf: _UF):
-    """Union the nodes of one sheet. Node ids: ('w', uid, wid), ('t', uid, cid, name)."""
+    """Union the nodes of one sheet. Node ids: ('w', uid, wid), ('t', uid, cid, name).
+
+    Wire endpoints join terminals by *validated* pin references and by
+    geometry (end point coincides with a terminal). Invalid pin names never
+    create fictitious terminals. Geometric wire-to-wire joins are unchanged
+    and remain compatible with a spatial candidate index on the wire loop.
+    """
     uid = doc.uid
     wires = list(doc.wires.values())
     for w in wires:
@@ -79,6 +173,7 @@ def _sheet_nodes(doc, uf: _UF):
     for nodes in term_at.values():
         for n in nodes[1:]:
             uf.union(nodes[0], n)
+    resolve, cache = symbol_resolver_for(doc), {}
     # Wire-to-wire unions at end points: same geometric rules as connectivity.analyse.
     # A spatial index (shared with connectivity) avoids the O(W^2) full scan; candidates
     # are a superset of wires that can touch each end point, so union-find membership is
@@ -86,8 +181,8 @@ def _sheet_nodes(doc, uf: _UF):
     index = _WireIndex(wires)
     for w in wires:
         for ref in (w.start, w.end):
-            if ref and ref[0] in doc.components:
-                uf.union(("w", uid, w.id), ("t", uid, ref[0], ref[1]))
+            if pin_ref_connects(doc, ref, resolve, cache):
+                uf.union(("w", uid, w.id), ("t", uid, ref[0], str(ref[1])))
         for idx in (0, -1):
             p = w.points[idx]
             for n in term_at.get(_key(p), []):
@@ -103,6 +198,7 @@ def link_label(c) -> str:
     return (c.label or c.designator or "").strip()
 
 
+@symbols.project_scoped
 def compute_nets(project) -> list[Net]:
     uf = _UF()
     for doc in project.sheets:
@@ -216,15 +312,12 @@ def numberable(project, n: Net) -> bool:
     return not doms or doms == {"elec"}
 
 
+@symbols.project_scoped
 def assign_wire_numbers(project, renumber: bool = False) -> int:
     """Give every electrical net a wire number. Existing numbers are kept
     (stable when wires or components move); manual numbers are never
     changed. With `renumber`, automatic numbers are reassigned in drawing
     order. Returns the number of nets that received a new number."""
-    conv = project.settings.get("wire_numbering", {})
-    scheme = conv.get("scheme", "sequential")
-    start = int(conv.get("start", 1) or 1)
-    step = max(1, int(conv.get("step", 1) or 1))
     nets = compute_nets(project)
     wire = lambda uid, wid: project.find_sheet(uid).wires[wid]  # noqa: E731
     if renumber:
@@ -233,7 +326,12 @@ def assign_wire_numbers(project, renumber: bool = False) -> int:
                 w = wire(uid, wid)
                 if not w.number_manual:
                     w.number = ""
-    used = set()
+    # Manual numbers are reserved first: an automatic number may be kept or
+    # given out only if no connection, earlier or later in drawing order, has
+    # it as a manual number (audit F6, #80).
+    reserved = {w.number for n in nets if numberable(project, n)
+                for w in (wire(u, i) for u, i in n.wires) if w.number_manual and w.number}
+    used = set(reserved)
     changed = 0
     pending = []
     for n in nets:
@@ -262,25 +360,8 @@ def assign_wire_numbers(project, renumber: bool = False) -> int:
                 w.number = num
         n.number = num
     counters = {}
-    order = {d.uid: i + 1 for i, d in enumerate(project.sheets)}
     for n in pending:
-        sheet_no = order.get(n.wires[0][0], 1)
-        if scheme == "sheet":
-            k = counters.get(sheet_no, 0)
-            while True:
-                k += 1
-                num = format_number(conv, sheet_no * 100 + k, sheet_no)
-                if num not in used:
-                    break
-            counters[sheet_no] = k
-        else:
-            k = counters.get(0, start - step)
-            while True:
-                k += step
-                num = format_number(conv, k)
-                if num not in used:
-                    break
-            counters[0] = k
+        num = _next_free_number(project, n, used, counters)
         used.add(num)
         n.number = num
         for u, i in n.wires:
@@ -291,18 +372,77 @@ def assign_wire_numbers(project, renumber: bool = False) -> int:
     return changed
 
 
-def set_net_number(project, sheet_uid: str, wire_id: int, number: str):
+def _next_free_number(project, n: Net, used: set, counters: dict) -> str:
+    """Next number of the project's numbering scheme for net `n` that is not in `used`."""
+    conv = project.settings.get("wire_numbering", {})
+    if conv.get("scheme", "sequential") == "sheet":
+        order = {d.uid: i + 1 for i, d in enumerate(project.sheets)}
+        sheet_no = order.get(n.wires[0][0], 1)
+        k = counters.get(sheet_no, 0)
+        while True:
+            k += 1
+            num = format_number(conv, sheet_no * 100 + k, sheet_no)
+            if num not in used:
+                break
+        counters[sheet_no] = k
+    else:
+        start = int(conv.get("start", 1) or 1)
+        step = max(1, int(conv.get("step", 1) or 1))
+        k = counters.get(0, start - step)
+        while True:
+            k += step
+            num = format_number(conv, k)
+            if num not in used:
+                break
+        counters[0] = k
+    return num
+
+
+@dataclass
+class NumberChange:
+    """Result of set_net_number: the net, and the other connections affected."""
+    net: Net | None
+    renumbered: list = field(default_factory=list)     # (old, new) for automatic numbers moved out of the way
+    manual_clash: int = 0                               # other connections with the same manual number
+
+
+@symbols.project_scoped
+def set_net_number(project, sheet_uid: str, wire_id: int, number: str) -> NumberChange:
     """Manual override: give the whole net of a wire this number (empty
-    string clears the override)."""
+    string clears the override).
+
+    Another connection that had this number automatically is given a new
+    automatic number, so the override never creates a duplicate (#80).
+    Another connection with the same number set manually is left alone (it
+    is the user's) and counted in `manual_clash`; Check reports it."""
     nets = compute_nets(project)
-    for n in nets:
-        if (sheet_uid, wire_id) in n.wires:
-            for u, i in n.wires:
-                w = project.find_sheet(u).wires[i]
-                w.number = number
-                w.number_manual = bool(number)
-            return n
-    return None
+    wire = lambda uid, wid: project.find_sheet(uid).wires[wid]  # noqa: E731
+    target = next((n for n in nets if (sheet_uid, wire_id) in n.wires), None)
+    out = NumberChange(target)
+    if target is None:
+        return out
+    for u, i in target.wires:
+        w = wire(u, i)
+        w.number = number
+        w.number_manual = bool(number)
+    if not number:
+        return out
+    others = [n for n in nets if n is not target and numberable(project, n)]
+    used = {w.number for n in others for w in (wire(u, i) for u, i in n.wires) if w.number} | {number}
+    counters: dict = {}
+    for n in others:
+        ws = [wire(u, i) for u, i in n.wires]
+        if any(w.number_manual and w.number == number for w in ws):
+            out.manual_clash += 1
+            continue
+        if any(not w.number_manual and w.number == number for w in ws):
+            new = _next_free_number(project, n, used, counters)
+            used.add(new)
+            for w in ws:
+                if not w.number_manual and w.number == number:
+                    w.number = new
+            out.renumbered.append((number, new))
+    return out
 
 
 def _natural(s: str):
@@ -310,6 +450,7 @@ def _natural(s: str):
 
 
 # ================================================================ reports
+@symbols.project_scoped
 def connection_rows(project, nets=None) -> list[dict]:
     """From-to connection list. Within each net the terminals are chained
     in drawing order (daisy chain), which is how the net is usually wired."""
@@ -331,15 +472,19 @@ def connection_rows(project, nets=None) -> list[dict]:
     return rows
 
 
+@symbols.project_scoped
 def wire_rows(project) -> list[dict]:
     """One row per drawn wire with its number, ends and properties."""
     names = {d.uid: d.name for d in project.sheets}
     rows = []
     for doc in project.sheets:
+        resolve, cache = symbol_resolver_for(doc), {}
         for w in sorted(doc.wires.values(), key=lambda w: (_natural(w.number), w.id)):
             def end(ref, p):
-                if ref and ref[0] in doc.components:
-                    return terminal_tag(project, doc.uid, ref[0], ref[1])
+                # only a reference that joins the netlist names a terminal: an invalid one (missing
+                # component, blank or unknown pin) must not appear as a real connection
+                if ref and pin_ref_connects(doc, ref, resolve, cache):
+                    return terminal_tag(project, doc.uid, ref[0], str(ref[1]))
                 return "junction" if p else ""
             rows.append({"sheet": names[doc.uid], "wire": w.number, "from": end(w.start, w.points[0]),
                          "to": end(w.end, w.points[-1]), "colour": w.props.get("colour", ""),
@@ -347,6 +492,7 @@ def wire_rows(project) -> list[dict]:
     return rows
 
 
+@symbols.project_scoped
 def terminal_rows(project, nets=None) -> list[dict]:
     """Terminal-strip report: one row per terminal with what is connected on
     each side (side 1 = left/field, side 2 = right/internal)."""

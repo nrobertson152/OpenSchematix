@@ -10,7 +10,6 @@ import time
 
 from openschematix import editing, netlist
 from openschematix.connectivity import _CELL, _PAD
-from openschematix.geometry import point_on_segment
 from openschematix.project import new_project
 from openschematix.symbols.general import OFFPAGE_IDS
 
@@ -19,34 +18,14 @@ def _key(p):
     return (round(p[0], 2), round(p[1], 2))
 
 
-def _naive_sheet_nodes(doc, uf: netlist._UF):
-    """Reference implementation: full wire scan (pre-index algorithm)."""
-    uid = doc.uid
-    wires = list(doc.wires.values())
-    for w in wires:
-        uf.find(("w", uid, w.id))
-    term_at = {}
-    for c in doc.components.values():
-        for name, p in c.terminals().items():
-            node = ("t", uid, c.id, name)
-            uf.find(node)
-            term_at.setdefault(_key(p), []).append(node)
-    for nodes in term_at.values():
-        for n in nodes[1:]:
-            uf.union(nodes[0], n)
-    for w in wires:
-        for ref in (w.start, w.end):
-            if ref and ref[0] in doc.components:
-                uf.union(("w", uid, w.id), ("t", uid, ref[0], ref[1]))
-        for idx in (0, -1):
-            p = w.points[idx]
-            for n in term_at.get(_key(p), []):
-                uf.union(("w", uid, w.id), n)
-            for o in wires:
-                if o.id == w.id:
-                    continue
-                if any(point_on_segment(p, a, b) for a, b in zip(o.points, o.points[1:])):
-                    uf.union(("w", uid, w.id), ("w", uid, o.id))
+class _FullScan:
+    """Stand-in for the spatial index that returns every wire (the pre-index O(W^2) scan)."""
+
+    def __init__(self, wires):
+        self.wires = list(wires)
+
+    def candidates(self, p, wires):
+        return wires
 
 
 def _compute_nets_naive(project):
@@ -55,12 +34,14 @@ def _compute_nets_naive(project):
     Reuses the production grouping, sorting and index assignment so that
     net membership *and* deterministic identifiers can be compared.
     """
-    original = netlist._sheet_nodes
+    # The production _sheet_nodes with the index replaced by a full scan: the
+    # reference differs in nothing else (pin validation and symbol scope included).
+    original = netlist._WireIndex
     try:
-        netlist._sheet_nodes = _naive_sheet_nodes
+        netlist._WireIndex = _FullScan
         return netlist.compute_nets(project)
     finally:
-        netlist._sheet_nodes = original
+        netlist._WireIndex = original
 
 
 def _full_signature(nets):
@@ -281,3 +262,53 @@ def test_large_workload_matches_naive_on_moderate_size():
     """At the largest size where naive is still practical, membership matches."""
     p = _grid_project(80, extra_vertical=40)
     _assert_identical(p, label="moderate-large-grid")
+
+
+# ---------------------------------------------------------------- pin validation and symbol scope
+def test_index_keeps_invalid_pin_references_out_of_nets():
+    """Wire ends that name a pin the symbol does not have never create terminals, indexed or not."""
+    from openschematix.model import Wire
+    p = new_project("refs")
+    d = p.sheets[0]
+    r = editing.place(d, "el.resistor.iec", -300, -200)
+    lamp = editing.place(d, "el.lamp.iec", 200, -200)
+    good = editing.add_wire(d, [r.terminals()["2"], lamp.terminals()["1"]])
+    assert good.start and good.end
+    t1 = r.terminals()["1"]
+    ghost = Wire(d.new_id(), [t1, (t1[0] - 60, t1[1])], [r.id, "ghost"], None)
+    d.add_wire(ghost)
+    missing = Wire(d.new_id(), [(-500, 100), (-400, 100)], [9999, "1"], None)
+    d.add_wire(missing)
+    nets = _assert_identical(p, label="invalid refs")
+    terms = {t for n in nets for t in n.terminals}
+    assert (d.uid, r.id, "ghost") not in terms
+    assert not any(t[1] == 9999 for t in terms)
+
+
+def test_index_respects_project_scoped_custom_symbols():
+    """Two projects with a same-id custom symbol of different pin positions keep their own nets."""
+    from openschematix.symbols.custom import blank_symbol, normalise
+
+    def make(reach):
+        sid = "user:netlist-index-scope"
+        doc = blank_symbol("scope")
+        doc.update(id=sid)
+        doc["prims"] = [{"k": "line", "pts": [[-reach, 0], [reach, 0]]}]
+        doc["pins"] = [{"id": "L", "name": "L", "x": -reach, "y": 0, "dir": "l"},
+                       {"id": "R", "name": "R", "x": reach, "y": 0, "dir": "r"}]
+        pr = new_project(f"reach {reach}")
+        pr.symbols[sid] = normalise(doc)
+        pr.activate_symbols()
+        d = pr.sheets[0]
+        c = editing.place(d, sid, -100, -100)
+        r = editing.place(d, "el.resistor.iec", 300, -100)
+        w = editing.add_wire(d, [c.terminals()["R"], r.terminals()["1"]])
+        assert w.start == [c.id, "R"]
+        return pr, d, c, r
+
+    a, da, ca, ra = make(40)
+    b, db, cb, rb = make(80)
+    # b is the active project now; a must still net with its own definition
+    for pr, d, c, r in ((a, da, ca, ra), (b, db, cb, rb)):
+        nets = _assert_identical(pr, label=pr.meta["title"])
+        assert any((d.uid, c.id, "R") in n.terminals and (d.uid, r.id, "1") in n.terminals for n in nets)

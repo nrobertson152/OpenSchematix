@@ -339,7 +339,7 @@ class SymbolEditor(tk.Toplevel):
             self.meta = normalise(copy.deepcopy(doc))
             self.is_new = doc.get("id") not in app.userlib.entries
         elif copy_of is not None:
-            sd = symbols.get(copy_of)
+            sd = app.project_symbol(copy_of)        # the open project's definition, not the registry's
             if sd is None:
                 raise ValueError(f"unknown symbol {copy_of}")
             self.meta = symbol_to_doc(sd, params, as_copy=True)
@@ -1190,12 +1190,23 @@ class SymbolEditor(tk.Toplevel):
                                      ok_text="Open copy").result
             if not sid:
                 return None
+        from ..symbols.custom import SymbolFormatError
+        from ..symbols.explode import symbol_to_doc
+        sd = self.app.project_symbol(sid)
+        try:
+            if sd is None:
+                raise SymbolFormatError(f"The symbol {sid} is not available.")
+            doc = symbol_to_doc(sd, params, as_copy=True)
+        except SymbolFormatError as e:
+            messagebox.showerror("Cannot edit a copy", str(e), parent=self)
+            return None
         if self.dirty and not messagebox.askyesno("Open symbol", "Discard the unsaved changes to this symbol?",
                                                   parent=self):
             return None
         folder = self.folder_var.get().strip() or None
-        ed = SymbolEditor(self.app, copy_of=sid, params=params,
+        ed = SymbolEditor(self.app, doc=doc,
                           folder=None if sid in self.app.userlib.entries else folder)
+        ed.source = (sd.id, sd.name)
         self.destroy()
         return ed
 
@@ -1266,9 +1277,17 @@ class SymbolEditor(tk.Toplevel):
         self.app.library.populate()
         self.set_status(f"Saved “{entry.name}” (revision {entry.doc['revision']}) in {folder}.")
         if entry.id in self.app.project.used_custom_symbols():
-            if messagebox.askyesno("Update drawings?", f"The open project uses “{entry.name}”. Update its drawings "
-                                   "to this new version?\n\nIf you choose No, the project keeps the version it was "
-                                   "drawn with until you update it from the library.", parent=self):
+            drawn = self.app.project.symbols.get(entry.id) or {}
+            drawn_name = drawn.get("name") or entry.name
+            if drawn_name != entry.name:
+                question = (f"The open project draws “{drawn_name}” (revision {drawn.get('revision', 0)}) with "
+                            f"this symbol id. Update its drawings to “{entry.name}” revision "
+                            f"{entry.doc.get('revision', 0)}?")
+            else:
+                question = f"The open project uses “{entry.name}”. Update its drawings to this new version?"
+            # update_project_symbol shows what an update would disconnect, and asks again, before changing anything
+            if messagebox.askyesno("Update drawings?", question + "\n\nIf you choose No, the project keeps the "
+                                   "version it was drawn with until you update it from the library.", parent=self):
                 self.app.update_project_symbol(entry.id)
         return True
 

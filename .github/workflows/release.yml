@@ -20,11 +20,13 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # tag v1.0.0: legacy-file compatibility tests
 
       - name: Install system packages
         run: |
           sudo apt-get update
-          sudo apt-get install -y python3-tk python3-venv xvfb imagemagick fonts-dejavu-core
+          sudo apt-get install -y python3-tk python3-venv xvfb imagemagick fonts-dejavu-core libxtst6
 
       # The distribution's Python is used on purpose: its Tk has Xft (anti-aliased fonts).
       - name: Set up build environment
@@ -43,7 +45,8 @@ jobs:
           if [ "$V" != "$T" ]; then echo "Tag $GITHUB_REF_NAME does not match program version $V"; exit 1; fi
 
       - name: Unit tests
-        run: .build-venv/bin/python -m pytest -q tests
+        # under a virtual display: without one every Tk test is skipped
+        run: xvfb-run -a -s "-screen 0 1600x1000x24" .build-venv/bin/python -m pytest -q -ra tests
 
       - name: GUI test
         run: xvfb-run -a -s "-screen 0 1600x1000x24" .build-venv/bin/python tests/gui_smoke.py gui-test-output
@@ -55,16 +58,27 @@ jobs:
           cp packaging/linux/install.sh packaging/linux/openschematix.desktop packaging/linux/openschematix-mime.xml dist/OpenSchematix/
           cp openschematix/resources/openschematix-256.png dist/OpenSchematix/openschematix.png
           chmod +x dist/OpenSchematix/install.sh
+          # Rebuild the demo with this checkout's writer version, not the
+          # historical metadata of the checked-in compatibility sample.
+          .build-venv/bin/python tools/make_demo_project.py
           mkdir -p dist/OpenSchematix/examples
           cp examples/*.schematix examples/*.osch dist/OpenSchematix/examples/
           tar -C dist -czf "dist/OpenSchematix-${VERSION}-linux-x86_64.tar.gz" OpenSchematix
           xvfb-run -a dist/OpenSchematix/OpenSchematix --version
+
+      - name: Packaged GUI check (bundle)
+        run: xvfb-run -a -s "-screen 0 1600x1000x24" .build-venv/bin/python packaging/ci/packaged_smoke.py dist/OpenSchematix/OpenSchematix
 
       - name: Build AppImage
         run: |
           bash packaging/linux/build_appimage.sh
           chmod +x dist/*.AppImage
           APPIMAGE_EXTRACT_AND_RUN=1 dist/OpenSchematix-*-x86_64.AppImage --version
+
+      - name: Packaged GUI check (AppImage)
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: "1"
+        run: xvfb-run -a -s "-screen 0 1600x1000x24" .build-venv/bin/python packaging/ci/packaged_smoke.py "$(ls dist/OpenSchematix-*-x86_64.AppImage)"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -78,6 +92,8 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # tag v1.0.0: legacy-file compatibility tests
 
       - uses: actions/setup-python@v5
         with:
@@ -110,10 +126,15 @@ jobs:
           $p = Start-Process -FilePath "dist\OpenSchematix\OpenSchematix.exe" -ArgumentList "--version" -PassThru -Wait
           if ($p.ExitCode -ne 0) { throw "OpenSchematix.exe --version failed" }
 
+      - name: Packaged GUI check
+        run: python packaging/ci/packaged_smoke.py dist\OpenSchematix\OpenSchematix.exe
+
       - name: Build installer and portable zip
         shell: pwsh
         run: |
           $v = python -c "import openschematix; print(openschematix.VERSION)"
+          # Regenerate the shipped demo before copying release examples.
+          python tools/make_demo_project.py
           New-Item -ItemType Directory -Force dist\OpenSchematix\examples | Out-Null
           Copy-Item examples\* dist\OpenSchematix\examples\
           $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
