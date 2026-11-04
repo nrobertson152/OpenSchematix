@@ -44,7 +44,8 @@
   from in the symbol editor (*Edit a copy…* / *Open existing symbol*, *Save as new symbol…*). It is informational
   only; older versions ignore it. A copy keeps the source's connection-point ids (for built-in symbols, the
   terminal names such as `1`, `A1`, `P`), so it connects the same way and can replace the original on a drawing
-  without losing wires.
+  without losing wires. Copies can also be made of a `.osym` file (*Edit a copy of a symbol file…*); its
+  `derived_from` names the file's symbol.
 * Optional `aliases` (list of strings) are extra identifiers for the symbol: letters, digits and `. _ + - /`, no
   spaces, at most 60 characters, at most 20 per symbol, compared case-insensitively. The library search, the
   symbol pickers and `INSERT <alias>` find the symbol by them; placed components always store the symbol's `id`,
@@ -55,6 +56,9 @@
 * `pins[].show` (default `true`): `false` means the connection point is never numbered on drawings (it is
   numbered only where a component overrides its designation). The symbol editor shows such a point's name only
   while it is selected, in parentheses.
+* Making a copy never alters geometry silently: every primitive and connection point of the copy is compared
+  with the source (`symbols/explode.py`, `conversion_losses`), and anything the format above cannot hold
+  exactly is reported as an error instead.
 
 ## A library package: `.osymlib` (version 1)
 

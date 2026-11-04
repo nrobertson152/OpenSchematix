@@ -619,6 +619,64 @@ if app.library.tree.exists("sym|el.resistor.iec"):
     ed4.close()
     pump()
 
+# v1.1.0: edit a copy of an .osym file; symbols that cannot be copied faithfully
+# give a clear message and open no editor window
+osym = os.path.join(OUT, "variant.osym")
+app.userlib.export_symbol(var_id, osym)
+with open(osym, "rb") as fh:
+    osym_bytes = fh.read()
+ANSWERS["open_path"] = osym
+ed5 = app.edit_symbol_file_copy(folder="Variants")
+ANSWERS["open_path"] = None
+pump(6)
+check(ed5 is not None and ed5.is_new and ed5.meta["id"] != var_id and ed5.meta["derived_from"]["id"] == var_id,
+      ".osym file opens as an editable copy with a new id")
+check(ed5 is not None and [p["id"] for p in ed5.pins] == [p["id"] for p in app.userlib.entries[var_id].doc["pins"]],
+      ".osym copy keeps the pin identifiers")
+ed5.meta_vars["name"].set("Inductor from file")
+check(ed5.save() and ed5.meta["id"] in app.userlib.entries and var_id in app.userlib.entries,
+      ".osym copy saves as a new library symbol next to the original")
+with open(osym, "rb") as fh:
+    check(fh.read() == osym_bytes, ".osym file left untouched")
+ed5.close()
+pump()
+
+_errors = []
+_showerror = messagebox.showerror
+messagebox.showerror = lambda *a, **k: _errors.append(a)
+bad_osym = os.path.join(OUT, "lossy.osym")
+with open(osym, encoding="utf-8") as fh:
+    _lossy = json.load(fh)
+_lossy["prims"].append({"k": "text", "p": [0, 0], "s": "Z", "size": 8, "anchor": "c", "rotation": 90})
+with open(bad_osym, "w", encoding="utf-8") as fh:
+    json.dump(_lossy, fh)
+n_win = len(app.windows)
+check(app.edit_symbol_file_copy(bad_osym) is None and len(app.windows) == n_win
+      and _errors and "'rotation'" in _errors[-1][1], "lossy .osym file: clear error, no editor")
+from openschematix.symbols.base import Geometry as _G, SymbolDef as _SD, Terminal as _T  # noqa: E402
+# Only built-in (Python-defined) symbols can carry geometry the editor cannot convert: custom symbols
+# are stored in the editor's own format. The editor resolves symbols through the open project
+# (built-in -> embedded -> library), not the ambient registry, so register it as a built-in.
+symreg._REGISTRY["proj.unsupported"] = _SD("proj.unsupported", "Unsupported", "Electrical", "Test", "Generic", "",
+                                           "X", _G([{"k": "region", "rings": [[(0, 0), (10, 0), (10, 10)]]}],
+                                                   [_T("1", 0, 0, "l")]))
+check(app.edit_symbol_copy("proj.unsupported") is None and len(app.windows) == n_win
+      and "'region'" in _errors[-1][1], "unsupported geometry: clear error, no editor")
+
+# Verify SymbolEditor.open_existing error handling without closing editor or losing unsaved edits
+ed_test = app.open_symbol_editor()
+ed_test.dirty = True
+_errors.clear()
+check(ed_test.open_existing("proj.unsupported") is None and ed_test.dirty is True
+      and len(app.windows) == n_win + 1 and "'region'" in _errors[-1][1],
+      "symbol editor open_existing error: clear error, editor and unsaved work preserved")
+ed_test.dirty = False
+ed_test.destroy()
+del symreg._REGISTRY["proj.unsupported"]
+symreg.set_project_symbols([])
+app.project.activate_symbols()
+messagebox.showerror = _showerror
+
 # ================================================================ 10. library packages
 pkg = os.path.join(OUT, "mine.osymlib")
 app.userlib.export_package("My symbols", pkg)
