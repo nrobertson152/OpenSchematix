@@ -31,6 +31,7 @@ IEC = "IEC 60617 style"
 IEEE = "IEEE 315 / ANSI Y32.2 style"
 NEMA = "NEMA / JIC ladder style (IEEE 315)"
 ISO = "ISO 1219-1 style"
+ANSI = "ANSI Y32.10 style"
 GENERIC = "Generic"
 
 
@@ -56,6 +57,16 @@ PORT_TYPES = {
     "any": "Any (no checking)",
 }
 CATEGORY_DOMAIN = {"Electrical": "elec", "Electronic": "elec", "Hydraulic": "hyd", "Pneumatic": "pneu"}
+
+
+# Drafting elements: symbols that are drawn but carry no fluid/electrical function of their own (valve
+# operators shown on their own, direction arrows, energy triangles, enclosure lines). They are the only
+# built-in symbols allowed to have no terminals, and they never appear in the BOM (empty designator prefix).
+DRAFTING_GROUPS = ("Valve operators", "Drafting")
+
+
+def is_drafting_element(sd) -> bool:
+    return sd.group in DRAFTING_GROUPS and not sd.prefix
 
 
 def port_domain(ptype: str) -> str:
