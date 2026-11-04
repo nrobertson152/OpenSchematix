@@ -4,21 +4,21 @@ This is the current operating instruction for AI-assisted development. The Direc
 
 ## Roles and authority
 
-- **Director (`nrobertson152`)** selects and authorizes work, resolves priorities and disputed risks, and alone approves merges, releases, tags, branch deletion, licence changes and changes to this operating policy.
+- **Director (`nrobertson152`)** retains exclusive authority over releases, version/release tags and licensing. The Director delegates routine engineering priorities, decisions and verified PR merges to the Engineering Coordinator and may override those decisions.
 - **Coder (Claude or ChatGPT, one assigned owner per task)** investigates, designs, implements, adds regression tests, runs available checks, documents material changes and opens a focused PR. The Coder fixes review findings but does not approve their own work. Do not start a second coding agent on the same task.
 - **Reviewer (ChatGPT, independent of the Coder)** reviews the actual PR diff and latest head SHA, runs or evaluates proportionate tests, checks compatibility and engineering invariants, and reports blocking defects with reproducible evidence. Codex GitHub reviews may provide this review; a comment or green CI is not automatically approval. If ChatGPT is the Coder, a separate ChatGPT review session must be used.
-- **Engineering Coordinator** maintains the authorized issue/PR queue, checks ownership and dependencies, tracks exact-SHA CI/review evidence, identifies conflicts and blockers, and reports merge readiness to the Director. The Coordinator does **not** implement features, approve their own changes, merge, tag, release or independently start scheduled agents.
+- **Engineering Coordinator** manages assignments, routine engineering and integration decisions, exact-SHA CI/review evidence, and merges PRs when mandatory quality gates pass. The Coordinator must not implement or review its own code, bypass safeguards, create releases or tags, or change licensing.
 
 GitHub issues, PRs, commits, review threads and CI are the authoritative record. Historical multi-agent names, assignments and checkout protocols are not current instructions.
 
 ## Work cycle
 
-1. **Authorize:** The Director authorizes an issue or a bounded request. The Coordinator checks existing issues/PRs, records the scope, acceptance criteria, priority, dependencies and assigned Coder. Backlog entries alone are not authorization.
+1. **Authorize:** The Director or delegated Coordinator authorizes a bounded in-scope issue or request. The Coordinator checks existing issues/PRs, records the scope, acceptance criteria, priority, dependencies and assigned Coder. Backlog entries alone are not authorization.
 2. **Implement:** One Coder works on one dedicated branch and opens one focused PR per issue, with `Closes #<n>` where applicable. Do not edit another agent's branch or create overlapping implementations without Director approval.
 3. **Verify:** The Coder posts the exact head SHA, commands actually run, OS/Python/Tk versions as applicable, pass/fail/skip counts, compatibility considerations and unverified cases. A failing or skipped test must not be described as passed.
 4. **Review:** The independent ChatGPT Reviewer checks the latest commit and records actionable findings on the PR. A review of an earlier SHA does not approve later changes. The Coder resolves findings and adds regression tests; the Reviewer rechecks the changes.
-5. **Coordinate:** The Coordinator confirms CI on the current head, review disposition, unresolved threads, dependencies, draft state, conflicts and release scope. Mark ready for Director only when evidence is sufficient; otherwise report a specific blocker.
-6. **Decide:** Only the Director merges or authorizes release. No agent may self-merge, bypass required checks or change branch protections to obtain approval.
+5. **Coordinate:** The Coordinator confirms CI on the current head, independent review, unresolved threads, dependencies, draft state, conflicts and release scope. Merge only when all mandatory gates are satisfied; otherwise report and resolve specific blockers.
+6. **Decide:** The Coordinator may merge independently verified PRs under the delegated merge gates. Only the Director authorizes releases, release tags and licensing changes. No Coder may self-merge; no agent may bypass required checks or branch protections.
 
 Keep one active Coder assignment per issue and avoid unnecessary parallel changes to shared subsystems. Do not require GitHub assignment locks, extra agent roles, hourly check-ins or recurring model runs. Existing scheduled agents stay paused unless the Director explicitly authorizes resumption.
 
@@ -65,3 +65,11 @@ The independent Reviewer should treat these as blocking:
 - Behaviour changes without a regression test, or tests that would pass on the old buggy code.
 - New network access, telemetry, runtime dependencies or Tkinter imports in the core.
 - Windows/Linux differences that the change didn't consider.
+
+## Delegated engineering authority (Director authorization: 2026-11-03)
+
+The Director explicitly delegates routine engineering decisions to the Engineering Coordinator for this repository. The Coordinator may prioritize and authorize bounded work consistent with the product specification, resolve ordinary implementation, design and integration decisions, assign or reassign work without duplicate ownership, and merge reviewed pull requests into permitted development or main branches. No additional Director approval is required for routine merges.
+
+**Mandatory merge gates:** exact current-head required CI successful; independent review covering the latest substantive changes; no unresolved blocking findings; applicable regression and compatibility evidence; correct branch dependencies and no unreviewed integration conflicts. Do not merge draft PRs or bypass GitHub protections. For data integrity, shared-file concurrency, connectivity or other high-risk changes, require evidence adequate to the risk, and fail closed if uncertain. Record the decision, supporting SHA, checks and review in the PR. A Codex comment without blocking findings is not by itself proof of all required verification.
+
+**Director-exclusive authority:** creating, publishing, drafting or editing GitHub Releases; creating or pushing release/version tags; changing licenses or licensing terms. Neither the Coordinator nor Coders/Reviewers may perform these actions. The Director may override or revoke this delegation. The Coordinator may merge release-preparation code and documentation when standard quality gates pass, but must not create or publish a release or any release/version tag. The Coordinator must not alter branch protection or waive safety checks to obtain a merge.
