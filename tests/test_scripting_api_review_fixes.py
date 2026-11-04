@@ -36,9 +36,15 @@ def _wire_state(s):
 
 
 # ---------------------------------------------------------------- 1. dangling T-branch
-def test_a_move_that_would_cut_off_a_dangling_branch_is_refused():
+def test_a_move_that_would_cut_off_a_dangling_branch_is_refused(monkeypatch):
     """Codex's reproduction: resistor at (200, 200), a wire from its terminal 1
-    to (80, 200), a branch from (130, 200) to (130, 100); move_by(0, 100)."""
+    to (80, 200), a branch from (130, 200) to (130, 100); move_by(0, 100).
+
+    The router keeps such junctions now (#93), so the API's own safeguard is
+    exercised with a router that ignores them, as it did before."""
+    from openschematix import editing
+    original = editing.route
+    monkeypatch.setattr(editing, "route", lambda *a, **k: original(*a[:7]))   # drop keep_points
     p = api.new_project("branch")
     s = p.sheets[0]
     r = s.place("el.resistor.iec", 200, 200)
@@ -52,6 +58,19 @@ def test_a_move_that_would_cut_off_a_dangling_branch_is_refused():
         r.move_by(0, 100)
     assert _membership(p) == nets_before and _wire_state(s) == wires_before
     assert r.position == (200, 200)
+
+
+def test_the_same_move_keeps_the_branch_with_the_current_router():
+    """With the router of #93 the branch stays on the re-routed wire, so the move is allowed."""
+    p = api.new_project("branch kept")
+    s = p.sheets[0]
+    r = s.place("el.resistor.iec", 200, 200)
+    s.add_wire([r.terminal("1").position, (80, 200)])
+    s.add_wire([(130, 200), (130, 100)])
+    before = _membership(p)
+    r.move_by(0, 100)
+    assert r.position == (200, 300)
+    assert _membership(p) == before
 
 
 def test_a_move_that_keeps_the_branch_on_its_net_is_allowed():
