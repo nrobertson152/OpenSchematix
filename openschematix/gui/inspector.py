@@ -10,11 +10,12 @@ from __future__ import annotations
 import tkinter as tk
 from tkinter import ttk
 
-from .. import symbols
+from .. import simlinks, symbols
 from ..geometry import UNIT_MM
 from ..model import (CUSTOM_SIZE, PROP_LABELS, SHEET_SIZE_GROUPS, STANDARD_SCALES, TITLE_BLOCK_NAMES, TITLE_BLOCKS,
                      Component, Shape, Wire)
 from ..symbols.base import PORT_TYPES
+from ..symbols.electrical_control import PLC_ID
 from .widgets import IconButton, PanelHeader, ScrollFrame, Section, current_theme
 
 MIXED = ""
@@ -213,7 +214,9 @@ class Inspector(ttk.Frame):
             if sd is not None:
                 self.note(sec, f"{sd.category} · {sd.convention}" + (" · custom" if sd.is_custom else ""))
                 if sd.parametric:
-                    self.button(sec, "Configure valve…", lambda: app.configure_valve(one.id))
+                    plc_block = one.symbol == PLC_ID
+                    self.button(sec, "Program PLC…" if plc_block else "Configure valve…",
+                                lambda: app.configure_symbol(one.id), style="Accent.TButton" if plc_block else "TButton")
                 if sd.is_custom:
                     self.button(sec, "Edit symbol…", lambda: app.edit_custom_symbol(one.symbol))
                 self.button(sec, "Edit a copy of the symbol…",
@@ -223,6 +226,8 @@ class Inspector(ttk.Frame):
                 self.entry(sec, "Terminal no.", one.props.get("terminal", ""),
                            lambda v: app.edit_components(comps, props={"terminal": v.strip()}),
                            hint="Number of this terminal on strip " + (one.designator or "X1"))
+        if one is not None:
+            self._simulation(comps, one)
         sec = self.section("Part")
         for key in ("description", "manufacturer", "part_number", "rating"):
             self.entry(sec, PROP_LABELS[key], _common(comps, lambda c, k=key: c.props.get(k, "")),
@@ -255,7 +260,7 @@ class Inspector(ttk.Frame):
         self._layer_lock(sec, comps)
         sec = self.section("Custom properties")
         if one:
-            customs = [(k, v) for k, v in one.props.items() if k not in PROP_LABELS]
+            customs = [(k, v) for k, v in one.props.items() if k not in PROP_LABELS and k not in simlinks.ALL_KEYS]
             for k, v in customs:
                 row = ttk.Frame(sec.body, style="Surface.TFrame")
                 var = tk.StringVar(value=v)
@@ -270,6 +275,27 @@ class Inspector(ttk.Frame):
             if not customs:
                 self.note(sec, "No custom properties.")
         self.button(sec, "Add property…", lambda: app.add_custom_property(comps))
+
+    def _simulation(self, comps, one):
+        """What this part is tied to when simulated. Mostly the tag says it: these are the few things it can't."""
+        fields = simlinks.fields_for(one)
+        if not fields:
+            return
+        sec = self.section("Simulation")
+        for key, label, tip in fields:
+            var = tk.StringVar(value=one.props.get(key, ""))
+            box = ttk.Combobox(sec.body, textvariable=var, values=simlinks.suggestions(self.app.project, key), width=14)
+            start = [var.get()]
+
+            def commit(_e=None, k=key, v=var, was=start):
+                if v.get() != was[0]:
+                    was[0] = v.get()
+                    self.app.edit_components(comps, props={k: v.get().strip()})
+            box.bind("<Return>", commit)
+            box.bind("<KP_Enter>", commit)
+            box.bind("<FocusOut>", commit)
+            box.bind("<<ComboboxSelected>>", commit)
+            sec.add_row(label, box, tip)
 
     def _layer_lock(self, sec, objs):
         app = self.app

@@ -25,6 +25,7 @@ Severities: **Error** — almost certainly wrong; **Warning** — often wrong, c
 | Junction and overlap consistency | Error / Warning | Wires running on top of each other (error); a wire passing over a terminal without connecting to it (warning); a wire ending exactly on a bridged crossing, which joins all three (warning). These are the cases where the picture could be read differently from the connection data. |
 | Unsupported or incomplete symbols | Error / Warning / Info | Missing symbols (placeholders); custom symbols with no geometry (error) or no connection points (warning); fluid-power custom symbols whose connection points have no port type (info). |
 | Wire numbers | Error / Warning | One wire number used by different connections (error); several manual numbers on one connection (warning). |
+| PLC programs | Error / Warning | A PLC block whose program doesn't build: a syntax error, an undeclared name, a write to an input, a damaged program (error); a tag on a pin the block doesn't have (warning). This only says the program can run, not that it does the right thing. |
 
 ## Port types and domains
 
