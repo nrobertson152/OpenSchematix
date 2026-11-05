@@ -19,6 +19,8 @@ from ..plc.core import FB_TYPES
 from ..plc.fbd import GATES, block_title, pins_of
 from ..plc.ladder import COMPARE_OPS, ELEMENT_TITLES
 from ..plc.sfc import QUALIFIERS
+from . import plc_view
+from .plc_view import coord as _coord, snap_grid as _snap_grid
 from .widgets import ScrollFrame, Tooltip
 
 LANG_SHORT = {"ld": "LD", "fbd": "FBD", "sfc": "SFC", "st": "ST", "c": "C", "python": "PY"}
@@ -856,33 +858,6 @@ class TextPage(ttk.Frame):
 
 
 # ================================================================ ladder
-CW, CH = 96, 66
-X0, TOP = 44, 8
-
-
-def _measure(series) -> tuple:
-    """(columns, rows) a series takes up."""
-    cols, rows = 0, 1
-    for el in series:
-        if el.get("t") == "par":
-            c, r = _measure_par(el)
-            cols += c
-            rows = max(rows, r)
-        else:
-            cols += 1
-    return max(cols, 1), rows
-
-
-def _measure_par(el) -> tuple:
-    branches = el.get("branches") or [[]]
-    cols, rows = 0, 0
-    for b in branches:
-        c, r = _measure(b)
-        cols = max(cols, c)
-        rows += r
-    return cols, max(rows, 1)
-
-
 class LadderPage(ttk.Frame):
     def __init__(self, master, editor, pou):
         super().__init__(master, style="Surface.TFrame")
@@ -1101,172 +1076,9 @@ class LadderPage(ttk.Frame):
 
     # ---- drawing
     def draw(self):
-        cv = self.cv
-        cv.delete("all")
-        self.hits = []
-        t = self.editor.app.theme
-        u = t.ui
-        widest = max((_measure(r.get("items", []))[0] for r in self.rungs), default=1)
-        right = max(X0 + (widest + 1) * CW + 30, cv.winfo_width() - 30)
-        y = TOP
-        for i, rung in enumerate(self.rungs):
-            items = rung.get("items", [])
-            _c, rows = _measure(items)
-            h = rows * CH
-            comment = str(rung.get("comment") or "")
-            if self.sel is not None and self.sel[0][0] == i:
-                cv.create_rectangle(4, y, right + 26, y + h + 22, fill=u["surface2"], outline="")
-            cv.create_text(10, y + 3, text=str(i + 1), anchor="nw", fill=u["faint"], font=t.fonts["small"])
-            if comment:
-                cv.create_text(X0, y + 3, text=comment, anchor="nw", fill=u["muted"], font=t.fonts["small"])
-            cy = y + 18 + CH // 2
-            cv.create_line(X0 - 14, y + 2, X0 - 14, y + h + 20, fill=u["text"], width=2)
-            cv.create_line(right + 14, y + 2, right + 14, y + h + 20, fill=u["text"], width=2)
-            self._draw_series(items, (i,), X0 - 14, cy, right + 14)
-            self.hits.append((0, y, right + 40, y + h + 22, ((i,), "rung")))
-            y += h + 24
-        cv.configure(scrollregion=(0, 0, right + 40, y + 10))
-
-    def _draw_series(self, series, path, x, cy, xend):
-        """Draw a series from x to xend on the row centred at cy. Coils at the very end of a rung sit at the rail."""
-        cv = self.cv
-        col = self.editor.app.theme.ui["text"]
-        tail = 0
-        if len(path) == 1:
-            while tail < len(series) and series[len(series) - 1 - tail].get("t") in ("coil", "ncoil", "set", "reset"):
-                tail += 1
-        head = series[:len(series) - tail] if tail else series
-        px = x
-        for i, el in enumerate(head):
-            if el.get("t") == "par":
-                px = self._draw_par(el, path, i, px, cy)
-            else:
-                self._draw_element(el, (path, i), px, cy)
-                px += CW
-        if not series:
-            sel = self.sel == (path, None)
-            u = self.editor.app.theme.ui
-            cv.create_line(px, cy, xend, cy, fill=col, width=1.5)
-            r = cv.create_rectangle(px + 30, cy - 10, px + 66, cy + 10, fill=u["accent_soft"] if sel else u["surface"],
-                                    outline=u["accent"] if sel else u["border"], dash=(3, 2))
-            cv.create_text(px + 48, cy, text="add", fill=u["muted"], font=self.editor.app.theme.fonts["small"])
-            self.hits.append((px + 30, cy - 10, px + 66, cy + 10, (path, None)))
-            return r
-        if tail:
-            start = xend - tail * CW
-            cv.create_line(px, cy, start, cy, fill=col, width=1.5)
-            for k in range(tail):
-                i = len(series) - tail + k
-                self._draw_element(series[i], (path, i), start + k * CW, cy)
-        else:
-            cv.create_line(px, cy, xend, cy, fill=col, width=1.5)
-
-    def _draw_par(self, el, path, i, x, cy):
-        cv = self.cv
-        u = self.editor.app.theme.ui
-        cols, _rows = _measure_par(el)
-        end = x + cols * CW
-        y = cy
-        last_y = cy
-        for b_i, branch in enumerate(el.get("branches") or [[]]):
-            sub = path + ((i, b_i),)
-            self._draw_series_plain(branch, sub, x, y, end)
-            last_y = y
-            y += _measure(branch)[1] * CH
-        selected = self.sel == (path, i)
-        color = u["accent"] if selected else u["text"]
-        cv.create_line(x, cy, x, last_y, fill=color, width=2 if selected else 1.5)
-        cv.create_line(end, cy, end, last_y, fill=color, width=2 if selected else 1.5)
-        self.hits.append((x - 6, cy - 6, x + 6, last_y + 6, (path, i)))
-        self.hits.append((end - 6, cy - 6, end + 6, last_y + 6, (path, i)))
-        return end
-
-    def _draw_series_plain(self, series, path, x, cy, xend):
-        cv = self.cv
-        col = self.editor.app.theme.ui["text"]
-        px = x
-        for i, el in enumerate(series):
-            if el.get("t") == "par":
-                px = self._draw_par(el, path, i, px, cy)
-            else:
-                self._draw_element(el, (path, i), px, cy)
-                px += CW
-        if not series:
-            u = self.editor.app.theme.ui
-            sel = self.sel == (path, None)
-            cv.create_line(px, cy, xend, cy, fill=col, width=1.5)
-            cv.create_rectangle(px + 30, cy - 10, px + 66, cy + 10, fill=u["accent_soft"] if sel else u["surface"],
-                                outline=u["accent"] if sel else u["border"], dash=(3, 2))
-            cv.create_text(px + 48, cy, text="add", fill=u["muted"], font=self.editor.app.theme.fonts["small"])
-            self.hits.append((px + 30, cy - 10, px + 66, cy + 10, (path, None)))
-            return
-        cv.create_line(px, cy, xend, cy, fill=col, width=1.5)
-
-    def _is_on(self, el):
-        """Whether this element conducts or is energised right now, while the test runs. None = can't say."""
-        rt = self.rt
-        if rt is None:
-            return None
-        name = str(el.get("a") or "")
-        t = el.get("t")
-        value = rt.read(name) if name else None
-        if value is None:
-            return None
-        if t in ("ton", "tof", "tp", "ctu", "ctd"):
-            return bool(getattr(value, "Q", False))
-        if t == "nc":
-            return not value
-        if t in ("no", "coil", "set", "reset", "rise", "fall"):
-            return bool(value)
-        if t == "ncoil":
-            return not value
-        return None
-
-    def _draw_element(self, el, ref, x, cy):
-        cv = self.cv
-        t = self.editor.app.theme
-        u = t.ui
-        k = el.get("t")
-        selected = self.sel == ref
-        on = self._is_on(el)
-        ink = u["text"]
-        live = u["success"] if "success" in u else "#1a8f3c"
-        color = live if on else ink
-        small = t.fonts["small"]
-        mid = x + CW // 2
-        if selected:
-            cv.create_rectangle(x + 2, cy - CH // 2 + 2, x + CW - 2, cy + CH // 2 - 2, fill=u["accent_soft"], outline=u["accent"])
-        label = str(el.get("a") or "")
-        hit = (x, cy - CH // 2, x + CW, cy + CH // 2, ref)
-        self.hits.append(hit)
-        width = 2 if on else 1.5
-        if k in ("no", "nc", "rise", "fall"):
-            cv.create_line(x, cy, mid - 6, cy, fill=ink, width=1.5)
-            cv.create_line(mid + 6, cy, x + CW, cy, fill=ink, width=1.5)
-            cv.create_line(mid - 6, cy - 11, mid - 6, cy + 11, fill=color, width=width)
-            cv.create_line(mid + 6, cy - 11, mid + 6, cy + 11, fill=color, width=width)
-            if k == "nc":
-                cv.create_line(mid - 12, cy + 11, mid + 12, cy - 11, fill=color, width=width)
-            elif k in ("rise", "fall"):
-                cv.create_text(mid, cy, text="P" if k == "rise" else "N", fill=color, font=small)
-            cv.create_text(mid, cy - 22, text=label or "?", fill=ink if label else u["danger"], font=small)
-        elif k in ("coil", "ncoil", "set", "reset"):
-            cv.create_line(x, cy, mid - 14, cy, fill=ink, width=1.5)
-            cv.create_line(mid + 14, cy, x + CW, cy, fill=ink, width=1.5)
-            cv.create_arc(mid - 16, cy - 12, mid + 2, cy + 12, start=90, extent=180, style="arc", outline=color, width=width)
-            cv.create_arc(mid - 2, cy - 12, mid + 16, cy + 12, start=-90, extent=180, style="arc", outline=color, width=width)
-            mark = {"set": "S", "reset": "R", "ncoil": "/"}.get(k, "")
-            if mark:
-                cv.create_text(mid, cy, text=mark, fill=color, font=small)
-            cv.create_text(mid, cy - 22, text=label or "?", fill=ink if label else u["danger"], font=small)
-        else:
-            title, lines = _box_text(el)
-            cv.create_line(x, cy, x + 8, cy, fill=ink, width=1.5)
-            cv.create_line(x + CW - 8, cy, x + CW, cy, fill=ink, width=1.5)
-            cv.create_rectangle(x + 8, cy - 22, x + CW - 8, cy + 24, outline=color, width=width, fill=u["surface"])
-            cv.create_text(mid, cy - 14, text=title, fill=color, font=t.fonts["heading"])
-            for n, line in enumerate(lines[:2]):
-                cv.create_text(mid, cy + n * 12, text=line[:14], fill=u["muted"], font=small)
+        drawing = plc_view.Ladder(self.cv, self.editor.app.theme, self.rungs, sel=self.sel, rt=self.rt, pou=self.pou.get("name"))
+        drawing.draw()
+        self.hits = drawing.hits
 
     def _click(self, e):
         self.cv.focus_set()
@@ -1349,29 +1161,12 @@ class LadderPage(ttk.Frame):
             first.focus_set()
 
 
-def _box_text(el):
-    k = el.get("t")
-    if k in ("ton", "tof", "tp"):
-        return k.upper(), [str(el.get("a") or "?"), str(el.get("pt") or "")]
-    if k in ("ctu", "ctd"):
-        return k.upper(), [str(el.get("a") or "?"), "PV " + str(el.get("pv") or "")]
-    if k == "cmp":
-        return str(el.get("op", ">")), [str(el.get("a") or "?"), str(el.get("b") or "?")]
-    if k == "move":
-        return ":=", [str(el.get("a") or "?"), str(el.get("b") or "?")]
-    if k == "st":
-        return "ST", [str(el.get("code") or "")]
-    return str(k), []
-
-
 # ================================================================ function block diagram
 PALETTE = (("Connect", ("input", "output")), ("Logic", ("AND", "OR", "XOR", "NAND", "NOR", "NOT")),
            ("Compare", ("GT", "GE", "LT", "LE", "EQ", "NE")),
            ("Math", ("ADD", "SUB", "MUL", "DIV", "MOD", "ABS", "NEG", "SQRT", "MIN", "MAX", "LIMIT", "SCALE", "SEL", "MOVE")),
            ("Timers and counters", ("TON", "TOF", "TP", "CTU", "CTD", "CTUD")),
            ("Latches and edges", ("SR", "RS", "R_TRIG", "F_TRIG")), ("Control", ("PID",)))
-BW, PIN = 96, 18
-SNAP = 10
 
 
 class FbdPage(ttk.Frame):
@@ -1419,20 +1214,11 @@ class FbdPage(ttk.Frame):
     # ---- geometry
     @staticmethod
     def _rect(b):
-        i, o = pins_of(b)
-        rows = max(len(i), len(o), 1)
-        x, y = _coord(b.get("x")), _coord(b.get("y"))
-        small = b.get("type") in ("input", "output")
-        return x, y, x + BW, y + (24 if small else 18 + rows * PIN)
+        return plc_view.block_rect(b)
 
-    def _pin_xy(self, b, pin, side):
-        i, o = pins_of(b)
-        x0, y0, x1, _y1 = self._rect(b)
-        small = b.get("type") in ("input", "output")
-        names = i if side == "in" else o
-        k = names.index(pin) if pin in names else 0
-        y = y0 + 12 if small else y0 + 18 + k * PIN + PIN // 2
-        return (x0 - 12, y) if side == "in" else (x1 + 12, y)
+    @staticmethod
+    def _pin_xy(b, pin, side):
+        return plc_view.pin_xy(b, pin, side)
 
     def _block(self, bid):
         return next((b for b in self.src["blocks"] if b.get("id") == bid), None)
@@ -1461,39 +1247,14 @@ class FbdPage(ttk.Frame):
         return None
 
     def _wire_path(self, w):
-        a, c = self._block(w["from"][0]), self._block(w["to"][0])
-        if a is None or c is None:
-            return None
-        ax, ay = self._pin_xy(a, w["from"][1], "out")
-        cx, cy = self._pin_xy(c, w["to"][1], "in")
-        if cx >= ax + 16:
-            mx = _snap_grid((ax + cx) / 2)
-            return [ax, ay, mx, ay, mx, cy, cx, cy]
-        my = max(self._rect(a)[3], self._rect(c)[3]) + 14
-        return [ax, ay, ax + 12, ay, ax + 12, my, cx - 12, my, cx - 12, cy, cx, cy]
+        return plc_view.wire_path(self.src["blocks"], w)
 
     # ---- drawing
     def draw(self):
-        cv = self.cv
-        cv.delete("all")
         t = self.editor.app.theme
+        plc_view.draw_fbd(self.cv, t, self.src, sel=self.sel, frame=self._live_frame())
         u = t.ui
-        small = t.fonts["small"]
-        live = u["success"] if "success" in u else "#1a8f3c"
-        frame = self._live_frame()
-        for w in self.src["wires"]:
-            path = self._wire_path(w) if isinstance(w, dict) else None
-            if not path:
-                continue
-            selected = self.sel == ("wire", w)
-            value = frame.get(f"{w['from'][0]}.{w['from'][1]}") if frame is not None else None
-            color = u["accent"] if selected else (live if value is True else u["text"])
-            cv.create_line(*path, fill=color, width=2.5 if selected or value is True else 1.5)
-        for b in self.src["blocks"]:
-            try:
-                self._draw_block(b, cv, u, small, frame, t)
-            except plc.CompileError:
-                continue
+        cv = self.cv
         if not self.src["blocks"]:
             cv.create_text(200, 60, text="Add blocks from the list on the left, then drag from an output pin to an input pin.",
                            anchor="w", fill=u["faint"], font=t.fonts["ui"])
@@ -1501,55 +1262,11 @@ class FbdPage(ttk.Frame):
             _k, _bid, _pin, _side, x0, y0, x1, y1 = self.drag
             cv.create_line(x0, y0, x1, y1, fill=u["accent"], dash=(4, 3), width=1.5)
 
-    def _draw_block(self, b, cv, u, small, frame, t):
-        x0, y0, x1, y1 = self._rect(b)
-        kind = b.get("type")
-        selected = self.sel == ("block", b.get("id"))
-        outline = u["accent"] if selected else u["text"]
-        cv.create_rectangle(x0, y0, x1, y1, fill=u["accent_soft"] if selected else u["surface2"], outline=outline,
-                            width=2 if selected else 1)
-        ins, outs = pins_of(b)
-        if kind in ("input", "output"):
-            label = str(b.get("expr") if kind == "input" else b.get("target")) if (b.get("expr") or b.get("target")) else "?"
-            cv.create_text((x0 + x1) / 2, y0 + 12, text=label[:15], fill=u["text"] if label != "?" else u["danger"], font=small)
-        else:
-            cv.create_text((x0 + x1) / 2, y0 + 9, text=kind, fill=u["text"], font=t.fonts["heading"])
-            if b.get("name"):
-                cv.create_text((x0 + x1) / 2, y0 - 7, text=str(b["name"]), fill=u["muted"], font=small)
-            for k, name in enumerate(ins):
-                yy = y0 + 18 + k * PIN + PIN // 2
-                constant = (b.get("pins") or {}).get(name)
-                cv.create_text(x0 + 4, yy, text=name if len(ins) > 1 or kind in FB_TYPES else "", anchor="w",
-                               fill=u["muted"], font=small)
-                if constant and self._undriven(b, name):
-                    cv.create_text(x0 - 15, yy, text=str(constant)[:10], anchor="e", fill=u["muted"], font=small)
-            for k, name in enumerate(outs):
-                yy = y0 + 18 + k * PIN + PIN // 2
-                cv.create_text(x1 - 4, yy, text=name if len(outs) > 1 or kind in FB_TYPES else "", anchor="e",
-                               fill=u["muted"], font=small)
-        negated = b.get("neg") or []
-        for side, names in (("in", ins), ("out", outs)):
-            for name in names:
-                px, py = self._pin_xy(b, name, side)
-                edge = x0 if side == "in" else x1
-                cv.create_line(px, py, edge, py, fill=u["text"])
-                if name in negated:
-                    cv.create_oval(edge - 8, py - 4, edge, py + 4, fill=u["surface"], outline=u["text"])
-                cv.create_oval(px - 3, py - 3, px + 3, py + 3, fill=u["accent"], outline="")
-                if frame is not None and side == "out":
-                    value = frame.get(f"{b['id']}.{name}")
-                    if value is not None and not isinstance(value, bool):
-                        cv.create_text(px + 4, py - 8, text=f"{value:.4g}" if isinstance(value, float) else str(value),
-                                       anchor="w", fill=u["muted"], font=small)
-
     def _undriven(self, b, pin):
         return not any(isinstance(w, dict) and w.get("to") == [b["id"], pin] for w in self.src["wires"])
 
     def _live_frame(self):
-        if self.rt is None:
-            return None
-        name = self.pou.get("name")
-        return next((p.frame for p in self.rt.program.pous if p.name == name), None)
+        return plc_view.running_frame(self.rt, self.pou.get("name")) if self.rt is not None else None
 
     def live(self, rt):
         self.rt = rt
@@ -1742,18 +1459,6 @@ class FbdPage(ttk.Frame):
         self.draw()
 
 
-def _coord(v):
-    return v if isinstance(v, (int, float)) and not isinstance(v, bool) and -1e6 < v < 1e6 else 40
-
-
-def _snap_grid(v):
-    return round(v / SNAP) * SNAP
-
-
-# ================================================================ sequential function chart
-SW, SH, SGAP, COLW = 110, 34, 62, 190
-
-
 class SfcPage(ttk.Frame):
     def __init__(self, master, editor, pou):
         super().__init__(master, style="Surface.TFrame")
@@ -1873,96 +1578,11 @@ class SfcPage(ttk.Frame):
         self.show_props()
 
     # ---- layout: steps by depth from the start, top to bottom; parallel steps side by side
-    def _layout(self):
-        steps = self._steps()
-        rank = {}
-        order = [s["id"] for s in steps if s.get("initial")] or [s["id"] for s in steps[:1]]
-        for sid in order:
-            rank[sid] = 0
-        queue = list(order)
-        while queue:
-            cur = queue.pop(0)
-            for t in self._trans():
-                if cur in (t.get("from") or []):
-                    for nxt in t.get("to") or []:
-                        if nxt not in rank:
-                            rank[nxt] = rank[cur] + 1
-                            queue.append(nxt)
-        for s in steps:
-            rank.setdefault(s["id"], max(rank.values(), default=-1) + 1)
-        rows = {}
-        for s in steps:
-            rows.setdefault(rank[s["id"]], []).append(s["id"])
-        self.pos = {}
-        for r, ids in rows.items():
-            for c, sid in enumerate(ids):
-                self.pos[sid] = (70 + c * COLW, 30 + r * (SH + SGAP))
-        return rows
-
-    def _active(self, sid):
-        if self.rt is None:
-            return False
-        s = self._step(sid)
-        return bool(s and self.rt.read(str(s.get("name"))))
-
     def draw(self):
-        cv = self.cv
-        cv.delete("all")
-        self.hits = []
         t = self.editor.app.theme
-        u = t.ui
-        small = t.fonts["small"]
-        self._layout()
-        live = u["success"] if "success" in u else "#1a8f3c"
-        # transitions first, under the steps
-        lane = 0
-        for tr in self._trans():
-            sources = [self.pos[i] for i in tr.get("from") or [] if i in self.pos]
-            targets = [self.pos[i] for i in tr.get("to") or [] if i in self.pos]
-            if not sources or not targets:
-                continue
-            selected = self.sel == ("trans", tr.get("id"))
-            color = u["accent"] if selected else u["text"]
-            sy = max(y for _x, y in sources) + SH
-            ty = min(y for _x, y in targets)
-            mx = sum(x for x, _y in sources) / len(sources) + SW / 2
-            if ty > sy:                 # forward
-                by = (sy + ty) / 2
-                for x, y in sources:
-                    cv.create_line(x + SW / 2, y + SH, x + SW / 2, by, mx, by, fill=color)
-                for x, y in targets:
-                    cv.create_line(mx, by, x + SW / 2, by, x + SW / 2, y, fill=color, arrow="last")
-            else:                       # back up the chart, round the left side
-                lane += 1
-                bx = 40 - lane * 10
-                by = sy + 18
-                for x, y in sources:
-                    cv.create_line(x + SW / 2, y + SH, x + SW / 2, by, fill=color)
-                for x, y in targets:
-                    cv.create_line(mx, by, bx, by, bx, y + SH / 2, x, y + SH / 2, fill=color, arrow="last")
-            cv.create_line(mx - 14, by, mx + 14, by, fill=color, width=3)
-            cond = str(tr.get("cond") or "?")
-            cv.create_text(mx + 18, by - 2, text=cond[:34], anchor="sw", fill=u["danger"] if cond == "?" else u["muted"], font=small)
-            self.hits.append((mx - 20, by - 16, mx + 160, by + 8, ("trans", tr.get("id"))))
-        for s in self._steps():
-            x, y = self.pos[s["id"]]
-            selected = self.sel == ("step", s["id"])
-            on = self._active(s["id"])
-            cv.create_rectangle(x, y, x + SW, y + SH, fill=live if on else (u["accent_soft"] if selected else u["surface2"]),
-                                outline=u["accent"] if selected else u["text"], width=2 if selected else 1)
-            if s.get("initial"):
-                cv.create_rectangle(x + 3, y + 3, x + SW - 3, y + SH - 3, outline=u["text"])
-            cv.create_text(x + SW / 2, y + SH / 2, text=str(s.get("name"))[:14], fill=u["text"], font=t.fonts["heading"])
-            self.hits.append((x, y, x + SW, y + SH, ("step", s["id"])))
-            acts = [a for a in (s.get("actions") or []) if isinstance(a, dict)]
-            if acts:
-                text = "\n".join(f"{a.get('q', 'N')} {a.get('target') or (str(a.get('code') or '')[:16])}" for a in acts[:4])
-                cv.create_text(x + SW + 6, y + 1, text=text, anchor="nw", fill=u["muted"], font=small)
-        xs = [p[0] for p in self.pos.values()] or [0]
-        ys = [p[1] for p in self.pos.values()] or [0]
-        cv.configure(scrollregion=(0, 0, max(xs) + COLW + 200, max(ys) + SH + SGAP + 40))
+        self.hits = plc_view.draw_chart(self.cv, t, self.src, sel=self.sel, active=plc_view.step_is_active(self.rt) if self.rt is not None else None)
         if not self.src["steps"]:
-            cv.create_text(40, 40, text="Press “Add step after this one” to begin.", anchor="w", fill=u["faint"], font=t.fonts["ui"])
+            self.cv.create_text(40, 40, text="Press “Add step after this one” to begin.", anchor="w", fill=t.ui["faint"], font=t.fonts["ui"])
 
     def _click(self, e):
         self.cv.focus_set()

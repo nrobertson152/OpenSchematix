@@ -54,7 +54,8 @@ an error when the program is checked.
 
 *Check program* (and *Check drawing*, rule **PLC programs**) lists every problem with its place; double-click to go
 to it. The **Test** tab runs the program right there, with check boxes for inputs, sliders for analog inputs and a live
-list of values; ladder, FBD and SFC light up as it runs.
+list of values. As it runs, ladder rungs light up by power flow, as far as the power really went in the last scan; function block wires
+light up by their signals; and charts by their active steps. FluidWorx shows the same thing with the program running in the simulated machine.
 
 ## Safety of programs in files
 
