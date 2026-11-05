@@ -4,6 +4,7 @@ import copy
 import json
 import os
 import tempfile
+import traceback
 
 import pytest
 
@@ -14,8 +15,9 @@ from openschematix.project import new_project
 tk = pytest.importorskip("tkinter")
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def tk_root():
+    """One root per test: a window's timers and bindings die with it, so nothing can land on the next test's errors."""
     os.environ.setdefault("OPENSCHEMATIX_CONFIG_DIR", tempfile.mkdtemp())
     try:
         root = tk.Tk()
@@ -32,13 +34,13 @@ def app(tk_root, tmp_path, monkeypatch):
     from openschematix.gui.app import App
     a = App(tk_root, check_recovery=False)
     errors = []
-    tk_root.report_callback_exception = lambda exc, val, tb: errors.append(val)
+    tk_root.report_callback_exception = lambda exc, val, tb: errors.append("".join(traceback.format_exception(exc, val, tb)))
     yield a
     for w in list(a.windows):
         w.dirty = False
         w.destroy()
     a.recovery.end()
-    assert not errors, errors
+    assert not errors, "\n".join(errors)
 
 
 def place(app, **params):

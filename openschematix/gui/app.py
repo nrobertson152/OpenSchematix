@@ -2594,7 +2594,10 @@ class App:
 
     def _rebuild_recent(self):
         m = self.recent_menu
-        m.delete(0, "end")
+        try:
+            m.delete(0, "end")
+        except tk.TclError:             # an empty menu, on tkinter from before Tk 9 with Tk 9
+            pass
         # No existence check here: this runs after every save and open, on the
         # UI thread, and on Windows a stat() of a file on a disconnected network
         # drive or share can block for many seconds (#75). A recent file that

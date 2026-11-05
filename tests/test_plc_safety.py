@@ -150,6 +150,45 @@ def test_deeply_nested_source_is_an_error_not_a_crash(lang, source):
     assert prog.errors or prog.pous
 
 
+@pytest.mark.parametrize("source", [
+    "x = 1" + " + 1" * 50000,
+    "x = a" + ".b" * 50000,
+    "x = f" + "()" * 50000,
+    "x = a" + "[0]" * 50000,
+    'x = f"{' + "1+" * 50000 + '1}"',
+    "x = " + "(" * 5000 + "1" + ")" * 5000,
+    "x = (" * 80 + "1" + ")" * 80,
+    "if 1:\n  pass\n" + "elif 1:\n  pass\n" * 20000,
+    "x = (1" + " + 1" * 900 + ")" + (" + (1" + " + 1" * 900 + ")") * 2,
+    "x = ((((((1" + " + 1" * 400 + ")" + " + 1" * 400 + ")" + " + 1" * 400 + ")" + " + 1" * 400 + ")))",
+])
+def test_python_that_would_overflow_the_parser_never_reaches_it(source, monkeypatch):
+    """A deep enough tree overflows the C stack inside ast.parse on some versions and platforms: Python 3.10 on Windows
+    took the whole process down this way. No except clause can catch that, so it must not get that far."""
+    from openschematix.plc import pylang
+    monkeypatch.setattr(pylang.ast, "parse", lambda *a, **k: pytest.fail("reached the parser"))
+    prog = build(params("python", source))
+    assert prog.errors
+    assert any(word in prog.errors[0].message for word in ("too", "elif"))
+
+
+@pytest.mark.parametrize("source", [
+    "TABLE = [" + ", ".join(str(i) for i in range(20000)) + "]\n",
+    "TABLE = [" + ", ".join(f"-{i}.5" for i in range(20000)) + "]\n",
+    "TABLE = [" + ", ".join(f"({i}, {i} + 1)" for i in range(5000)) + "]\n",
+    "NAMES = {" + ", ".join(f"'k{i}': 'a + b - c * d'" for i in range(5000)) + "}\n",
+    "\n".join(f"x{i} = {i} + 1 + 2 + 3" for i in range(5000)) + "\n",
+    "; ".join(f"x{i} = {i} + 1 + 2 + 3" for i in range(1000)) + "\n",
+    "text = '" + "+-*/ " * 5000 + "'\n",
+    "# " + "+-*/ " * 5000 + "\nx = 1\n",
+    "if a:\n  pass\n" + "elif a:\n  pass\n" * 200,
+    "x = 1 + \\\n  2 + \\\n  3\ny = (1 +\n 2 +\n 3)\n",
+])
+def test_real_programs_are_not_mistaken_for_deep_ones(source):
+    from openschematix.plc import pylang
+    pylang.check_depth(source)
+
+
 def test_too_long_a_source_is_refused():
     prog = build(params("st", "x := 1;\n" * 200000))
     assert prog.errors and "too long" in prog.errors[0].message
