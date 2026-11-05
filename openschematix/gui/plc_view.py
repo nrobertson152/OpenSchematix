@@ -87,9 +87,9 @@ def _show(value) -> str:
 class Ladder:
     """One ladder program on a canvas. `rt`, a running PLC, and `pou`, this program's name, light it up."""
 
-    def __init__(self, cv, theme, rungs, sel=None, rt=None, pou=""):
+    def __init__(self, cv, theme, rungs, sel=None, rt=None, pou="", running=None):
         self.cv, self.t, self.rungs, self.sel, self.rt = cv, theme, rungs, sel, rt
-        self.live = rt is not None and rt.running
+        self.live = rt is not None and (rt.running if running is None else running)
         self.power = rt.program.power.get(pou, {}) if rt is not None else {}
         self.hits = []
 
@@ -468,11 +468,13 @@ def step_is_active(rt):
 
 
 class ProgramView(ttk.Frame):
-    """One program of a running PLC, read-only. `theme` is a function that returns the current theme."""
+    """One program of a running PLC, read-only. `theme` is a function that returns the current theme. Whoever hosts the PLC can say
+    whether it's running, with `is_running`, since a PLC on a machine can be stopped or lose its supply and still have a program."""
 
-    def __init__(self, master, theme):
+    def __init__(self, master, theme, is_running=None):
         super().__init__(master, style="Surface.TFrame")
         self.theme = theme
+        self.is_running = is_running
         self.rt = None
         self.pou = None
         self._last = None
@@ -529,7 +531,8 @@ class ProgramView(ttk.Frame):
         if rt is None or pou is None or pou.get("lang") not in ("ld", "fbd", "sfc"):
             return
         name = pou.get("name")
-        now = (rt.running, dict(rt.program.power.get(name, {})), repr(rt.watch()))
+        running = rt.running if self.is_running is None else bool(self.is_running())
+        now = (running, dict(rt.program.power.get(name, {})), repr(rt.watch()))
         if not force and now == self._last:
             return
         self._last = now
@@ -540,12 +543,12 @@ class ProgramView(ttk.Frame):
             return
         lang = pou["lang"]
         if lang == "ld":
-            Ladder(self.cv, t, src.get("rungs") or [], rt=rt, pou=name).draw()
+            Ladder(self.cv, t, src.get("rungs") or [], rt=rt, pou=name, running=running).draw()
         elif lang == "fbd":
             if isinstance(src.get("blocks"), list) and isinstance(src.get("wires"), list):
-                draw_fbd(self.cv, t, src, frame=running_frame(rt, name) if rt.running else None)
+                draw_fbd(self.cv, t, src, frame=running_frame(rt, name) if running else None)
                 box = self.cv.bbox("all")
                 if box:
                     self.cv.configure(scrollregion=(0, 0, box[2] + 40, box[3] + 40))
         elif isinstance(src.get("steps"), list) and isinstance(src.get("transitions"), list):
-            draw_chart(self.cv, t, src, active=step_is_active(rt) if rt.running else None)
+            draw_chart(self.cv, t, src, active=step_is_active(rt) if running else None)
