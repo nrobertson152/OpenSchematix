@@ -50,3 +50,35 @@ def test_suggestions_come_from_the_project():
     assert simlinks.suggestions(p, simlinks.SENSES) == ["A1", "PT1"]
     assert simlinks.suggestions(p, simlinks.SOLENOID_A) == ["K1", "Y1"]
     assert simlinks.suggestions(p, simlinks.DRIVEN_BY) == ["M1"]
+
+
+def _valve(left, right, medium="pneu", vtype="3/2"):
+    return comp(f"fl.{medium}.dcv", params={**default_valve_params(medium, vtype), "left": left, "right": right})
+
+
+def test_a_roller_or_a_cam_is_operated_by_the_machine():
+    assert simlinks.mechanical_sides(_valve(["roller"], ["spring"])) == ["a"]
+    assert simlinks.mechanical_sides(_valve(["spring"], ["cam"])) == ["b"]
+    assert simlinks.mechanical_sides(_valve(["roller.lever"], ["plunger"])) == ["a", "b"]
+    assert simlinks.mechanical_sides(_valve(["plunger.limited"], ["spring"])) == ["a"]
+    assert simlinks.mechanical_sides(_valve(["lever"], ["spring"])) == []
+    assert simlinks.mechanical_sides(_valve(["solenoid"], ["spring"])) == []
+    assert simlinks.mechanical_sides(comp("fl.hyd.check")) == []
+    assert simlinks.mechanical_sides(comp("el.switch.limit.no")) == []
+
+
+def test_a_damaged_valve_has_no_mechanical_side():
+    assert simlinks.mechanical_sides(comp("fl.pneu.dcv", params={"left": "roller", "right": [3, None]})) == []
+
+
+def test_a_valve_offers_senses_for_its_rollers():
+    assert [f[0] for f in simlinks.fields_for(_valve(["roller"], ["spring"]))] == [simlinks.SENSES]
+    assert [f[0] for f in simlinks.fields_for(_valve(["roller"], ["cam"]))] == [simlinks.SENSES_A, simlinks.SENSES_B]
+    assert [f[0] for f in simlinks.fields_for(_valve(["solenoid"], ["roller"]))] == [simlinks.SOLENOID_A, simlinks.SENSES]
+    assert [f[0] for f in simlinks.fields_for(_valve(["lever"], ["spring"]))] == []
+    tip = simlinks.fields_for(_valve(["spring"], ["roller"]))[0][2]
+    assert "right-hand" in tip and "A1 100%" in tip
+
+
+def test_senses_on_a_valve_are_links_not_custom_properties():
+    assert {simlinks.SENSES_A, simlinks.SENSES_B} <= set(simlinks.ALL_KEYS)

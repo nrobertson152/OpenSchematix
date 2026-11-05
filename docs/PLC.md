@@ -99,6 +99,11 @@ A position switch has no symbol on the fluid sheet, so it says what operates it.
 | `A1` | On a potentiometer or analog sensor: a position transducer across the whole stroke |
 | `PT1 > 120 bar` | On a contact: closed while that gauge or transducer reads above 120 bar |
 
+A valve operated by the machine itself says the same. Give a directional valve a roller, plunger or cam as an operator and it has a
+**Senses** field too, with the same places: `A1 100%` shifts it while A1 is at the end of its stroke. With one on each side, there's
+**Senses a** for the left-hand one and **Senses b** for the right-hand one. Pneumatic drawings are often already written this way: a roller
+valve tagged `a1` is at the end of cylinder `A`'s stroke and `a0` at the start, and FluidWorx reads them so.
+
 These are ordinary component properties, and FluidWorx can also set them in a study without changing the drawing.
 See FluidWorx's `docs/ELECTRICAL.md` for how the simulation works.
 
