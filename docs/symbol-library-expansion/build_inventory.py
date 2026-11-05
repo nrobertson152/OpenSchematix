@@ -7,6 +7,7 @@ Sources
   Y32  "Fluid Power Symbols - ANSI Y32.10 Graphic Symbols" (PDF, 24 pages). Clause numbers are the document's own.
   ECL  "Electric Components Library" (ElCompLib2017.svg), Filip Dominec and contributors, CC0 1.0 public domain.
        Location = section / row / position in row (1-based, left to right).
+  CTL  Control devices added with the PLC block; not taken from an outside chart.
 
 Status
   existing     already in the built-in library (target = existing id); nothing added
@@ -1264,6 +1265,26 @@ for r in R:
         elif st == "validated":
             r["batch"] = "F1"
 assert not set(PROGRESS) - {r["key"] for r in R}, set(PROGRESS) - {r["key"] for r in R}
+
+# =============================================================== control devices (not from the source charts)
+# Added with the PLC block: the symbols a control panel needs so that an electrical sheet can be simulated with
+# the fluid sheet it operates. Drawn natively in the style of el.contact.*.iec and el.coil.iec.
+for _id, _name, _cat, _group in (
+        ("el.plc", "PLC block", E, "Control"), ("el.switch.limit.no", "Position switch, NO", E, "Control"),
+        ("el.switch.limit.nc", "Position switch, NC", E, "Control"),
+        ("el.switch.pressure.no", "Pressure switch contact, NO", E, "Control"),
+        ("el.switch.pressure.nc", "Pressure switch contact, NC", E, "Control"),
+        ("el.switch.selector.no", "Selector switch, NO", E, "Control"),
+        ("el.switch.selector.nc", "Selector switch, NC", E, "Control"), ("el.estop", "Emergency stop", E, "Control"),
+        ("el.sensor.prox.pnp", "Proximity sensor, PNP", EL, "Sensors"),
+        ("el.sensor.prox.npn", "Proximity sensor, NPN", EL, "Sensors"),
+        ("el.sensor.analog", "Analog sensor, three-wire", EL, "Sensors"),
+        ("el.sensor.loop", "Analog sensor, two-wire", EL, "Sensors"),
+        ("el.coil.valve", "Solenoid valve coil", E, "Control"), ("el.coil.ondelay", "Timer relay coil, on-delay", E, "Control"),
+        ("el.coil.offdelay", "Timer relay coil, off-delay", E, "Control"),
+        ("el.contact.3no", "Main contacts, three-pole", E, "Power"), ("el.breaker.3p", "Circuit breaker, three-pole", E, "Protection"),
+        ("el.overload.3p", "Thermal overload relay, three-pole", E, "Protection"), ("el.psu", "Power supply, AC to DC", E, "Sources")):
+    row("CTL-" + _id[3:].upper().replace(".", "-"), "CTL", "PLC block feature", _name, _cat, _group, _id, "validated", "CTL")
 
 # =============================================================== write (guarded)
 # Completed statuses must never fall back to "pending" by regenerating: progress lives in the PROGRESS overlays

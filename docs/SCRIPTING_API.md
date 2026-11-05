@@ -375,3 +375,16 @@ wires leaving one terminal can run on top of each other, which Check Drawing rep
   `list_symbols()` and `get_symbol()` describe the most recently used project.
 - **Not thread-safe.** Use one thread.
 - **Source checkout required.** The packaged Windows/Linux applications cannot run scripts.
+
+## PLC blocks
+
+A PLC block is a parametric symbol like a valve. Its parameters (I/O counts, tags and the program) are described in
+[`PLC.md`](PLC.md):
+
+```python
+plc = sheet.place("el.plc", 400, 400, params={"di": 2, "do": 1, "ai": 0, "ao": 0, "tags": {"I0": "Go", "Q0": "Y1"},
+                                              "program": {"pous": [{"name": "Main", "lang": "st",
+                                                                    "source": "Y1 := Go;"}]}})
+from openschematix import plc as plc_core
+assert not plc_core.check(plc.params)     # every problem with the program, with its place
+```

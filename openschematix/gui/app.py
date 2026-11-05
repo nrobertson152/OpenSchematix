@@ -32,6 +32,7 @@ from ..project import Project, new_project
 from ..printtemp import PrintFiles
 from ..recovery import RecoveryManager
 from ..settings import Settings
+from ..symbols.electrical_control import PLC_ID
 from ..userlib import UserLibrary, add_recent_symbol
 from . import cadcmds, theme as th
 from . import interact as ia
@@ -44,6 +45,7 @@ from .inspector import Inspector
 from .keymap import KeyMap
 from .library import LibraryPanel
 from .panels import CheckPanel, LayersPanel, ProjectPanel, SearchPanel, TemplatesPanel
+from .plc_editor import PlcEditor
 from .widgets import IconButton, ToastHost, ToolbarSeparator, Tooltip, make_menu, set_current_theme
 
 UNDO_LIMIT = 150
@@ -1600,6 +1602,27 @@ class App:
     def configure_valve(self, cid):
         ValveDialog(self, cid)
 
+    def configure_symbol(self, cid):
+        """What double-clicking a configurable symbol opens: the PLC program editor, or the valve dialog."""
+        comp = self.doc.components.get(cid)
+        if comp is not None and comp.symbol == PLC_ID:
+            self.program_plc(cid)
+        else:
+            self.configure_valve(cid)
+
+    def program_plc(self, cid):
+        for w in self.windows:
+            if isinstance(w, PlcEditor) and w.doc_uid == self.doc.uid and w.comp_id == cid:
+                w.lift()
+                w.focus_set()
+                return w
+        return PlcEditor(self, self.doc.uid, cid)
+
+    def switch_to_sheet(self, uid):
+        """Make a sheet the active one, for a window that edits something on it."""
+        if self.doc.uid != uid and self.project.find_sheet(uid) is not None:
+            self.set_active_sheet(uid)
+
     def set_wire_number(self, wire, number):
         s = self.begin_change()
         res = netlist.set_net_number(self.project, self.doc.uid, wire.id, number)
@@ -2335,7 +2358,8 @@ class App:
             sd = symbols.get(one.symbol)
             m.add_separator()
             if sd is not None and sd.parametric:
-                m.add_command(label="Configure valve…", command=lambda: self.configure_valve(one.id))
+                m.add_command(label="Program PLC…" if one.symbol == PLC_ID else "Configure valve…",
+                              command=lambda: self.configure_symbol(one.id))
             if sd is not None and sd.is_custom:
                 m.add_command(label="Edit symbol…", command=lambda: self.edit_custom_symbol(one.symbol))
             if sd is not None:
@@ -2570,7 +2594,10 @@ class App:
 
     def _rebuild_recent(self):
         m = self.recent_menu
-        m.delete(0, "end")
+        try:
+            m.delete(0, "end")
+        except tk.TclError:             # an empty menu, on tkinter from before Tk 9 with Tk 9
+            pass
         # No existence check here: this runs after every save and open, on the
         # UI thread, and on Windows a stat() of a file on a disconnected network
         # drive or share can block for many seconds (#75). A recent file that

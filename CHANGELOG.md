@@ -8,6 +8,23 @@ The release date is set when the Director publishes the release.
 
 ### Added
 
+- **PLC block.** Place *PLC (programmable controller)* from the Electrical library, set its digital and analog I/O,
+  and program it in **ladder logic, function block diagram, sequential function chart, structured text, C or
+  Python**. Double-click it for the program editor: graphical editors for the first three, code editors for the
+  others, an I/O table with tags and analog scaling, a problem list, and a test panel that runs the program on the
+  spot with live power flow. A block can hold several programs in different languages, run in order each scan. The
+  program is stored in the block's parameters, so it follows copy and paste, undo, revisions and templates, and older
+  releases keep it. *Check drawing* reports programs that don't build. FluidWorx runs the same program in simulation.
+  Programs can't touch the computer: none of the languages is executed by Python itself, a loop that runs too long
+  trips a watchdog, and a damaged program is an error message. See `docs/PLC.md`.
+
+- Control symbols: position switches, pressure-switch contacts, selector switches, emergency stop, proximity sensors
+  (PNP and NPN), analog sensors (three-wire and 4-20 mA loop), solenoid valve coil, on-delay and off-delay timer relay
+  coils, three-pole main contacts, three-pole breaker, thermal overload relay and a DC power supply.
+
+- The *Simulation* section of the properties panel, on solenoid valves, pumps and sensors: which coil, motor or
+  cylinder they are tied to when the same tag can't say it. See `docs/PLC.md`.
+
 - *Tools ▸ Simulate in FluidWorx* and the `SIMULATE` command open the saved project in FluidWorx, a separate free
   simulator for hydraulic and pneumatic circuits. It offers to save unsaved changes first, because FluidWorx reads
   the file. OpenSchematix works exactly as before without it, and no file format changes.

@@ -512,3 +512,22 @@ ECL-VAC1.1,ECL,Vacuum tubes r1 #1,"Vacuum diode, directly heated",Electronic,Vac
 ECL-VAC1.2,ECL,Vacuum tubes r1 #2,"Vacuum diode, indirectly heated (cathode)",Electronic,Vacuum tubes,el.tube.diode,validated,E8,"A, K, F1, F2"
 ECL-VAC1.3,ECL,Vacuum tubes r1 #3,Triode,Electronic,Vacuum tubes,el.tube.triode,validated,E8,"A, G, K, F1, F2"
 ECL-VAC1.4,ECL,Vacuum tubes r1 #4,Tetrode,Electronic,Vacuum tubes,el.tube.tetrode,validated,E8,"4th form has two grids: tetrode (no suppressor grid shown); A, G2, G1, K, F1, F2"
+CTL-PLC,CTL,PLC block feature,PLC block,Electrical,Control,el.plc,validated,CTL,
+CTL-SWITCH-LIMIT-NO,CTL,PLC block feature,"Position switch, NO",Electrical,Control,el.switch.limit.no,validated,CTL,
+CTL-SWITCH-LIMIT-NC,CTL,PLC block feature,"Position switch, NC",Electrical,Control,el.switch.limit.nc,validated,CTL,
+CTL-SWITCH-PRESSURE-NO,CTL,PLC block feature,"Pressure switch contact, NO",Electrical,Control,el.switch.pressure.no,validated,CTL,
+CTL-SWITCH-PRESSURE-NC,CTL,PLC block feature,"Pressure switch contact, NC",Electrical,Control,el.switch.pressure.nc,validated,CTL,
+CTL-SWITCH-SELECTOR-NO,CTL,PLC block feature,"Selector switch, NO",Electrical,Control,el.switch.selector.no,validated,CTL,
+CTL-SWITCH-SELECTOR-NC,CTL,PLC block feature,"Selector switch, NC",Electrical,Control,el.switch.selector.nc,validated,CTL,
+CTL-ESTOP,CTL,PLC block feature,Emergency stop,Electrical,Control,el.estop,validated,CTL,
+CTL-SENSOR-PROX-PNP,CTL,PLC block feature,"Proximity sensor, PNP",Electronic,Sensors,el.sensor.prox.pnp,validated,CTL,
+CTL-SENSOR-PROX-NPN,CTL,PLC block feature,"Proximity sensor, NPN",Electronic,Sensors,el.sensor.prox.npn,validated,CTL,
+CTL-SENSOR-ANALOG,CTL,PLC block feature,"Analog sensor, three-wire",Electronic,Sensors,el.sensor.analog,validated,CTL,
+CTL-SENSOR-LOOP,CTL,PLC block feature,"Analog sensor, two-wire",Electronic,Sensors,el.sensor.loop,validated,CTL,
+CTL-COIL-VALVE,CTL,PLC block feature,Solenoid valve coil,Electrical,Control,el.coil.valve,validated,CTL,
+CTL-COIL-ONDELAY,CTL,PLC block feature,"Timer relay coil, on-delay",Electrical,Control,el.coil.ondelay,validated,CTL,
+CTL-COIL-OFFDELAY,CTL,PLC block feature,"Timer relay coil, off-delay",Electrical,Control,el.coil.offdelay,validated,CTL,
+CTL-CONTACT-3NO,CTL,PLC block feature,"Main contacts, three-pole",Electrical,Power,el.contact.3no,validated,CTL,
+CTL-BREAKER-3P,CTL,PLC block feature,"Circuit breaker, three-pole",Electrical,Protection,el.breaker.3p,validated,CTL,
+CTL-OVERLOAD-3P,CTL,PLC block feature,"Thermal overload relay, three-pole",Electrical,Protection,el.overload.3p,validated,CTL,
+CTL-PSU,CTL,PLC block feature,"Power supply, AC to DC",Electrical,Sources,el.psu,validated,CTL,

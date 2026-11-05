@@ -42,8 +42,12 @@ feature limits. If you find it useful you can optionally [support development on
   **search** and **Check Drawing**.
 - **Documentation**: ISO A0–A4, ANSI A–E, Letter/Legal/Tabloid and custom sheets, three title-block styles,
   reference zones, revision tables, print scales and *Fit drawing to sheet*, multi-page PDF.
+- **A programmable PLC block**: set its digital and analog I/O and program it in **ladder logic, function block diagram,
+  sequential function chart, structured text, C or Python**, with graphical and code editors, a problem list and a test
+  panel that runs the program on the spot. Programs in a file can't touch your computer. See [`docs/PLC.md`](docs/PLC.md).
 - **Simulation with [FluidWorx](https://github.com/nrobertson152/FluidWorx)**, a separate free program: *Tools ▸ Simulate
-  in FluidWorx* opens the saved project so you can run its hydraulic and pneumatic circuits.
+  in FluidWorx* opens the saved project so you can run it: hydraulics, pneumatics, the electrical control circuit and
+  the PLC program together. A coil tagged Y1 operates the valve tagged Y1, and so on.
 - **DXF import and export**, **revision history** with graphical comparison, **autosave and crash recovery**,
   reusable **circuit templates**, layers, grouping, locking, alignment.
 
@@ -125,7 +129,10 @@ properties. Nothing is lost, and the original file is not modified: when you sav
   in [`docs/SYMBOLS.md`](docs/SYMBOLS.md) and can be drawn with the symbol editor.
 - **Check Drawing** finds common drafting mistakes with documented rules ([`docs/VALIDATION.md`](docs/VALIDATION.md)).
   **Passing the checks does not mean a drawing is safe, correct or compliant with any standard.** Nothing is
-  simulated.
+  simulated here; FluidWorx does that.
+- **PLC programs** run in a safe interpreter written for this program: the languages are subsets (see
+  [`docs/PLC.md`](docs/PLC.md)), timing is by scan rather than real time, and it is no substitute for testing on the
+  actual controller. It doesn't export to any manufacturer's programming tool.
 - **Rotation of symbols** is limited to 90° steps (drafting objects can rotate by any angle).
 - **Panels** can be resized, collapsed and are remembered, but cannot be undocked into separate windows,
   and toolbars cannot be customised. One project is open at a time; its sheets are the document tabs.
@@ -189,10 +196,12 @@ openschematix/
   export.py         SVG and multi-page vector PDF (no dependencies)
   dxf.py            DXF import/export (no dependencies)
   bom.py search.py check.py compare.py revisions.py recovery.py templates.py userlib.py commands.py
+  plc/              PLC programs: ladder, FBD, SFC, ST, C and Python subset, safe runtime (docs/PLC.md)
+  simlinks.py       how a drawing says what is tied to what when simulated
   symbols/          symbol framework, built-in libraries, custom symbols
   api/              public headless Python scripting API (docs/SCRIPTING_API.md)
   gui/              Tkinter interface: theme (design system), icons, widgets, canvas, command line,
-                    panels, inspector, dialogs, reports, revisions, symbol editor
+                    panels, inspector, dialogs, reports, revisions, symbol editor, PLC program editor
 tests/              pytest suites and the GUI smoke test
 tools/              documentation generators and example builders
 packaging/          PyInstaller spec, Windows and Linux build scripts, installer
