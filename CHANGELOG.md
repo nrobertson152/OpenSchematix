@@ -8,6 +8,10 @@ The release date is set when the Director publishes the release.
 
 ### Added
 
+- *Tools ▸ Simulate in FluidWorx* and the `SIMULATE` command open the saved project in FluidWorx, a separate free
+  simulator for hydraulic and pneumatic circuits. It offers to save unsaved changes first, because FluidWorx reads
+  the file. OpenSchematix works exactly as before without it, and no file format changes.
+
 - Python scripting API (`openschematix.api`, phase 1, #33): create, open, edit, inspect, check and save projects
   from Python scripts without the GUI (no tkinter or display needed). Supports sheets; placing symbols with
   position, rotation, mirroring and valve parameters; wires (drawn or auto-routed); component properties;

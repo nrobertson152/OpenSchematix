@@ -42,6 +42,8 @@ feature limits. If you find it useful you can optionally [support development on
   **search** and **Check Drawing**.
 - **Documentation**: ISO A0–A4, ANSI A–E, Letter/Legal/Tabloid and custom sheets, three title-block styles,
   reference zones, revision tables, print scales and *Fit drawing to sheet*, multi-page PDF.
+- **Simulation with [FluidWorx](https://github.com/nrobertson152/FluidWorx)**, a separate free program: *Tools ▸ Simulate
+  in FluidWorx* opens the saved project so you can run its hydraulic and pneumatic circuits.
 - **DXF import and export**, **revision history** with graphical comparison, **autosave and crash recovery**,
   reusable **circuit templates**, layers, grouping, locking, alignment.
 

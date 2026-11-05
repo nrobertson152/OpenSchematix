@@ -23,7 +23,7 @@ import tkinter as tk
 import webbrowser
 from tkinter import filedialog, messagebox, simpledialog, ttk
 
-from .. import printtemp
+from .. import fluidworx_link, printtemp
 from .. import (APP_NAME, DONATE_URL, PROJECT_EXTENSION, VERSION, commands as cmdparse, editing, export, netlist,
                 projectio, symbols, templates)
 from ..geometry import GRID, UNIT_MM, norm_rotation, snap
@@ -480,6 +480,7 @@ class App:
         m.add_cascade(label="Sheet", menu=s)
         t = tk.Menu(m, tearoff=0)
         self._add(t, "Check drawing", self.run_check, "check")
+        t.add_command(label="Simulate in FluidWorx…", command=self.simulate)
         self._add(t, "Search project…", lambda: self.show_search(), "find")
         t.add_separator()
         self._add(t, "Bill of materials…", self.open_bom, "bom")
@@ -566,6 +567,7 @@ class App:
         sep()
         btn("search", lambda: self.show_search(), "Search the project", "find", command="SEARCH")
         btn("check", self.run_check, "Check the drawing for errors", "check", command="CHECK")
+        btn("simulate", self.simulate, "Simulate the saved project in FluidWorx", command="SIMULATE")
         btn("bom", self.open_bom, "Bill of materials", "bom", command="BOM")
         btn("revision", self.open_revisions, "Revision history", command="REVISION")
         btn("pdf", lambda: self.export_pdf_dialog(), "Export PDF…", "export_pdf")
@@ -1188,6 +1190,9 @@ class App:
 
     def cmd_check(self, args):
         self.run_check()
+
+    def cmd_simulate(self, args):
+        self.simulate()
 
     def cmd_export(self, args):
         a = args.strip().upper()
@@ -2137,6 +2142,43 @@ class App:
             self.canvas.after(30, lambda: self.canvas.fit((b[0] - pad, b[1] - pad, b[2] + pad, b[3] + pad)))
         elif point is not None:
             self.canvas.after(30, lambda: self.canvas.center_on(point, max(self.canvas.zoom, 1.5)))
+
+    def simulate(self) -> bool:
+        """Open the saved project in FluidWorx. It reads the file, so unsaved changes are saved first if wanted."""
+        if not any(c.symbol.startswith("fl.") or (c.symdef() is not None and c.symdef().category in ("Hydraulic", "Pneumatic"))
+                   for _s, c in self.project.all_components()):
+            messagebox.showinfo("Simulate", "This project has no hydraulic or pneumatic parts to simulate.",
+                                parent=self.root)
+            return False
+        if not self.filename:
+            if not messagebox.askokcancel("Simulate", "FluidWorx simulates the saved file, so this project needs "
+                                                      "to be saved first.", parent=self.root) or not self.save_as():
+                return False
+        elif self.dirty:
+            answer = messagebox.askyesnocancel(
+                "Simulate", "This project has unsaved changes, and FluidWorx simulates the saved file.\n\n"
+                            "Save now? Choose No to simulate the last saved version.", parent=self.root)
+            if answer is None or (answer and not self.save()):
+                return False
+        command = fluidworx_link.find_fluidworx(self.settings["fluidworx_path"])
+        if command is None:
+            if not messagebox.askyesno("Simulate", "FluidWorx isn't installed, or OpenSchematix can't find it.\n\n"
+                                                   "It is a separate free program. Do you want to locate it now?",
+                                       parent=self.root):
+                return False
+            found = filedialog.askopenfilename(parent=self.root, title="Find the FluidWorx program")
+            if not found:
+                return False
+            self.settings["fluidworx_path"] = found
+            self.settings.save()
+            command = [found]
+        try:
+            fluidworx_link.launch(command, self.filename)
+        except OSError as e:
+            messagebox.showerror("Simulate", f"FluidWorx could not be started.\n\n{e}", parent=self.root)
+            return False
+        self.set_status(f"Opened {os.path.basename(self.filename)} in FluidWorx.")
+        return True
 
     def open_revisions(self):
         from .revisions_ui import RevisionsWindow

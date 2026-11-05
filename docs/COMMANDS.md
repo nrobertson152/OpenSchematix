@@ -110,6 +110,7 @@ Type a command or alias anywhere on the drawing (the letters go to the command l
 | `TERMINALS` | `TS` | Terminal strip report | `TERMINALS` |
 | `WIRENUMBER` | `WN` | Assign wire numbers | `WIRENUMBER [renumber]` |
 | `CHECK` | `CHK` | Check the drawing | `CHECK` |
+| `SIMULATE` | `SIM` | Simulate the saved project in FluidWorx | `SIMULATE` |
 
 ## Sheet
 
