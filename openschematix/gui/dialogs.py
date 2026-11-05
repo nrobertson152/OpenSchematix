@@ -233,6 +233,10 @@ class PreferencesDialog(Dialog):
             self.flags[k] = v
         ttk.Label(e, text="Wires always snap to the 2.5 mm grid so they meet symbol terminals exactly.",
                   style="Muted.TLabel").grid(row=20, column=0, columnspan=2, sticky="w", pady=(8, 0))
+        self.fluidworx_path = tk.StringVar(value=st["fluidworx_path"])
+        ttk.Label(e, text="FluidWorx program (blank = find it)", style="Surface.TLabel").grid(
+            row=21, column=0, sticky="w", pady=(10, 4), padx=(0, 16))
+        ttk.Entry(e, textvariable=self.fluidworx_path, width=28).grid(row=21, column=1, sticky="w", pady=(10, 4))
         self.buttons("Apply", extra=[("Keyboard shortcuts…", lambda: ShortcutsDialog(self.app))])
         self.show_modal()
 
@@ -251,6 +255,7 @@ class PreferencesDialog(Dialog):
         st["autosave_minutes"] = max(0, min(120, auto))
         st["ui_scale"] = sc if 0.5 <= sc <= 4 else 0.0
         st["default_sheet"] = self.default_sheet.get()
+        st["fluidworx_path"] = self.fluidworx_path.get().strip()
         for k, v in self.flags.items():
             st[k] = bool(v.get())
         self.app.set_theme(inv.get(self.theme.get(), th.DEFAULT_THEME), cinv.get(self.canvas.get(), "auto"))
