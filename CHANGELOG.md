@@ -17,6 +17,9 @@ The release date is set when the Director publishes the release.
   releases keep it. *Check drawing* reports programs that don't build. FluidWorx runs the same program in simulation.
   Programs can't touch the computer: none of the languages is executed by Python itself, a loop that runs too long
   trips a watchdog, and a damaged program is an error message. See `docs/PLC.md`.
+- **Import PLC programs as PLCopen XML**, the exchange format PLC tools have in common. Ladder, function block diagrams and charts stay graphical where this block
+  has the same things, and come across as structured text where it doesn't. Addresses become tagged pins. It lists what it left out: instruction list, charts in
+  function blocks, your own data types. Nothing reaches the drawing until Apply. See `docs/PLC.md`.
 
 - Control symbols: position switches, pressure-switch contacts, selector switches, emergency stop, proximity sensors
   (PNP and NPN), analog sensors (three-wire and 4-20 mA loop), solenoid valve coil, on-delay and off-delay timer relay

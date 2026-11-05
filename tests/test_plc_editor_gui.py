@@ -515,3 +515,80 @@ def test_scripting_api_can_place_and_configure_a_plc(tmp_path):
     path = str(tmp_path / "x.schematix")
     project.save(path)
     assert not plc.check(api.open_project(path).sheets[0].components()[0].params)
+
+
+# ---------------------------------------------------------------- importing
+PLCOPEN = b"""<?xml version="1.0" encoding="utf-8"?>
+<project xmlns="http://www.plcopen.org/xml/tc6_0201" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+<types><dataTypes/><pous><pou name="Imported" pouType="program">
+<interface><localVars><variable name="Go" address="%IX0.1"><type><BOOL/></type></variable><variable name="Lamp" address="%QX0.2"><type><BOOL/></type></variable></localVars></interface>
+<body><ST><xhtml:p>Lamp := Go;</xhtml:p></ST></body></pou>
+<pou name="Old" pouType="program"><body><IL><xhtml:p>LD Go</xhtml:p></IL></body></pou>
+</pous></types></project>"""
+
+
+def _plcopen_file(tmp_path, data=PLCOPEN):
+    p = tmp_path / "program.xml"
+    p.write_bytes(data)
+    return str(p)
+
+
+def test_importing_into_an_empty_block_replaces_its_empty_program(app, tmp_path):
+    e = editor(app, place(app))
+    assert e.blank()
+    dlg = e.read_plcopen(_plcopen_file(tmp_path))
+    e.update()
+    assert "Old" in dlg.notes.get("1.0", "end") and "instruction list" in dlg.notes.get("1.0", "end")
+    dlg.go(True)
+    e.update()
+    assert [p["name"] for p in e.program["pous"]] == ["Imported"]
+    assert e.params["tags"] == {"I1": "Go", "Q2": "Lamp"}
+    assert e.selected == "pou0" and e.dirty
+    assert e.run_check()
+    rt = plc.compile_params(e.params)
+    rt.set_input("I1", True)
+    rt.scan()
+    assert rt.read("Q2") is True
+
+
+def test_nothing_reaches_the_drawing_until_apply(app, tmp_path):
+    e = editor(app, place(app))
+    before = plc.program_of(e._component().params)
+    e.read_plcopen(_plcopen_file(tmp_path)).go(True)
+    e.update()
+    assert plc.program_of(e._component().params)["pous"] == before["pous"]
+    assert e.apply()
+    assert [p["name"] for p in plc.program_of(e._component().params)["pous"]] == ["Imported"]
+
+
+def test_importing_into_a_block_with_a_program_can_add_to_it(app, tmp_path):
+    e = editor(app, place(app))
+    e.program["pous"][0] = {"name": "Mine", "lang": "st", "source": "Q0 := TRUE;"}
+    assert not e.blank()
+    e.read_plcopen(_plcopen_file(tmp_path)).go(False)
+    e.update()
+    assert [p["name"] for p in e.program["pous"]] == ["Mine", "Imported"]
+    assert e.selected == "pou1"
+
+
+def test_a_file_that_cant_be_read_says_so_and_changes_nothing(app, tmp_path, monkeypatch):
+    from openschematix.gui import plc_editor
+    e = editor(app, place(app))
+    shown = []
+    monkeypatch.setattr(plc_editor.messagebox, "showerror", lambda *a, **k: shown.append(a))
+    before = len(e.program["pous"])
+    assert e.read_plcopen(_plcopen_file(tmp_path, b"not xml")) is None
+    assert e.read_plcopen(str(tmp_path / "missing.xml")) is None
+    assert len(shown) == 2 and len(e.program["pous"]) == before and not e.dirty
+
+
+def test_the_import_button_asks_for_a_file(app, tmp_path, monkeypatch):
+    from openschematix.gui import plc_editor
+    e = editor(app, place(app))
+    monkeypatch.setattr(plc_editor.filedialog, "askopenfilename", lambda **k: "")
+    e.import_plcopen()
+    asked = []
+    monkeypatch.setattr(plc_editor.filedialog, "askopenfilename", lambda **k: asked.append(k) or _plcopen_file(tmp_path))
+    e.import_plcopen()
+    e.update()
+    assert asked and [w for w in e.winfo_children() if isinstance(w, plc_editor.ImportDialog)]
