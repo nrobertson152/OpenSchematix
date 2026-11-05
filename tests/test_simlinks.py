@@ -35,6 +35,12 @@ def test_who_gets_which_field():
     assert simlinks.fields_for(comp("fl.hyd.tank")) == []
 
 
+def test_a_pressure_switch_contact_can_say_which_gauge_it_reads():
+    """Its tag ties it to a pressure switch. Without one, `PT1 > 120 bar` ties it to a gauge or transducer instead."""
+    assert [f[0] for f in simlinks.fields_for(comp("el.switch.pressure.no"))] == [simlinks.SENSES]
+    assert [f[0] for f in simlinks.fields_for(comp("el.switch.pressure.nc"))] == [simlinks.SENSES]
+
+
 def test_suggestions_come_from_the_project():
     p = new_project()
     d = p.sheets[0]
