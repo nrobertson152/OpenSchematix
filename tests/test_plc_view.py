@@ -153,6 +153,22 @@ def test_a_stopped_plc_shows_nothing_lit(view):
     assert not hot_items(v.cv, theme)
 
 
+def test_whoever_hosts_it_can_say_it_isnt_running(view):
+    """A PLC on a machine can be stopped, or lose its supply, with its program still standing ready."""
+    v, theme = view
+    params = ladder_params([{"items": [no("I0"), coil("Q0")]}])
+    rt = plc.compile_params(params)
+    rt.set_input("I0", True)
+    rt.scan()
+    running = [True]
+    v.is_running = lambda: running[0]
+    v.show(rt, plc.program_of(params)["pous"][0])
+    assert hot_items(v.cv, theme)
+    running[0] = False
+    v.refresh()
+    assert rt.running and not hot_items(v.cv, theme)
+
+
 def test_every_language_can_be_shown_and_a_text_one_says_it_wont_light(view):
     v, theme = view
     pous = [plc.new_pou(f"P{lang}", lang) for lang in plc.LANGUAGES]
