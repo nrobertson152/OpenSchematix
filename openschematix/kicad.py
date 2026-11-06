@@ -268,10 +268,14 @@ def plan(project, name: str) -> Export:
             if ref and c.terminal_defs():
                 groups.setdefault(ref, []).append((doc, c))
 
+    names: set = set()
+
     def lib_named(base: str) -> str:
+        """A library name no other symbol has: two designators can make the same safe name (X1:1 and X1_1)."""
         n, k = _safe(base), 2
-        while n in libs:
+        while n in names:
             n, k = f"{_safe(base)}_{k}", k + 1
+        names.add(n)
         return n
 
     virtual_n = 0
