@@ -29,6 +29,10 @@ jobs:
           cache-dependency-path: pyproject.toml
       - name: Install project and test dependencies
         run: python -m pip install -e ".[dev]"
+      - name: Install RevisionWorx and OpenMeridian, for the RevisionWorx tests
+        run: |
+          python -m pip install --no-deps "git+https://github.com/nrobertson152/RevisionWorx.git"
+          python -m pip install --no-deps "git+https://github.com/nrobertson152/OpenMeridian.git"
       - name: Install Tk and Xvfb (Linux)
         if: runner.os == 'Linux'
         run: |
