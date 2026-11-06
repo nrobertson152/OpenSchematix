@@ -68,6 +68,7 @@ jobs:
     # The export is KiCad 7's format, which later KiCad versions read. Here the newest KiCad reads it too.
     name: KiCad ${{ matrix.kicad }} reads the KiCad export
     runs-on: ubuntu-latest
+    timeout-minutes: 20          # KiCad's archive is sometimes slow; a stuck install shouldn't hold CI for hours
     strategy:
       fail-fast: false
       matrix:
