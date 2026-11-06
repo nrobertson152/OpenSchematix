@@ -57,6 +57,28 @@ to it. The **Test** tab runs the program right there, with check boxes for input
 list of values. As it runs, ladder rungs light up by power flow, as far as the power really went in the last scan; function block wires
 light up by their signals; and charts by their active steps. FluidWorx shows the same thing with the program running in the simulated machine.
 
+## Importing a program from another tool
+
+**Import…** under the program list reads **PLCopen XML** (IEC 61131-10), the one exchange format PLC programming tools have in common. CODESYS and the
+tools built on it can export it, and so can Beremiz. Vendors' own formats aren't read. Nothing reaches the drawing until you press *Apply*, so an import can
+be checked and tested first.
+
+| In the file | Here |
+|---|---|
+| Structured text program | Structured text |
+| Ladder program | Ladder, if it has only contacts, coils, TON, TOF, TP, CTU, CTD, compares and MOVE. Structured text if not |
+| Function block program | A function block diagram, if it has only the blocks here. Structured text if not, as when it uses a function block of your own |
+| Chart program | A chart: steps, transitions, branches, jumps, and actions N, S, R, P, P0, P1, L, D |
+| Function, function block | Structured text, the one language here that can define them, whichever language it was drawn in |
+| A variable on an address, such as `%IX0.3` | That pin's tag: I3. An address the block can't have takes the next free pin, and says so. Pins are added as needed |
+| Other variables and global variables | The variable table, or the text of a structured text program |
+| Tasks | The shortest interval is the scan time, and everything runs every scan. A program no task runs is there but switched off |
+
+**Not read:** instruction list, a chart inside a function block, your own data types (structs and enumerations), macro steps, jumps and labels in ladder and function block networks,
+and anything vendor-specific. The import lists what it left out, and whatever needed it shows up as a problem to fix, as a library function this PLC doesn't have does.
+
+This has been tried on hand-written files and the examples that come with Beremiz. It hasn't been tried on an export from CODESYS or anything built on it.
+
 ## Safety of programs in files
 
 A PLC program is part of a drawing, and drawings come from other people. So none of these languages is run by Python
@@ -71,6 +93,8 @@ itself. Each is parsed and turned into code that can only reach the PLC's own me
 - Division by zero, a bad index or a null pointer stop the PLC with a message. They never crash the program.
 - A damaged program in a file is reported as a problem. It never stops the file from opening, and a program with
   errors doesn't run.
+- An imported file is treated the same way. It can't declare XML entities, it's limited in size, and whatever is in it comes out as ordinary program
+  source with the limits above.
 
 OpenSchematix only runs a program when you press *Run* on the Test tab. FluidWorx runs it when you simulate.
 
