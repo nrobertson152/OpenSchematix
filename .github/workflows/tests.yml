@@ -33,17 +33,21 @@ jobs:
         run: |
           python -m pip install --no-deps "git+https://github.com/nrobertson152/RevisionWorx.git"
           python -m pip install --no-deps "git+https://github.com/nrobertson152/OpenMeridian.git"
-      - name: Install Tk and Xvfb (Linux)
+      - name: Install Tk and Xvfb, and KiCad to read the KiCad export (Linux)
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y xvfb python3-tk
+          sudo apt-get install -y --no-install-recommends kicad
+          kicad-cli version
       - name: Byte-compile package and tests
         run: python -m compileall -q openschematix tests
       - name: Repository integrity checks
         run: python -m pytest -q tests/test_repo_integrity.py
       - name: Run pytest (Linux with virtual display)
         if: runner.os == 'Linux'
+        env:
+          OPENSCHEMATIX_REQUIRE_KICAD: "1"      # the KiCad tests must run here, not skip
         run: xvfb-run -a python -m pytest -q --tb=short -ra --durations=20
       - name: Run pytest (Windows)
         if: runner.os == 'Windows'

@@ -89,7 +89,7 @@ Type a command or alias anywhere on the drawing (the letters go to the command l
 | `OPEN` | — | Open a project or drawing | `OPEN` |
 | `SAVE` | `QSAVE` | Save the project | `SAVE` |
 | `SAVEAS` | — | Save the project as | `SAVEAS` |
-| `EXPORT` | `EXP` | Export | `EXPORT PDF | SVG | DXF | BOM | WIRELIST` |
+| `EXPORT` | `EXP` | Export | `EXPORT PDF | SVG | DXF | KICAD | BOM | WIRELIST` |
 | `IMPORT` | `IMP` | Import a DXF drawing | `IMPORT DXF` |
 
 ## Project

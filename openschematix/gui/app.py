@@ -368,6 +368,7 @@ class App:
         self._add(exp, "PDF (all or selected sheets)…", lambda: self.export_pdf_dialog(), "export_pdf")
         exp.add_command(label="SVG (current sheet)…", command=lambda: self.export_file("svg"))
         exp.add_command(label="DXF (current sheet)…", command=lambda: self.export_file("dxf"))
+        exp.add_command(label="KiCad project (all sheets)…", command=self.export_kicad)
         exp.add_command(label="Bill of materials (CSV)…", command=self.export_bom_csv)
         exp.add_command(label="Connection list (CSV)…", command=lambda: self.open_reports("connections"))
         exp.add_command(label="Current sheet as legacy single drawing (.osch)…", command=self.export_osch)
@@ -1216,10 +1217,12 @@ class App:
             self.export_file("dxf")
         elif a == "BOM":
             self.export_bom_csv()
+        elif a == "KICAD":
+            self.export_kicad()
         elif a in ("WIRELIST", "CONNECTIONS", "CSV"):
             self.open_reports("connections")
         else:
-            raise ValueError("use EXPORT PDF | SVG | DXF | BOM | WIRELIST")
+            raise ValueError("use EXPORT PDF | SVG | DXF | KICAD | BOM | WIRELIST")
 
     def cmd_import(self, args):
         self.import_dxf_dialog()
@@ -2674,6 +2677,40 @@ class App:
             messagebox.showerror("Export failed", f"{path}\n\n{e}", parent=self.root)
             return
         self.toast(f"Exported {os.path.basename(path)}", "success")
+
+    def export_kicad(self, path=None, confirm=None):
+        """The whole project as a KiCad project, which KiCad 7, 8 and 9 open (docs/KICAD.md). ``path`` and
+        ``confirm`` stand in for the file dialog and the question about replacing files."""
+        from .. import kicad
+        from ..userlib import safe_name
+        if path is None:
+            base = kicad._safe(safe_name(self.project.meta.get("title") or self.doc.name or "schematic"))
+            path = filedialog.asksaveasfilename(parent=self.root, title="Export to KiCad", defaultextension=".kicad_sch",
+                                                filetypes=[("KiCad schematic", "*.kicad_sch")],
+                                                initialfile=base + ".kicad_sch",
+                                                initialdir=self.settings["last_dir"] or None)
+        if not path:
+            return None
+        folder = os.path.dirname(os.path.abspath(path))
+        name = kicad._safe(os.path.splitext(os.path.basename(path))[0])
+        try:
+            plan = kicad.plan(self.project, name)
+            others = kicad.files_to_replace(folder, plan, name)
+            if others:
+                ask = confirm or (lambda title, text: messagebox.askyesno(title, text, parent=self.root))
+                listed = "\n".join(others[:8]) + ("\n…" if len(others) > 8 else "")
+                if not ask("Replace files?", f"The folder already has {len(others)} of the files this export writes:"
+                                             f"\n\n{listed}\n\nReplace them?"):
+                    return None
+            kicad.write_project(self.project, os.path.join(folder, name + ".kicad_sch"), plan)
+        except (OSError, kicad.KiCadError) as e:
+            messagebox.showerror("Export to KiCad failed", f"{path}\n\n{e}", parent=self.root)
+            return None
+        for note in plan.notes:
+            self.log(note, "warning")
+        more = f" {len(plan.notes)} thing(s) couldn't be kept; see the log." if plan.notes else ""
+        self.toast(f"Exported {name}.kicad_sch for KiCad.{more}", "warning" if plan.notes else "success")
+        return plan
 
     def export_osch(self):
         path = filedialog.asksaveasfilename(parent=self.root, title="Export sheet as .osch", defaultextension=".osch",

@@ -53,6 +53,8 @@ feature limits. If you find it useful you can optionally [support development on
   step as a button, *Check out* or *Check in…*. Checking in can take the bill of materials along as a BOM beside the
   schematic, which is how its parts reach [OpenMeridian](https://github.com/nrobertson152/OpenMeridian) once it's released.
   Someone else's checked-out project isn't saved over. See [`docs/REVISIONWORX.md`](docs/REVISIONWORX.md).
+- **Export to KiCad**: the whole project as a KiCad project (KiCad 7, 8 and 9) with every connection, wire number,
+  part and field, on KiCad's grid, and its symbols as a KiCad library. See [`docs/KICAD.md`](docs/KICAD.md).
 - **DXF import and export**, **revision history** with graphical comparison, **autosave and crash recovery**,
   reusable **circuit templates**, layers, grouping, locking, alignment.
 

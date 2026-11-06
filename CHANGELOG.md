@@ -21,6 +21,12 @@ The release date is set when the Director publishes the release.
   has the same things, and come across as structured text where it doesn't. Addresses become tagged pins. It lists what it left out: instruction list, charts in
   function blocks, your own data types. Nothing reaches the drawing until Apply. See `docs/PLC.md`.
 
+- **Export to KiCad.** *File ▸ Export ▸ KiCad project* (or `EXPORT KICAD`) writes the whole project as a KiCad
+  project that KiCad 7, 8 and 9 open: one KiCad sheet per sheet, the symbols as a KiCad library, and every connection
+  exactly as OpenSchematix has it (the tests have KiCad read the export and compare its netlist). Sheet connectors
+  become global labels, wire numbers name the nets, a device drawn in several places is one part with several units,
+  and the drawing is written on KiCad's 100 mil grid. What doesn't come across is in `docs/KICAD.md`.
+
 - **RevisionWorx.** When RevisionWorx is installed, the status bar shows what it says about the open project and the
   next step: *Check out*, or *Check in…*, which saves first, checks out if nobody has, and can take the bill of
   materials along as a BOM document beside the schematic (parts with a part number; OpenMeridian imports it once it's

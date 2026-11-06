@@ -90,7 +90,7 @@ COMMANDS = [
     CommandDef("WIRENUMBER", ("WN",), "Assign wire numbers", "WIRENUMBER [renumber]", "Reports"),
     CommandDef("CHECK", ("CHK",), "Check the drawing", "CHECK", "Reports"),
     CommandDef("SIMULATE", ("SIM",), "Simulate the saved project in FluidWorx", "SIMULATE", "Reports"),
-    CommandDef("EXPORT", ("EXP",), "Export", "EXPORT PDF | SVG | DXF | BOM | WIRELIST", "File"),
+    CommandDef("EXPORT", ("EXP",), "Export", "EXPORT PDF | SVG | DXF | KICAD | BOM | WIRELIST", "File"),
     CommandDef("IMPORT", ("IMP",), "Import a DXF drawing", "IMPORT DXF", "File"),
     CommandDef("FIT", (), "Fit the drawing to the sheet (sets the print scale)", "FIT", "Sheet"),
     CommandDef("PLOTSCALE", ("PS",), "Set the sheet's presentation (print) scale", "PLOTSCALE 1:2", "Sheet"),
