@@ -226,6 +226,24 @@ def test_sheet_connectors_join_sheets_and_a_device_spans_them(tmp_path):
 
 
 @needs_kicad
+def test_designators_that_make_the_same_safe_name_get_their_own_symbols(tmp_path):
+    """X1:1 and X1_1 both become the library name X1_1_device; each device must keep its own symbol, or KiCad would
+    give both the pins of one."""
+    p = new_project("names")
+    d = p.sheets[0]
+    parts = []
+    for i, ref in enumerate(("X1:1", "X1:1", "X1_1", "X1_1")):
+        c = editing.place(d, "el.coil.iec" if i % 2 == 0 else "el.contact.no.iec", 100 + 150 * i, 100)
+        c.designator = ref
+        c.props.pop("terminal", None)
+        parts.append(c)
+    export, root = same_connections(p, tmp_path)
+    names = [line.split('"')[1] for line in export.files["OpenSchematix.kicad_sym"].splitlines()
+             if line.startswith("  (symbol ")]
+    assert len(names) == len(set(names)) == 2
+
+
+@needs_kicad
 def test_wire_numbers_name_the_nets(tmp_path):
     p = new_project("numbered")
     d = p.sheets[0]
