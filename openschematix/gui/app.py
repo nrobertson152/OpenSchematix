@@ -24,6 +24,7 @@ import webbrowser
 from tkinter import filedialog, messagebox, simpledialog, ttk
 
 from .. import fluidworx_link, printtemp
+from .revisionworx_ui import RevisionWorxUI
 from .. import (APP_NAME, DONATE_URL, PROJECT_EXTENSION, VERSION, commands as cmdparse, editing, export, netlist,
                 projectio, symbols, templates)
 from ..geometry import GRID, UNIT_MM, norm_rotation, snap
@@ -106,6 +107,9 @@ class App:
         geo = self.settings["geometry"]
         root.geometry(geo if geo else "1500x900")
         self._build()
+        # RevisionWorx, when it's installed: its sentence about the project and the next step in the status bar, File ▸ RevisionWorx
+        self.revisionworx = RevisionWorxUI(self, self.status_bar, self.file_menu, "Print (via PDF viewer)…")
+        root.bind("<FocusIn>", lambda e: self.revisionworx.focus_returned() if e.widget is root else None, add="+")
         self._register_actions()
         self.keymap.bind_all()
         self._bind_keys()
@@ -343,6 +347,7 @@ class App:
         m = tk.Menu(self.root, tearoff=0)
         self.menubar = m
         f = tk.Menu(m, tearoff=0)
+        self.file_menu = f
         self._add(f, "New project", self.new, "new")
         f.add_command(label="New from project template…", command=self.new_from_template)
         self._add(f, "Open…", self.open, "open")
@@ -600,7 +605,8 @@ class App:
     def _build_status(self):
         sb = self.status_bar
         self.status = tk.StringVar(value="Ready.")
-        ttk.Label(sb, textvariable=self.status, style="Status.TLabel").pack(side="left", fill="x", expand=True)
+        message = ttk.Label(sb, textvariable=self.status, style="Status.TLabel")
+        message.pack(side="left", fill="x", expand=True)
         self.check_label = ttk.Label(sb, text="", style="Status.TLabel", cursor="hand2")
         self.check_label.pack(side="right", padx=(8, 0))
         self.check_label.bind("<Button-1>", lambda e: self.run_check())
@@ -627,6 +633,8 @@ class App:
             self.toggle_labels[key] = lab
         self.conn_label = ttk.Label(sb, text="", style="Status.TLabel")
         self.conn_label.pack(side="right", padx=8)
+        # the message gets what's left: a long one is cut short rather than squeezing out the toggles and readouts
+        message.pack_configure(after=self.conn_label)
         th.subscribe(lambda t: self._update_toggles())
         self._update_toggles()
 
@@ -836,6 +844,8 @@ class App:
     def update_title(self):
         name = os.path.basename(self.filename) if self.filename else (self.project.meta.get("title") or "Untitled")
         self.root.title(f"{'● ' if self.dirty else ''}{name} — {self.doc.name} — {APP_NAME} {VERSION}")
+        if getattr(self, "revisionworx", None) is not None:
+            self.revisionworx.show()        # unsaved changes make Check in the next step
 
     def update_zoom_label(self):
         self.zoom_label.configure(text=f"{self.canvas.zoom * 100 / (96 / 25.4 * UNIT_MM):.0f}%")
@@ -2435,6 +2445,9 @@ class App:
         self.check_panel.show()
         self.canvas.set_tool("select")
         self.refresh(full=True)
+        if getattr(self, "revisionworx", None) is not None:
+            self.revisionworx.status = None
+            self.revisionworx.refresh()
 
     def new(self):
         if not self.confirm_discard():
@@ -2500,6 +2513,8 @@ class App:
     def save(self) -> bool:
         if not self.filename:
             return self.save_as()
+        if os.path.exists(self.filename) and not self.revisionworx.may_write(self.filename):
+            return False                    # someone else's checked-out working file
         try:
             projectio.save_project(self.project, self.filename)
         except (OSError, projectio.ProjectFormatError) as e:
@@ -2514,6 +2529,7 @@ class App:
         self.recovery.discard_snapshots()
         self.set_status(f"Saved {self.filename}")
         self.log(f"Saved {self.filename}", "success")
+        self.revisionworx.refresh()
         return True
 
     def save_as(self) -> bool:

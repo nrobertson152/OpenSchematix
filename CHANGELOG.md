@@ -21,6 +21,13 @@ The release date is set when the Director publishes the release.
   has the same things, and come across as structured text where it doesn't. Addresses become tagged pins. It lists what it left out: instruction list, charts in
   function blocks, your own data types. Nothing reaches the drawing until Apply. See `docs/PLC.md`.
 
+- **RevisionWorx.** When RevisionWorx is installed, the status bar shows what it says about the open project and the
+  next step: *Check out*, or *Check in…*, which saves first, checks out if nobody has, and can take the bill of
+  materials along as a BOM document beside the schematic (parts with a part number; OpenMeridian imports it once it's
+  released). *File ▸ RevisionWorx* also undoes a check-out and adds a project to a RevisionWorx project. A project
+  someone else has checked out isn't saved over: Save offers a copy. Only RevisionWorx's command line is used. Without
+  RevisionWorx nothing changes. See `docs/REVISIONWORX.md`.
+
 - Control symbols: position switches, pressure-switch contacts, selector switches, emergency stop, proximity sensors
   (PNP and NPN), analog sensors (three-wire and 4-20 mA loop), solenoid valve coil, on-delay and off-delay timer relay
   coils, three-pole main contacts, three-pole breaker, thermal overload relay and a DC power supply.
