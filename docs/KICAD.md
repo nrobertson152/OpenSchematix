@@ -3,7 +3,8 @@
 *File ▸ Export ▸ KiCad project (all sheets)…* (or `EXPORT KICAD`) writes the whole project as a KiCad project, so
 the schematic can be carried on in [KiCad](https://www.kicad.org/), shared with someone who uses it, or taken on to a
 circuit board. KiCad 7, 8 and 9 open it: the files are in KiCad 7's format, which the later versions read and
-update.
+update. Every change to the export is checked by KiCad 7, 8 and 9 themselves (CI installs each and compares its netlist
+with OpenSchematix's nets).
 
 Choose a name and a folder. A new, empty folder is best: it becomes the KiCad project.
 
