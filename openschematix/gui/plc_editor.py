@@ -10,11 +10,13 @@ FluidWorx uses (openschematix.plc), so a program can't do anything to the comput
 from __future__ import annotations
 
 import copy
+import os
 import re
 import tkinter as tk
-from tkinter import messagebox, ttk
+from tkinter import filedialog, messagebox, ttk
 
 from .. import plc
+from ..plc import plcopen
 from ..plc.core import FB_TYPES
 from ..plc.fbd import GATES, block_title, pins_of
 from ..plc.ladder import COMPARE_OPS, ELEMENT_TITLES
@@ -244,6 +246,9 @@ class PlcEditor(tk.Toplevel):
             menu.add_command(label=label, command=lambda k=key: self.add_pou(k))
         mb["menu"] = menu
         mb.pack(side="left", fill="x", expand=True)
+        imp = ttk.Button(row, text="Import…", command=self.import_plcopen)
+        imp.pack(side="left", padx=(4, 0))
+        Tooltip(imp, "Bring in a program from another PLC tool, exported as PLCopen XML")
         row2 = ttk.Frame(left, style="Surface.TFrame")
         row2.pack(fill="x", pady=(4, 0))
         for text, cmd, tip in (("Rename", self.rename_pou, "Rename the selected program"),
@@ -388,6 +393,42 @@ class PlcEditor(tk.Toplevel):
         self.select_item(f"pou{max(0, i - 1)}")
         self.mark_dirty()
 
+    # ---------------------------------------------------------------- bringing in a program
+    def import_plcopen(self):
+        path = filedialog.askopenfilename(parent=self, title="Import a program as PLCopen XML",
+                                          filetypes=[("PLCopen XML", "*.xml"), ("All files", "*.*")])
+        if path:
+            self.read_plcopen(path)
+
+    def read_plcopen(self, path):
+        try:
+            with open(path, "rb") as f:
+                imported = plcopen.parse(f.read(plcopen.MAX_FILE + 1))
+        except (plcopen.PlcOpenError, OSError) as e:
+            messagebox.showerror("PLC program", f"This file couldn't be imported.\n\n{e}", parent=self)
+            return None
+        return ImportDialog(self, imported, os.path.basename(path))
+
+    def blank(self) -> bool:
+        """Whether this block has only the empty program it started with."""
+        pous = self.program["pous"]
+        return len(pous) == 1 and pous[0].get("lang") == "ld" and not any(
+            r.get("items") for r in (pous[0].get("source") or {}).get("rungs", []) if isinstance(r, dict))
+
+    def take_import(self, imported, replace):
+        """Nothing reaches the drawing until Apply, as with any other change here."""
+        self._commit_page()
+        added = plcopen.merge(self.params, imported, replace)
+        self.program = self.params["program"]
+        self._fill_tree()
+        self.page = None
+        self.selected = ""
+        self.mark_dirty()
+        names = [p.get("name") for p in self.program["pous"]]
+        self.select_item(f"pou{names.index(added[0])}" if added else self._first_pou_item())
+        self.run_check()
+        return added
+
     # ---------------------------------------------------------------- checking
     def _schedule_check(self):
         if self._check_after is not None:
@@ -446,6 +487,54 @@ class PlcEditor(tk.Toplevel):
 
 
 # ================================================================ test panel
+class ImportDialog(tk.Toplevel):
+    """What's in a file, what became of it, and what to do with it."""
+
+    def __init__(self, editor, imported, name):
+        super().__init__(editor)
+        self.editor, self.imported = editor, imported
+        self.title(f"Import {name}")
+        self.transient(editor)
+        self.geometry("680x440")
+        u = editor.app.theme.ui
+        self.configure(bg=u["bg"])
+        box = ttk.Frame(self, style="Surface.TFrame", padding=12)
+        box.pack(fill="both", expand=True)
+        found = ", ".join(f"{p['name']} ({LANG_SHORT.get(p['lang'], p['lang'])})" for p in imported.pous)
+        ttk.Label(box, text=f"Programs found: {found}" if found else "No programs found that this PLC block can run.", style="Bold.TLabel",
+                  wraplength=640, justify="left").pack(anchor="w")
+        pins = ", ".join(f"{k} {v}" for k, v in sorted(imported.tags.items()))
+        if pins:
+            ttk.Label(box, text=f"Tags: {pins}", style="Muted.TLabel", wraplength=640, justify="left").pack(anchor="w", pady=(4, 0))
+        if imported.notes:
+            ttk.Label(box, text="Worth knowing", style="Heading.TLabel").pack(anchor="w", pady=(10, 2))
+            holder = ttk.Frame(box, style="Surface.TFrame")
+            holder.pack(fill="both", expand=True)
+            self.notes = tk.Text(holder, wrap="word", height=8, bd=0, padx=8, pady=6, bg=u["surface2"], fg=u["text"], font=editor.app.theme.fonts["ui"])
+            bar = ttk.Scrollbar(holder, command=self.notes.yview)
+            self.notes.configure(yscrollcommand=bar.set)
+            self.notes.insert("1.0", "\n".join(f"• {n}" for n in imported.notes))
+            self.notes.configure(state="disabled")
+            self.notes.pack(side="left", fill="both", expand=True)
+            bar.pack(side="right", fill="y")
+        ttk.Label(box, text="It can be checked and tested here before it goes on the drawing: nothing changes until you press Apply.", style="Faint.TLabel",
+                  wraplength=640, justify="left").pack(anchor="w", pady=(8, 0))
+        row = ttk.Frame(box, style="Surface.TFrame")
+        row.pack(fill="x", pady=(10, 0))
+        ttk.Button(row, text="Cancel", command=self.destroy).pack(side="right")
+        if imported.pous:
+            if editor.blank():
+                ttk.Button(row, text="Import", style="Accent.TButton", command=lambda: self.go(True)).pack(side="right", padx=(0, 6))
+            else:
+                ttk.Button(row, text="Replace this block's programs", command=lambda: self.go(True)).pack(side="right", padx=(0, 6))
+                ttk.Button(row, text="Add to this block's programs", style="Accent.TButton", command=lambda: self.go(False)).pack(side="right", padx=(0, 6))
+        self.bind("<Escape>", lambda e: self.destroy())
+
+    def go(self, replace):
+        self.editor.take_import(self.imported, replace)
+        self.destroy()
+
+
 class TestPanel(ttk.Frame):
     """Run the program here, with inputs from check boxes: the quickest way to see that it does what you meant."""
 
