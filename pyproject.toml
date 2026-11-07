@@ -22,13 +22,18 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest", "pypdf", "pyinstaller", "ezdxf"]   # ezdxf only used to validate DXF output in tests
+# ezdxf only validates DXF output in tests; pypdfium2 (with pillow) renders PDFs and zxing-cpp, the decoder FieldWorx's app uses,
+# reads the revision codes back. None of them is used by the program.
+dev = ["pytest", "pypdf", "pyinstaller", "ezdxf", "pypdfium2", "pillow", "zxing-cpp"]
 
 [project.urls]
 "Support development" = "https://ko-fi.com/nr270343"
 
 [project.gui-scripts]
 openschematix = "openschematix.gui.app:main"
+
+[project.scripts]
+openschematix-cli = "openschematix.cli:main"     # for other programs: one JSON object out (docs/COMMAND_LINE.md)
 
 [tool.setuptools.packages.find]
 include = ["openschematix*"]

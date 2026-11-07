@@ -430,24 +430,42 @@ def to_pdf(doc: Document, use_sheet: bool = True, project=None, missing: set | N
 
 
 @symbols.project_scoped
-def project_pdf(project, sheet_uids=None, missing: set | None = None) -> bytes:
+def project_pdf(project, sheet_uids=None, missing: set | None = None, code=None, skipped: list | None = None) -> bytes:
     """All (or the selected) sheets of a project in one PDF, in project
-    order, each page at its own sheet size and orientation."""
+    order, each page at its own sheet size and orientation.
+
+    `code` (revcode.RevisionCode) prints the revision's QR code on every
+    sheet, in the drawing area's lower right corner, never over anything
+    drawn. A sheet with something there is printed without it and named in
+    `skipped`; without `skipped`, it raises revcode.CodeError instead and
+    nothing is made."""
+    from . import revcode
     pages = []
     for doc in project.sheets:
         if sheet_uids is not None and doc.uid not in sheet_uids:
             continue
         items, extent = paper_items(doc, True, project)
-        pages.append((f"{project.sheet_number(doc)}. {doc.name}", items, extent))
+        label = f"{project.sheet_number(doc)}. {doc.name}"
+        if code is not None:
+            box = revcode.area(doc)
+            problem = revcode.why_not(items, box)
+            if not problem:
+                items = list(items) + revcode.code_items(code, box)
+            elif skipped is None:
+                raise revcode.CodeError(f"Sheet {label}: {problem}.")
+            else:
+                skipped.append(label)
+        pages.append((label, items, extent))
     return build_pdf(pages, title=project.meta.get("title") or "Schematic", author=project.meta.get("author", ""),
                      missing=missing)
 
 
-def export_project_pdf(project, path: str, sheet_uids=None) -> list[str]:
+def export_project_pdf(project, path: str, sheet_uids=None, code=None, skipped: list | None = None) -> list[str]:
     """Write the PDF. Returns the characters of drawing text that PDF output
-    cannot show (drawn as "?"), sorted; empty if everything was shown."""
+    cannot show (drawn as "?"), sorted; empty if everything was shown.
+    `code` and `skipped` as for project_pdf."""
     missing: set = set()
-    _atomic_write(path, project_pdf(project, sheet_uids, missing))
+    _atomic_write(path, project_pdf(project, sheet_uids, missing, code, skipped))
     return sorted(missing)
 
 

@@ -37,6 +37,23 @@ reads a BOM (its `docs/bom`): an item for the schematic and for each part, and a
 [OpenMeridian](https://github.com/nrobertson152/OpenMeridian) imports a BOM from a released revision, so once the BOM is released in
 RevisionWorx, the schematic's parts reach purchasing and stock there.
 
+## Revision codes on prints
+
+*Print* and *Export PDF* put the revision's code on every sheet when RevisionWorx says the saved project is exactly its latest revision,
+with nothing changed since. The code is FieldWorx's revision label, a QR code holding `FWX:R:E-100@B`. Anyone with
+[FieldWorx](https://github.com/nrobertson152/FieldWorx) on a phone can scan a paper copy and see whether it's still the released
+revision, and which revision is if it isn't.
+
+- It goes in the drawing area's lower right corner, just above the revision table and title block. It is 20 mm square, with the
+  number and revision under it.
+- It never covers anything. On a sheet with something drawn there, that sheet is printed without it, and the Output panel says which
+  sheets.
+- A project with unsaved changes, or one that differs from its latest revision, is printed without a code. The window says why:
+  the print wouldn't be that revision.
+- The number and revision are RevisionWorx's, not the title block's own fields.
+
+`openschematix-cli pdf --revision-code` does the same for other programs ([COMMAND_LINE.md](COMMAND_LINE.md)).
+
 ## Someone else's working file
 
 A project someone else has checked out is the file they're working on, so it isn't saved over: Save says who has it and offers to save
