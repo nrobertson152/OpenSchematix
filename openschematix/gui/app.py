@@ -2630,32 +2630,6 @@ class App:
     def export_pdf_dialog(self, preselect=None):
         ExportPdfDialog(self, preselect)
 
-    def _revision_code(self):
-        """The revision code for a print of this project (openschematix.revcode), and what to say about it. There's one only when
-        RevisionWorx says the saved file is exactly the latest revision of a document it controls and nothing has changed since: then
-        the print shows that revision and nothing else. A project RevisionWorx doesn't control gets none, and nothing is said."""
-        from ..revcode import RevisionCode
-        if not self.filename:
-            return None, ""
-        s = self.revisionworx.now(self.filename)
-        if s is None or not s.controlled:
-            return None, ""
-        if self.dirty or s.file_state != "unchanged" or not s.number or not s.revision:
-            what = f"{s.name} rev {s.revision}" if s.revision else s.name
-            return None, f"No revision code on it: it isn't exactly {what} as RevisionWorx has it."
-        code = RevisionCode(s.number, s.revision)
-        return code, f"With the revision code for {code.caption}."
-
-    def _say_revision_code(self, said: str, skipped: list) -> None:
-        if skipped:
-            from ..revcode import CLEAR
-            from ..geometry import UNIT_MM
-            self.log(f"No room for the revision code on {', '.join(skipped)}: something is drawn in the lower right corner of the "
-                     f"drawing area, where it goes (it needs {CLEAR[0] * UNIT_MM:g} x {CLEAR[1] * UNIT_MM:g} mm clear). Those sheets "
-                     f"were printed without it.", "warning")
-        elif said:
-            self.log(said, "info")
-
     def export_pdf(self, uids):
         base = os.path.splitext(os.path.basename(self.filename))[0] if self.filename else (
             self.project.meta.get("title") or "drawing")
@@ -2664,18 +2638,13 @@ class App:
                                             initialdir=self.settings["last_dir"] or None)
         if not path:
             return
-        code, said = self._revision_code()
-        skipped: list = []
         try:
-            missing = export.export_project_pdf(self.project, path, set(uids), code, skipped)
+            missing = export.export_project_pdf(self.project, path, set(uids))
         except OSError as e:
             messagebox.showerror("Export failed", f"{path}\n\n{e}", parent=self.root)
             return
-        self._say_revision_code(said, skipped)
         if not self._report_pdf_missing(missing):
-            note = (" — without the revision code on " + ", ".join(skipped) + " (see the Output panel)") if skipped else \
-                (" with the revision code" if code is not None else "")
-            self.toast(f"Exported {len(uids)} sheet(s) to {os.path.basename(path)}{note}", "warning" if skipped else "success")
+            self.toast(f"Exported {len(uids)} sheet(s) to {os.path.basename(path)}", "success")
 
     def _report_pdf_missing(self, missing) -> bool:
         """Tell the user which characters a PDF could not show (#81). True if any."""
@@ -2787,17 +2756,14 @@ class App:
 
     def print_(self):
         path = None
-        code, said = self._revision_code()
-        skipped: list = []
         try:
             path = self.print_files.new_path()      # deleted on exit, or at a later start (#82)
-            missing = export.export_project_pdf(self.project, path, {self.doc.uid}, code, skipped)
+            missing = export.export_project_pdf(self.project, path, {self.doc.uid})
         except OSError as e:
             if path:
                 self.print_files.discard(path)
             messagebox.showerror("Print failed", str(e), parent=self.root)
             return
-        self._say_revision_code(said, skipped)
         self._report_pdf_missing(missing)
         try:
             if sys.platform.startswith("win"):

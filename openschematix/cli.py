@@ -1,7 +1,7 @@
 """``openschematix-cli``: OpenSchematix for other programs, without the window (docs/COMMAND_LINE.md).
 
     openschematix-cli version
-    openschematix-cli pdf PROJECT OUTPUT.pdf [--sheet N ...] [--revision-code NUMBER@REVISION] [--overwrite]
+    openschematix-cli pdf PROJECT OUTPUT.pdf [--sheet N ...] [--overwrite]
     openschematix-cli components PROJECT [--sheet N ...] [--include-excluded]
 
 Each prints exactly one JSON object on standard output, with ``"ok": true`` or ``"ok": false``, and exits 0 or 2, the same shape as
@@ -20,7 +20,7 @@ API_VERSION = 1
 
 COMMANDS = {
     "version": "this interface's version and the program's",
-    "pdf": "the project's sheets as a PDF, as Export PDF makes it; optionally with the revision's QR code on each sheet",
+    "pdf": "the project's sheets as a PDF, as Export PDF makes it",
     "components": "the components drawn, with their sheet and zone, and the bill of materials",
 }
 
@@ -65,13 +65,7 @@ def _sheets(project, wanted: list) -> list:
 
 
 def _pdf(args) -> dict:
-    from . import export, revcode
-    code = None
-    if args.revision_code is not None:
-        try:
-            code = revcode.RevisionCode.parse(args.revision_code)
-        except revcode.CodeError as exc:
-            raise Refused(str(exc)) from exc
+    from . import export
     if not args.output.casefold().endswith(".pdf"):
         raise Refused("The PDF's name has to end in .pdf.")
     project = _open(args.project)
@@ -80,15 +74,12 @@ def _pdf(args) -> dict:
         raise Refused(f"{os.path.basename(args.output)} is already there. Add --overwrite to replace it.", "exists")
     internal = project._use()
     try:
-        missing = export.export_project_pdf(internal, args.output, {d.uid for d in docs}, code)
-    except revcode.CodeError as exc:
-        raise Refused(str(exc)) from exc
+        missing = export.export_project_pdf(internal, args.output, {d.uid for d in docs})
     except OSError as exc:
         raise Refused(f"{args.output} couldn't be written: {exc}", "error") from exc
     return {"ok": True, "path": args.output,
             "sheets": [{"number": internal.sheet_number(d), "name": d.name} for d in docs],
-            "missing": missing, "revision_code": code.text if code is not None else "",
-            "warnings": list(project.warnings)}
+            "missing": missing, "warnings": list(project.warnings)}
 
 
 def _components(args) -> dict:
@@ -123,8 +114,6 @@ def _parser(name: str) -> argparse.ArgumentParser:
         p.add_argument("project", help="a .schematix project (or a legacy .osch drawing)")
     if name == "pdf":
         p.add_argument("output", help="the PDF to write")
-        p.add_argument("--revision-code", metavar="NUMBER@REVISION",
-                       help="RevisionWorx's document number and revision, like E-100@B: FieldWorx's QR code for it on each sheet")
         p.add_argument("--overwrite", action="store_true", help="replace OUTPUT if it's there")
     if name in ("pdf", "components"):
         p.add_argument("--sheet", action="append", default=[], metavar="N", help="just this sheet, by number or name (repeatable)")

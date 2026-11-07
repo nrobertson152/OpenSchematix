@@ -22,9 +22,9 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-# ezdxf only validates DXF output in tests; pypdfium2 (with pillow) renders PDFs and zxing-cpp, the decoder FieldWorx's app uses,
-# reads the revision codes back. None of them is used by the program.
-dev = ["pytest", "pypdf", "pyinstaller", "ezdxf", "pypdfium2", "pillow", "zxing-cpp"]
+# ezdxf only validates DXF output in tests; pypdfium2 (with pillow) renders PDFs for tests that look at the page. Neither is used by
+# the program.
+dev = ["pytest", "pypdf", "pyinstaller", "ezdxf", "pypdfium2", "pillow"]
 
 [project.urls]
 "Support development" = "https://ko-fi.com/nr270343"
