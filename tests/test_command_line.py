@@ -1,17 +1,10 @@
-"""The command line for other programs (openschematix/cli.py, docs/COMMAND_LINE.md), and revision codes on printed sheets
-(openschematix/revcode.py): FieldWorx's FWX:R:<number>@<revision> as a QR code in the drawing area's lower right corner. Codes are read
-back from the rendered pages by zxing-cpp, the decoder FieldWorx's app uses, after PDFium has rendered them: programs that share no
-code with OpenSchematix. The tests that need them skip without them."""
-import hashlib
+"""The command line for other programs (openschematix/cli.py, docs/COMMAND_LINE.md)."""
 import json
 import subprocess
 import sys
 from pathlib import Path
 
-import pytest
-
-from openschematix import cli, editing, export, fwx_label, projectio, revcode
-from openschematix.geometry import UNIT_MM
+from openschematix import cli, editing, export, projectio
 from openschematix.project import new_project
 
 
@@ -47,17 +40,6 @@ def saved(tmp_path, project=None, name="panel.schematix") -> Path:
     f = tmp_path / name
     projectio.save_project(project or panel(), str(f))
     return f
-
-
-def codes_in(pdf: Path) -> list:
-    pdfium = pytest.importorskip("pypdfium2")
-    zxingcpp = pytest.importorskip("zxingcpp")
-    doc = pdfium.PdfDocument(str(pdf))
-    out = []
-    for i in range(len(doc)):
-        image = doc[i].render(scale=150 / 72, grayscale=True).to_pil()
-        out.append([(r.text, r.position) for r in zxingcpp.read_barcodes(image)])
-    return out
 
 
 # ------------------------------------------------------------------------------------------------- the command line
@@ -102,7 +84,7 @@ def test_components_with_their_sheets_zones_and_the_bom(capsys, tmp_path):
 def test_a_pdf_as_export_makes_it(capsys, tmp_path):
     f = saved(tmp_path)
     code, out = run(capsys, "pdf", f, tmp_path / "panel.pdf")
-    assert code == 0 and out["revision_code"] == "" and out["missing"] == []
+    assert code == 0 and out["missing"] == [] and "revision_code" not in out
     assert out["sheets"] == [{"number": 1, "name": "Power"}, {"number": 2, "name": "Control"}]
     assert (tmp_path / "panel.pdf").read_bytes() == export.project_pdf(projectio.open_any(str(f)).project)
     code, out = run(capsys, "pdf", f, tmp_path / "one.pdf", "--sheet", "2")
@@ -116,7 +98,6 @@ def test_refusals_change_nothing(capsys, tmp_path):
     damaged.write_bytes(b"PK\x03\x04 not really a project")
     for args, kind in (((f, tmp_path / "there.pdf"), "exists"), ((f, tmp_path / "a.txt"), "bad-input"),
                        ((f, tmp_path / "a.pdf", "--sheet", "9"), "bad-input"),
-                       ((f, tmp_path / "a.pdf", "--revision-code", "E-100"), "bad-input"),
                        ((tmp_path / "nope.schematix", tmp_path / "a.pdf"), "not-readable"),
                        ((damaged, tmp_path / "a.pdf"), "not-readable"), ((f, tmp_path / "a.pdf", "--paper", "A0"), "bad-input")):
         code, out = run(capsys, "pdf", *args)
@@ -126,86 +107,12 @@ def test_refusals_change_nothing(capsys, tmp_path):
     assert code == 2 and out["kind"] == "not-readable"
 
 
-# ------------------------------------------------------------------------------------------------- revision codes
-
-def test_the_encoder_is_fieldworxs_copied_unchanged():
-    # FieldWorx tests fwx_label.py bit for bit against python-qrcode; this copy must be that file, so it draws the same codes.
-    # (Line endings aside: git on Windows checks text files out with CRLF.)
-    assert fwx_label.FWX_LABEL_VERSION == 1
-    assert hashlib.sha256(Path(fwx_label.__file__).read_bytes().replace(b"\r\n", b"\n")).hexdigest() == \
-        "56cffdf78cb5f0297cf17f06f8ada7a738f30a2f7e7eb6f65d671109a291c067"
-
-
-@pytest.mark.parametrize("style,scale", [("standard", "1:1"), ("compact", "1:1"), ("iso", "1:1"), ("none", "1:1"),
-                                         ("standard", "1:2")])
-def test_every_sheet_carries_the_code_above_its_title_block(capsys, tmp_path, style, scale):
-    f = saved(tmp_path, panel(style, scale))
+def test_a_pdf_carries_no_revision_code(capsys, tmp_path):
+    """Prints carry no QR code: which revision of a drawing applies is a unit's to say (RevisionWorx's unit register), so a code on
+    paper could only say whether it's the released one, which can be the wrong advice for a machine built to an earlier one."""
+    f = saved(tmp_path)
     code, out = run(capsys, "pdf", f, tmp_path / "panel.pdf", "--revision-code", "E-100@B")
-    assert code == 0 and out["revision_code"] == "FWX:R:E-100@B"
-    pages = codes_in(tmp_path / "panel.pdf")
-    assert [[t for t, _ in page] for page in pages] == [["FWX:R:E-100@B"], ["FWX:R:E-100@B"]], "on every sheet"
-    project = projectio.open_any(str(f)).project
-    doc = project.sheets[0]
-    x0, y0, x1, y1 = revcode.area(doc)
-    pw, ph = doc.sheet.paper_units()
-    p = pages[0][0][1]
-    k = 150 / 25.4 * UNIT_MM                                  # pixels per paper unit
-    cx = (p.top_left.x + p.top_right.x + p.bottom_left.x + p.bottom_right.x) / 4 / k
-    cy = (p.top_left.y + p.top_right.y + p.bottom_left.y + p.bottom_right.y) / 4 / k
-    assert x0 < cx < x1 and y0 < cy < y0 + revcode.SIZE, "where area() says, the caption below it"
-    assert x1 < pw - 40 and y1 < ph - 40, "inside the frame"
-    from openschematix import titleblock
-    tb = titleblock.frame_layout(doc)["title_block"]
-    if tb is not None:
-        assert y1 <= tb[1] * doc.sheet.scale_factor(), "above the title block (and its revision table)"
-
-
-def test_it_never_covers_the_drawing(capsys, tmp_path):
-    p = panel()
-    doc = p.sheets[0]
-    f = doc.sheet.scale_factor()
-    x0, y0, x1, y1 = revcode.area(doc)
-    editing.add_wire(doc, [((x0 + 10) / f, (y0 + 10) / f), ((x1 + 80) / f, (y0 + 10) / f)])    # a wire through the corner
-    path = saved(tmp_path, p)
-    code, out = run(capsys, "pdf", path, tmp_path / "a.pdf", "--revision-code", "E-100@B")
-    assert code == 2 and out["kind"] == "bad-input" and "Sheet 1. Power: no room for the revision code" in out["error"]
-    assert not (tmp_path / "a.pdf").exists()
-    skipped: list = []
-    data = export.project_pdf(projectio.open_any(str(path)).project, None, None, revcode.RevisionCode("E-100", "B"), skipped)
-    assert skipped == ["1. Power"], "the window prints the sheet without it, and says which"
-    (tmp_path / "b.pdf").write_bytes(data)
-    assert [[t for t, _ in page] for page in codes_in(tmp_path / "b.pdf")] == [[], ["FWX:R:E-100@B"]]
-
-
-def test_what_is_and_isnt_in_the_way():
-    p = panel()
-    doc = p.sheets[0]
-    items, _ = export.paper_items(doc, True, p)
-    box = revcode.area(doc)
-    assert revcode.why_not(items, box) == "", "the frame, title block and revision table aren't in the way"
-    near = [{"k": "line", "pts": [(box[0] - 30, box[1] - 30), (box[0] - 1, box[3] + 50)], "role": "wire"}]
-    assert revcode.why_not(near, box) == "", "close, but clear of it"
-    across = [{"k": "line", "pts": [(box[0] - 30, box[1] + 5), (box[2] + 30, box[1] + 5)], "role": "wire"}]
-    text = [{"k": "text", "p": ((box[0] + box[2]) / 2, (box[1] + box[3]) / 2), "s": "NOTE", "size": 10, "anchor": "c", "role": "ink"}]
-    watermark = [{"k": "text", "p": ((box[0] + box[2]) / 2, box[1]), "s": "PRELIMINARY", "size": 80, "anchor": "c",
-                  "role": "watermark"}]
-    assert revcode.why_not(across, box) and revcode.why_not(text, box) and not revcode.why_not(watermark, box)
-
-
-def test_revision_codes_are_checked_and_long_ones_get_smaller_words():
-    assert revcode.RevisionCode.parse(" E-100@B ") == revcode.RevisionCode("E-100", "B")
-    assert revcode.RevisionCode.parse("A@B@C").text == "FWX:R:A@B@C", "the revision is what follows the last @"
-    for bad in ("E-100", "@B", "E-100@", "E-100@ ", "E\n100@B", ""):
-        with pytest.raises(revcode.CodeError):
-            revcode.RevisionCode.parse(bad)
-    box = (0.0, 0.0, revcode.CLEAR[0], revcode.CLEAR[1])
-    short = [i for i in revcode.code_items(revcode.RevisionCode("E-100", "B"), box) if i["k"] == "text"]
-    longer = [i for i in revcode.code_items(revcode.RevisionCode("E-100-PRESS-PANEL", "AB"), box) if i["k"] == "text"]
-    longest = [i for i in revcode.code_items(revcode.RevisionCode("E-100-PRESS-PANEL-LINE-3-SHEETS-1-TO-12", "AB"), box)
-               if i["k"] == "text"]
-    assert short[0]["size"] == revcode.CAPTION and longer[0]["size"] < revcode.CAPTION and longest == [], \
-        "words shrink to the code's width, and are left out when too small to read: the code still holds them"
-    assert export.text_width(longer[0]["s"], longer[0]["size"]) <= revcode.SIZE + 1e-9
+    assert code == 2 and out["kind"] == "bad-input" and not (tmp_path / "panel.pdf").exists()
 
 
 def test_answers_are_ascii_json_whatever_the_names_are(capsys, tmp_path):

@@ -27,12 +27,8 @@ The release date is set when the Director publishes the release.
   become global labels, wire numbers name the nets, a device drawn in several places is one part with several units,
   and the drawing is written on KiCad's 100 mil grid. What doesn't come across is in `docs/KICAD.md`.
 
-- **Revision codes on prints.** When RevisionWorx says the saved project is exactly its latest revision, *Print* and *Export PDF*
-  put that revision's code on every sheet: FieldWorx's `FWX:R:<number>@<revision>` as a QR code, just above the revision table and
-  title block. A phone with FieldWorx then says whether a paper copy is still the released revision. It never covers anything drawn:
-  a sheet without room is printed without it, and the Output panel says which. See `docs/REVISIONWORX.md`.
 - **A command line for other programs**, `openschematix-cli` (or `python -m openschematix <command>`), without tkinter. Each command
-  prints one JSON object. `pdf` writes a project's sheets as *Export PDF* does, optionally with the revision code. `components`
+  prints one JSON object. `pdf` writes a project's sheets as *Export PDF* does. `components`
   lists what's drawn, with sheet and grid zone, and the bill of materials. See `docs/COMMAND_LINE.md`.
 - **RevisionWorx.** When RevisionWorx is installed, the status bar shows what it says about the open project and the
   next step: *Check out*, or *Check in…*, which saves first, checks out if nobody has, and can take the bill of
