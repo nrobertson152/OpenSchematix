@@ -300,3 +300,52 @@ class TestTheWindow:
         assert app.revisionworx.label.winfo_manager() == ""
         assert app.revisionworx.add(({"id": project_id, "workspace": str(eng)}, "E-200", "Loose", "First issue"))
         assert folder in Path(app.filename).parents and app.revisionworx.status.number == "E-200"
+
+    def codes(self, pdf):
+        pdfium = pytest.importorskip("pypdfium2")
+        zxingcpp = pytest.importorskip("zxingcpp")
+        doc = pdfium.PdfDocument(str(pdf))
+        return [r.text for i in range(len(doc)) for r in zxingcpp.read_barcodes(doc[i].render(scale=150 / 72, grayscale=True).to_pil())]
+
+    def export(self, app, monkeypatch, out):
+        from openschematix.gui import app as app_module
+        monkeypatch.setattr(app_module.filedialog, "asksaveasfilename", lambda **k: str(out))
+        logged = []
+        monkeypatch.setattr(app, "log", lambda msg, kind="info": logged.append((kind, msg)))
+        app.export_pdf([d.uid for d in app.project.sheets])
+        return logged
+
+    def test_a_print_of_the_revision_carries_its_revision_code(self, app, asked, tmp_path, monkeypatch):
+        f = controlled(workspace(tmp_path))
+        app.open_path(str(f), confirm=False)
+        app.revisionworx.refresh(wait=True)
+        rev = app.revisionworx.status.revision
+        logged = self.export(app, monkeypatch, tmp_path / "out.pdf")
+        assert self.codes(tmp_path / "out.pdf") == [f"FWX:R:E-100@{rev}"]
+        assert ("info", f"With the revision code for E-100 rev {rev}.") in logged
+        editing.place(app.doc, "el.lamp.iec", 600, 100)         # changed, not saved: the print isn't that revision any more
+        app.mark_dirty()
+        logged = self.export(app, monkeypatch, tmp_path / "changed.pdf")
+        assert self.codes(tmp_path / "changed.pdf") == []
+        assert ("info", f"No revision code on it: it isn't exactly E-100 rev {rev} as RevisionWorx has it.") in logged
+
+    def test_a_sheet_without_room_is_printed_without_it_and_named(self, app, asked, tmp_path, monkeypatch):
+        from openschematix import revcode
+        p = panel()
+        doc = p.sheets[0]
+        k = doc.sheet.scale_factor()
+        x0, y0, x1, y1 = revcode.area(doc)
+        editing.add_wire(doc, [((x0 + 10) / k, (y0 + 10) / k), ((x1 + 80) / k, (y0 + 10) / k)])
+        f = controlled(workspace(tmp_path), p)
+        app.open_path(str(f), confirm=False)
+        logged = self.export(app, monkeypatch, tmp_path / "out.pdf")
+        assert self.codes(tmp_path / "out.pdf") == []
+        assert any(kind == "warning" and msg.startswith("No room for the revision code on 1. Sheet 1") for kind, msg in logged)
+
+    def test_a_project_it_doesnt_control_prints_as_before(self, app, asked, tmp_path, monkeypatch):
+        workspace(tmp_path)
+        f = tmp_path / "loose.schematix"
+        projectio.save_project(panel(), str(f))
+        app.open_path(str(f), confirm=False)
+        logged = self.export(app, monkeypatch, tmp_path / "out.pdf")
+        assert self.codes(tmp_path / "out.pdf") == [] and not any("revision code" in msg for _, msg in logged)
